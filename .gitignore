@@ -1,0 +1,62 @@
+# ==========================================
+# SEGREDOS — nunca remova estas linhas
+# Chaves do Supabase, tokens de bot e IDs de
+# afiliado são dinheiro. Não podem ir pro Git.
+# ==========================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credenciais/
+
+# Supabase local
+.branches
+.temp
+supabase/.temp/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+
+# Cache e ferramentas
+.turbo/
+.cache/
+*.tsbuildinfo
+.eslintcache
+
+# Deploy
+.vercel/
+.netlify/
+.wrangler/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# Dados locais e exportações
+*.csv
+!docs/exemplos/*.csv
+*.sqlite
+*.db
+relatorios/
