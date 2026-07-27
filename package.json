@@ -19,7 +19,8 @@
     "db:reset": "supabase db reset",
     "db:status": "supabase status",
     "db:publica": "supabase db push",
-    "db:tipos": "supabase gen types typescript --local > lib/supabase/tipos.ts"
+    "db:tipos": "supabase gen types typescript --local > lib/supabase/tipos.ts",
+    "funcoes:serve": "supabase functions serve"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",

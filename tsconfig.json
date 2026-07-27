@@ -30,5 +30,10 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules"]
+  // As Edge Functions rodam em Deno, não em Node: usam `Deno.env`,
+  // importam por URL e por `jsr:`. O TypeScript do Next não sabe
+  // nada disso e acusaria erro em código que está correto. Quem
+  // verifica aquela pasta é o Deno de dentro do container, quando
+  // a função é servida com `pnpm funcoes:serve`.
+  "exclude": ["node_modules", "supabase/functions"]
 }

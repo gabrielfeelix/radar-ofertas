@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Codigo Deno, com outras regras e outros globais.
+    // Verificado ao servir a funcao, nao por este ESLint.
+    "supabase/functions/**",
   ]),
 ]);
 
