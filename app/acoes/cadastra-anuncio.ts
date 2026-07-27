@@ -22,7 +22,18 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
  */
 
 export type ResultadoCadastro =
-  | { ok: true; anuncioId: string; produtoId: string; jaExistia: boolean }
+  | {
+      ok: true;
+      anuncioId: string;
+      produtoId: string;
+      jaExistia: boolean;
+      /**
+       * Valor novo a cada cadastro bem-sucedido. O formulário usa
+       * como `key` para se remontar limpo, o que evita ter que
+       * mexer em estado dentro de efeito só para esvaziar campo.
+       */
+      token: string;
+    }
   | { ok: false; campo: "link" | "titulo" | "preco" | "geral"; mensagem: string };
 
 export async function cadastraAnuncio(
@@ -102,6 +113,7 @@ export async function cadastraAnuncio(
       anuncioId: existente.id,
       produtoId: existente.produto_id,
       jaExistia: true,
+      token: crypto.randomUUID(),
     };
   }
 
@@ -153,5 +165,11 @@ export async function cadastraAnuncio(
   }
 
   revalidatePath("/");
-  return { ok: true, anuncioId: anuncio.id, produtoId: produto.id, jaExistia: false };
+  return {
+    ok: true,
+    anuncioId: anuncio.id,
+    produtoId: produto.id,
+    jaExistia: false,
+    token: crypto.randomUUID(),
+  };
 }

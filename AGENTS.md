@@ -124,6 +124,17 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 ## 9. Estado atual
 
-Repositório recém-criado. Nada implementado ainda. Somente documentação.
+**Fase 0 em andamento** (contas de afiliado e prova de subid, trabalho manual do dono), com a base da Fase 1 sendo construída em paralelo. As duas não conflitam: o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
-**Próxima tarefa:** ler `docs/roadmap.md`, seção Fase 0, e ajudar o usuário a executá-la. A Fase 0 é quase toda trabalho manual fora do código — resista à tentação de começar a programar o painel.
+Já existe:
+
+- Repositório privado em `gabrielfeelix/radar-ofertas`, versões travadas (`docs/ambiente.md`).
+- Migrations da Fase 1: `marketplace`, `produto`, `anuncio`, `preco_ponto`, com RLS ligado, a view `anuncio_serie` e as funções `registra_preco` e `expurga_precos_expirados`.
+- Painel da Fase 1: cadastro de anúncio por link colado e tabela de acompanhamento da série.
+- `lib/marketplaces.ts` lê a URL e extrai loja e código do anúncio, sem fazer requisição.
+
+Ainda não existe, e é o próximo bloco de trabalho:
+
+- **Coletor diário de preço.** Bloqueado: depende de decidir a via de coleta permitida por marketplace (ver a pendência em `docs/decisoes.md`). Não escreva raspador antes dessa decisão.
+- Agendamento por `pg_cron`, que depende do projeto Supabase na nuvem existir.
+- Definição do nicho, que precede cadastrar os 150 anúncios.

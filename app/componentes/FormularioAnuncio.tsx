@@ -1,0 +1,191 @@
+"use client";
+
+import { useActionState, useState } from "react";
+
+import { cadastraAnuncio, type ResultadoCadastro } from "@/app/acoes/cadastra-anuncio";
+import { leLinkDeProduto } from "@/lib/marketplaces";
+
+/**
+ * Formulário de cadastro de anúncio.
+ *
+ * A leitura do link acontece duas vezes de propósito: aqui, na
+ * hora que o operador cola, só para dar retorno imediato — e de
+ * novo no servidor, que é quem decide de verdade. Validação de
+ * navegador é conveniência, nunca garantia.
+ *
+ * Título e preço são digitados à mão. Buscar isso na página do
+ * produto depende dos termos de cada marketplace e ainda não foi
+ * decidido — ver a pendência em docs/decisoes.md.
+ */
+
+const NOME_DA_LOJA: Record<string, string> = {
+  mercado_livre: "Mercado Livre",
+  shopee: "Shopee",
+  amazon: "Amazon",
+};
+
+export function FormularioAnuncio() {
+  const [resultado, acao, enviando] = useActionState<ResultadoCadastro | null, FormData>(
+    cadastraAnuncio,
+    null,
+  );
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/*
+        A `key` muda a cada cadastro bem-sucedido, o que remonta os
+        campos vazios. Na Fase 1 o operador cadastra dezenas de
+        anúncios seguidos — limpar à mão a cada um é o tipo de
+        atrito que faz a pessoa largar o sistema.
+
+        As mensagens ficam fora do componente com key, senão
+        sumiriam junto com a remontagem.
+      */}
+      <Campos
+        key={resultado?.ok ? resultado.token : "inicial"}
+        acao={acao}
+        enviando={enviando}
+        resultado={resultado}
+      />
+
+      {resultado?.ok === true && (
+        <p className="text-sm text-green-700">
+          {resultado.jaExistia
+            ? "Esse anúncio já estava cadastrado. Registrei o preço de hoje nele."
+            : "Cadastrado. Já entra na próxima coleta."}
+        </p>
+      )}
+      {resultado?.ok === false && resultado.campo === "geral" && (
+        <p className="text-sm text-red-700">{resultado.mensagem}</p>
+      )}
+    </div>
+  );
+}
+
+function Campos({
+  acao,
+  enviando,
+  resultado,
+}: {
+  acao: (formData: FormData) => void;
+  enviando: boolean;
+  resultado: ResultadoCadastro | null;
+}) {
+  const [link, setLink] = useState("");
+
+  // Retorno imediato sobre o link, antes de enviar qualquer coisa.
+  const leitura = link.trim() === "" ? null : leLinkDeProduto(link);
+
+  const erroDe = (campo: "link" | "titulo" | "preco") =>
+    resultado?.ok === false && resultado.campo === campo ? resultado.mensagem : null;
+
+  return (
+    <form action={acao} className="flex flex-col gap-4">
+      <Campo
+        rotulo="Link do produto"
+        dica="Cole o endereço da página do produto. Link curto de app não funciona — abra no navegador e copie o de cima."
+        erro={erroDe("link")}
+      >
+        <input
+          name="link"
+          type="url"
+          required
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="https://www.mercadolivre.com.br/..."
+          className="w-full rounded border border-neutral-300 bg-white px-3 py-2 font-mono text-sm"
+        />
+        {leitura?.ok === true && (
+          <p className="mt-1 text-sm text-green-700">
+            {NOME_DA_LOJA[leitura.link.marketplaceSlug]} · código{" "}
+            <code className="font-mono">{leitura.link.sku}</code>
+          </p>
+        )}
+        {leitura?.ok === false && (
+          <p className="mt-1 text-sm text-amber-700">{leitura.erro.mensagem}</p>
+        )}
+      </Campo>
+
+      <Campo
+        rotulo="Título"
+        dica="Curto e reconhecível. É o que vai aparecer na mensagem do grupo, não o título poluído da loja."
+        erro={erroDe("titulo")}
+      >
+        <input
+          name="titulo"
+          type="text"
+          required
+          minLength={3}
+          maxLength={120}
+          className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+        />
+      </Campo>
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Campo rotulo="Categoria" dica="Define o percentual de comissão.">
+          <input
+            name="categoria"
+            type="text"
+            className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+          />
+        </Campo>
+
+        <Campo rotulo="Vendedor" dica="Opcional.">
+          <input
+            name="vendedor"
+            type="text"
+            className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+          />
+        </Campo>
+
+        <Campo
+          rotulo="Preço de hoje"
+          dica="Opcional. Vira o primeiro ponto da série."
+          erro={erroDe("preco")}
+        >
+          <input
+            name="preco"
+            type="text"
+            inputMode="decimal"
+            placeholder="R$ 89,90"
+            className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+          />
+        </Campo>
+      </div>
+
+      <div>
+        <button
+          type="submit"
+          disabled={enviando || leitura?.ok === false}
+          className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
+        >
+          {enviando ? "Salvando…" : "Cadastrar anúncio"}
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function Campo({
+  rotulo,
+  dica,
+  erro,
+  children,
+}: {
+  rotulo: string;
+  dica?: string;
+  erro?: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-medium">{rotulo}</span>
+      {children}
+      {erro ? (
+        <p className="mt-1 text-sm text-red-700">{erro}</p>
+      ) : dica ? (
+        <p className="mt-1 text-xs text-neutral-500">{dica}</p>
+      ) : null}
+    </label>
+  );
+}

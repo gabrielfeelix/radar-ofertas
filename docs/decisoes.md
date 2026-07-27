@@ -72,7 +72,33 @@ O sistema não guarda nome, telefone ou e-mail de quem está nos grupos. Cliques
 
 ---
 
+## D-007 · RLS ligado sem policy na Fase 1, acesso pelo servidor
+**Data:** 2026-07-27
+
+Todas as tabelas nascem com Row Level Security ligado e **nenhuma policy**. Efeito prático: a chave anônima não lê nada. O painel da Fase 1 acessa o banco só pelo servidor, com a service role, que ignora RLS por desenho do Postgres.
+
+**Motivo:** a Fase 1 não tem login nem a tabela `usuario` — ela é da Fase 3. Escrever policy agora seria adivinhar. Ligar RLS desde a primeira migration, por outro lado, precisa ser feito agora: o erro clássico é criar a tabela aberta e só ligar RLS meses depois, quando já vazou.
+
+O arquivo `lib/supabase/servidor.ts` importa `server-only`, então se algum componente de navegador tentar usar a service role, o build quebra em vez de mandar a chave mestra para dentro da página.
+
+**Mudaria se:** nada até a Fase 3, quando as policies por papel entram e o painel passa a usar a chave do usuário.
+
+---
+
+## D-008 · Versões travadas, Docker só para o banco
+**Data:** 2026-07-27
+
+Node no `.nvmrc`, pnpm em `packageManager`, Supabase CLI como dependência do projeto e Postgres 17 no `supabase/config.toml`. O banco local sobe em Docker via `supabase start`. A aplicação roda direto no sistema, sem container próprio.
+
+**Motivo:** o banco é onde a diferença entre máquinas realmente aparece, e o Supabase já o entrega containerizado com versões fixas no Git. Já o Next.js dentro de container no WSL sofre com hot reload, porque evento de alteração de arquivo não atravessa a fronteira Windows/container — a saída seria polling, que come CPU e deixa o ciclo lento. O ganho que sobraria (paridade de versão do Node) o `.nvmrc` já dá de graça.
+
+**Mudaria se:** entrar uma terceira máquina ou outra pessoa no projeto, quando um devcontainer passa a valer o custo de manutenção. Detalhes em `docs/ambiente.md`.
+
+---
+
 ## Pendências que ainda não são decisões
+
+**Extração automática de título e preço.** Hoje o cadastro é manual: o operador cola o link e digita título e preço. O sistema só lê a URL para descobrir a loja e o código do anúncio — nenhuma requisição sai para o site. Antes de automatizar a coleta é preciso decidir, por marketplace, qual é a via permitida: API oficial, feed de afiliado ou leitura da página. **Isso bloqueia o coletor diário da Fase 1** e cai na regra da seção 8 do `AGENTS.md` — não colete de um site sem confirmar que os termos permitem.
 
 **Nicho.** Não definido. Determina categoria de comissão, ticket médio e perfil de parceiro. Precisa ser resolvido antes da Fase 1.
 
