@@ -128,7 +128,26 @@ O coletor não sabe como o preço de cada loja chega. Ele conhece um contrato �
 
 ## Pendências que ainda não são decisões
 
-**Extração automática de título e preço.** Hoje o cadastro é manual: o operador cola o link e digita título e preço. O sistema só lê a URL para descobrir a loja e o código do anúncio — nenhuma requisição sai para o site. Antes de automatizar a coleta é preciso decidir, por marketplace, qual é a via permitida: API oficial, feed de afiliado ou leitura da página. **Isso bloqueia o coletor diário da Fase 1** e cai na regra da seção 8 do `AGENTS.md` — não colete de um site sem confirmar que os termos permitem.
+**Extração automática de título e preço.** Hoje o cadastro é manual: o operador cola o link e digita título e preço. O sistema só lê a URL para descobrir a loja e o código do anúncio — nenhuma requisição sai para o site. **Isso bloqueia o coletor diário da Fase 1.**
+
+A pesquisa de mercado (`docs/mercado.md`) encontrou três vias oficiais, todas melhores que raspagem: a **Open API de afiliado da Shopee**, que resolve dado de produto e link curto na mesma credencial; a **API de itens do Mercado Livre**, já implementada e esperando credencial; e o **feed de rede de afiliados** (Lomadee, Awin, Afilio), que é dado fornecido pela rede exatamente para este uso.
+
+Falta escolher por onde começar e obter a credencial. A regra da seção 8 do `AGENTS.md` continua valendo — nada de raspar página sem confirmar os termos.
+
+---
+
+## D-011 · Canal do WhatsApp, não grupo
+**Data:** 2026-07-27
+
+A distribuição no WhatsApp usa **Canal**, não grupo.
+
+**Motivo:** grupo tem teto de 1.024 membros, que é teto de receita — cheio, obriga a criar um segundo e publicar duas vezes à mão. Além disso, em grupo o telefone de cada membro fica visível para todos os outros, o que é exposição desnecessária sob a LGPD e desconforto para quem entra. Canal não tem limite de seguidores, não expõe telefone e é unidirecional, então o operador não vira moderador.
+
+A pesquisa também fechou a porta da alternativa: **não existe via oficial e automatizada de distribuição em massa no WhatsApp.** A API do Business não publica em grupo, a Groups API restrita serve a punhados de participantes, e lista de transmissão exige que o destinatário tenha o número salvo. Quem promete automação de grupo está usando ferramenta não oficial, que é o vetor de banimento número um. A D-002 deixa de ser cautela e passa a ser a única via legítima.
+
+**Custo:** perde-se a conversa entre membros. Em grupo de oferta, isso costuma ser mais ruído que comunidade.
+
+**Mudaria se:** o WhatsApp abrir API oficial de publicação em canal, o que tornaria o envio automático e mudaria o desenho da fila.
 
 **Custo de aquisição por membro.** O grupo inicial de pet será crescido com tráfego pago, o que troca "esperar a audiência aparecer" por "comprar audiência". Isso põe um custo novo na conta que não existia no plano original: se o membro custa mais do que a comissão que ele gera na vida dele dentro do grupo, o modelo não fecha por mais bem construído que o sistema esteja. Medir isso é a primeira métrica real do projeto — e ela só existe depois da primeira comissão confirmada.
 
