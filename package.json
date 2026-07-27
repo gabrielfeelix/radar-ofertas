@@ -12,7 +12,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "verifica": "tsc --noEmit && eslint",
+    "testa": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON testes/links.mjs",
+    "verifica": "tsc --noEmit && eslint && pnpm testa",
 
     "db:sobe": "supabase start",
     "db:desce": "supabase stop",

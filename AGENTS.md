@@ -141,12 +141,16 @@ Já existe:
 - `lib/marketplaces.ts` lê a URL e extrai loja e código do anúncio, sem fazer requisição.
 
 - Coletor diário com fontes plugáveis por marketplace, testado sem credencial.
-- Motor de validação: `oferta`, `parametro`, `comissao_categoria`, as duas comportas e a nota, com dez casos cobertos.
+- Motor de validação: `oferta`, `parametro`, `comissao_categoria`, as duas comportas e a nota, com dez casos cobertos. Detecta 3.000 anúncios em 1,5 s.
+- Rotinas de manutenção: expurgo, expiração de oferta e compactação da série.
+- **Colheita de canais públicos do Telegram** (D-012), rodada contra um canal real: 20 posts, 37 links, 18 anúncios novos em 8 segundos.
+- Testes do leitor de link em `testes/links.mjs`, rodados por `pnpm testa` e pelo CI.
 
 Ainda não existe, e é o próximo bloco de trabalho:
 
-- **Colheita de canais de terceiros** (D-012), que é o que enche o catálogo.
+- **Tela da fila de ofertas.** Não depende de nada — dá para construir com dados semeados.
+- Colheita por conta de usuário do Telegram, para alcançar grupo fechado.
 - Credencial de marketplace. Sem ela o coletor roda mas não coleta nada.
-- Agendamento por `pg_cron`, que depende do projeto Supabase na nuvem existir.
+- Projeto Supabase na nuvem e segredos no GitHub.
 
 Leia `docs/mercado.md` antes de propor qualquer coisa sobre distribuição ou concorrência — ele tem a pesquisa de como o mercado opera de fato, e corrige duas suposições do plano original.

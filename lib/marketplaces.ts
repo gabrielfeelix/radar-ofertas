@@ -194,6 +194,30 @@ function leShopee(url: URL): ResultadoLeitura {
     };
   }
 
+  // Vitrine do vendedor: /nome-do-vendedor/123456/789012
+  //
+  // Este formato apareceu na colheita real de canais — é o que os
+  // encurtadores da Shopee entregam com mais frequência. Sem ele, a
+  // maior parte dos links de Shopee era descartada.
+  //
+  // A ordem (loja, item) segue o formato documentado /product/, que
+  // usa a mesma sequência. NÃO foi possível confirmar contra uma
+  // página real: a Shopee recusa requisição sem navegador. Confirmar
+  // quando a credencial da API de afiliado chegar — ela devolve
+  // shopid e itemid separados. Se estiver invertido, o mesmo produto
+  // vira dois anúncios e parte a série de preço em duas.
+  const formatoVitrine = alvo.match(/^\/[^/]+\/(\d{4,})\/(\d{4,})\/?$/);
+  if (formatoVitrine) {
+    return {
+      ok: true,
+      link: {
+        marketplaceSlug: "shopee",
+        sku: `${formatoVitrine[1]}.${formatoVitrine[2]}`,
+        urlLimpa: limpaUrl(url),
+      },
+    };
+  }
+
   return {
     ok: false,
     erro: {

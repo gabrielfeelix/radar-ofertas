@@ -212,6 +212,10 @@ Guardar o **menor** da semana, e não a média, é decisão de produto: a série
 
 ## Pendências que ainda não são decisões
 
+**Ordem de `shopid` e `itemid` no link de vitrine da Shopee.** A colheita real mostrou que os encurtadores da Shopee entregam com mais frequência o formato `shopee.com.br/{vendedor}/{numero1}/{numero2}`. Implementamos lendo como (loja, item), seguindo o formato documentado `/product/{shopid}/{itemid}`, que usa a mesma sequência. **Não foi possível confirmar contra uma página real** — a Shopee recusa requisição sem navegador. Confirmar quando a credencial da API de afiliado chegar, porque ela devolve os dois campos separados. Se estiver invertido, o mesmo produto vira dois anúncios e parte a série de preço em duas.
+
+**Falha intermitente de TLS ao resolver link no runtime local.** Na colheita de teste, parte dos links falhou com erro de certificado e o link seguinte, para o mesmo domínio, funcionou. Contornado com uma repetição em `resolveLink`, e resolvido no ambiente local com `DENO_TLS_CA_STORE` e `SSL_CERT_FILE`. **Não foi verificado no runtime de produção da Supabase**, que tem outra configuração de certificados. Conferir na primeira execução real.
+
 **Extração automática de título e preço.** Hoje o cadastro é manual: o operador cola o link e digita título e preço. O sistema só lê a URL para descobrir a loja e o código do anúncio — nenhuma requisição sai para o site. **Isso bloqueia o coletor diário da Fase 1.**
 
 A pesquisa de mercado (`docs/mercado.md`) encontrou três vias oficiais, todas melhores que raspagem: a **Open API de afiliado da Shopee**, que resolve dado de produto e link curto na mesma credencial; a **API de itens do Mercado Livre**, já implementada e esperando credencial; e o **feed de rede de afiliados** (Lomadee, Awin, Afilio), que é dado fornecido pela rede exatamente para este uso.
