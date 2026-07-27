@@ -43,10 +43,76 @@ export type AnuncioLinha = {
   sku_externo: string;
   vendedor: string | null;
   avaliacao: number | null;
+  /** Quantas avaliações. Nota 5,0 com 2 avaliações não vale nota 4,6 com 800. */
+  avaliacao_qtd: number | null;
+  /** Normalizada de 0 a 1. Cada loja tem escala própria; a conversão é feita na fonte. */
+  reputacao_vendedor: number | null;
+  loja_oficial: boolean | null;
+  vendas_estimadas: number | null;
   ativo: boolean;
   ultima_coleta_em: string | null;
   criado_em: string;
   atualizado_em: string;
+};
+
+export type ComissaoCategoriaLinha = {
+  id: string;
+  marketplace_id: string;
+  categoria: string;
+  percentual: number;
+  vigente_desde: string;
+  vigente_ate: string | null;
+  criado_em: string;
+};
+
+/** Limiares da curadoria. Ajustáveis sem deploy, porque mudam toda semana no começo. */
+export type ParametroLinha = {
+  chave: string;
+  valor: number;
+  descricao: string;
+  atualizado_em: string;
+};
+
+export type OfertaStatus = "nova" | "aprovada" | "rejeitada" | "expirada";
+
+export type OfertaLinha = {
+  id: string;
+  anuncio_id: string;
+  preco_atual_centavos: number;
+  /** Mediana observada por nós. Nunca o "preço de" da loja, que é inflado. */
+  preco_referencia_centavos: number;
+  /** Abaixo de 14, a mensagem não pode falar em desconto histórico. */
+  referencia_janela_dias: number;
+  dias_de_serie: number;
+  desconto_pct: number;
+  comissao_estimada_centavos: number;
+  /** Escala de 0 a 100, teto real 80 até a Fase 2 trazer canal. */
+  nota: number;
+  nota_desconto: number;
+  nota_comissao: number;
+  nota_qualidade: number;
+  status: OfertaStatus;
+  detectada_em: string;
+  expirada_em: string | null;
+  criado_em: string;
+};
+
+/** Veredito de `avalia_anuncio`. É o que responde "por que essa oferta não apareceu?". */
+export type VeredictoAnuncio = {
+  anuncio_id: string;
+  aprovada: boolean;
+  /** Vazio quando aprovada. Ex.: `serie_curta(5_de_14_dias)`, `comissao_baixa(144_centavos)`. */
+  motivos: string[];
+  preco_atual_centavos: number;
+  preco_referencia_centavos: number;
+  referencia_janela_dias: number;
+  dias_de_serie: number;
+  desconto_pct: number;
+  comissao_estimada_centavos: number;
+  nota: number;
+  nota_desconto: number;
+  nota_comissao: number;
+  nota_qualidade: number;
 };
 
 export type PrecoPontoLinha = {
@@ -92,6 +158,25 @@ export type Banco = {
         "produto_id" | "marketplace_id" | "url_original" | "sku_externo"
       >;
       preco_ponto: Tabela<PrecoPontoLinha, "anuncio_id" | "preco_centavos">;
+      comissao_categoria: Tabela<
+        ComissaoCategoriaLinha,
+        "marketplace_id" | "categoria" | "percentual"
+      >;
+      parametro: Tabela<ParametroLinha, "chave" | "valor" | "descricao">;
+      oferta: Tabela<
+        OfertaLinha,
+        | "anuncio_id"
+        | "preco_atual_centavos"
+        | "preco_referencia_centavos"
+        | "referencia_janela_dias"
+        | "dias_de_serie"
+        | "desconto_pct"
+        | "comissao_estimada_centavos"
+        | "nota"
+        | "nota_desconto"
+        | "nota_comissao"
+        | "nota_qualidade"
+      >;
     };
     Views: {
       anuncio_serie: { Row: AnuncioSerieLinha; Relationships: [] };
@@ -109,6 +194,18 @@ export type Banco = {
       expurga_precos_expirados: {
         Args: Record<string, never>;
         Returns: number;
+      };
+      parametro: {
+        Args: { p_chave: string };
+        Returns: number;
+      };
+      avalia_anuncio: {
+        Args: { p_anuncio_id: string };
+        Returns: VeredictoAnuncio[];
+      };
+      detecta_ofertas: {
+        Args: Record<string, never>;
+        Returns: { avaliados: number; aprovados: number }[];
       };
     };
     Enums: Record<string, never>;

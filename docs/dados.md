@@ -60,10 +60,23 @@ Série histórica. É a tabela que mais cresce.
 
 Índice em (`anuncio_id`, `coletado_em desc`). Guarde no máximo um ponto por anúncio por dia; se coletar mais vezes, mantenha o menor do dia. Rotina de limpeza descarta pontos de marketplaces cujo `cache_preco_max_horas` seja menor que a idade do ponto — na prática, a Amazon.
 
+### parametro
+Limiares da curadoria, ajustáveis sem deploy (D-014).
+
+`chave`, `valor`, `descricao`, `atualizado_em`
+
+Lidos pela função `parametro(chave)`, que falha alto se a chave não existir — devolver um padrão silencioso esconderia erro de digitação e faria o sistema curar com limiar que ninguém escolheu.
+
 ### oferta
-`id`, `anuncio_id`, `preco_atual_centavos`, `preco_referencia_centavos`, `referencia_janela_dias`, `desconto_pct`, `nota`, `comissao_estimada_centavos`, `status` (`nova` | `aprovada` | `rejeitada` | `expirada`), `detectada_em`, `expirada_em`
+`id`, `anuncio_id`, `preco_atual_centavos`, `preco_referencia_centavos`, `referencia_janela_dias`, `dias_de_serie`, `desconto_pct`, `nota`, `nota_desconto`, `nota_comissao`, `nota_qualidade`, `comissao_estimada_centavos`, `status` (`nova` | `aprovada` | `rejeitada` | `expirada`), `detectada_em`, `expirada_em`, `criado_em`
 
 `referencia_janela_dias` registra sobre quantos dias de série a comparação foi feita. Se for menor que 14, a mensagem não pode falar em desconto histórico.
+
+As parcelas da nota ficam gravadas separadas para que se entenda depois por que uma oferta ficou com determinada nota, sem precisar recalcular.
+
+**A nota vai de 0 a 100, mas o teto real hoje é 80.** Os 20 pontos de fadiga do canal e de desempenho histórico por categoria dependem de `canal`, que é da Fase 2. Ficam reservados de propósito, para que a nota de hoje continue comparável com a de amanhã em vez de sofrer inflação silenciosa.
+
+Quem decide é a função `avalia_anuncio(anuncio_id)`, que devolve o veredito com os motivos em texto — é a mesma função que responde "por que essa oferta não apareceu?" na tela. `detecta_ofertas()` roda depois da coleta e grava as aprovadas.
 
 ### publicacao
 `id`, `oferta_id`, `canal_id`, `subid`, `mensagem_enviada`, `preco_no_envio_centavos`, `link_afiliado`, `status` (`fila` | `enviada` | `cancelada`), `agendada_para`, `enviada_em`, `enviada_por`, `criado_em`

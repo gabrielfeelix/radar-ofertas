@@ -133,8 +133,13 @@ Já existe:
 - Painel da Fase 1: cadastro de anúncio por link colado e tabela de acompanhamento da série.
 - `lib/marketplaces.ts` lê a URL e extrai loja e código do anúncio, sem fazer requisição.
 
+- Coletor diário com fontes plugáveis por marketplace, testado sem credencial.
+- Motor de validação: `oferta`, `parametro`, `comissao_categoria`, as duas comportas e a nota, com dez casos cobertos.
+
 Ainda não existe, e é o próximo bloco de trabalho:
 
-- **Coletor diário de preço.** Bloqueado: depende de decidir a via de coleta permitida por marketplace (ver a pendência em `docs/decisoes.md`). Não escreva raspador antes dessa decisão.
+- **Colheita de canais de terceiros** (D-012), que é o que enche o catálogo.
+- Credencial de marketplace. Sem ela o coletor roda mas não coleta nada.
 - Agendamento por `pg_cron`, que depende do projeto Supabase na nuvem existir.
-- Definição do nicho, que precede cadastrar os 150 anúncios.
+
+Leia `docs/mercado.md` antes de propor qualquer coisa sobre distribuição ou concorrência — ele tem a pesquisa de como o mercado opera de fato, e corrige duas suposições do plano original.

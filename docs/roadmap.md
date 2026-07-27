@@ -28,24 +28,29 @@ Custo: cerca de R$20 e uma semana de espera.
 
 ---
 
-## Fase 1 — Radar silencioso
+## Fase 1 — Radar silencioso e motor de curadoria
 
-Ainda sem grupo nenhum. O objetivo é acumular série de preços antes de precisar dela, resolvendo o problema de arranque a frio que quebra os concorrentes.
+Ainda sem canal nenhum. O objetivo é acumular série de preços antes de precisar dela, resolvendo o arranque a frio que quebra os concorrentes — e, agora, encher o catálogo depressa o bastante para sustentar 30 ofertas por dia.
 
 O que construir:
 
-- Projeto Supabase e migrations de `marketplace`, `produto`, `anuncio` e `preco_ponto`.
-- Uma página simples com um campo para colar link de produto, que extrai título, preço, imagem e vendedor e cria produto e anúncio.
-- Um coletor diário de preço via `pg_cron` chamando uma Edge Function.
+- Migrations de `marketplace`, `produto`, `anuncio` e `preco_ponto`. **Feito.**
+- Página de cadastro por link colado. **Feito.**
+- Motor de validação: `oferta`, `parametro`, `comissao_categoria`, as duas comportas e a nota. **Feito.**
+- Coletor diário de preço, com fontes plugáveis por marketplace. **Feito, esperando credencial.**
+- Colheita de canais de terceiros, alimentando o catálogo (D-012).
+- Agendamento por `pg_cron`: coleta, detecção de ofertas e expurgo.
 - Nada de design elaborado. Uma tabela feia serve.
 
-Meta operacional: **de 150 a 250 anúncios do nicho escolhido, coletando preço diariamente por três semanas.**
+Meta operacional: **catálogo na casa de alguns milhares de anúncios de pet, coletando preço diariamente**, e a taxa de aprovação da curadoria estabilizada num patamar que sustente 30 ofertas por dia.
 
-**Concluída quando:** existem 150 ou mais anúncios ativos com pelo menos 21 dias de série contínua.
+**Concluída quando:** a detecção automática aprova 30 ou mais ofertas por dia, por uma semana seguida, sem afrouxar nenhum parâmetro.
 
-Custo: R$0. Trabalho estimado: 15 horas.
+Custo: R$0 até o Supabase passar de 500 MB.
 
-Ponto de atenção: o nicho ainda não foi definido. Ele determina categoria de comissão, ticket médio e que tipo de parceiro faz sentido. Categoria de comissão alta com ticket baixo pode render menos por post que categoria de comissão baixa com ticket alto — faça essa conta com o usuário antes de cadastrar 200 anúncios do nicho errado.
+O rampe é o que precisa de paciência: o catálogo enche rápido pela colheita, mas cada produto novo só fica validável depois de acumular série. Poucas ofertas na primeira semana, algo em torno de dez a quinze na terceira, trinta a partir da sexta.
+
+Ponto de atenção: acompanhe a **taxa de aprovação** que `detecta_ofertas` devolve. Aprovação perto de zero com catálogo grande significa parâmetro apertado demais; aprovação alta demais significa que a curadoria virou carimbo.
 
 ---
 

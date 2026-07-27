@@ -126,6 +126,51 @@ O coletor não sabe como o preço de cada loja chega. Ele conhece um contrato �
 
 ---
 
+## D-012 · Colher de canais de terceiros como sinal, nunca como verdade
+**Data:** 2026-07-27
+
+O sistema lê canais de oferta de terceiros e trata cada oferta vista lá como **candidata**, não como oferta. A candidata passa pelas mesmas duas comportas de qualquer outra antes de virar publicação.
+
+**Motivo:** a pesquisa de mercado mostrou que o padrão dos concorrentes é pegar oferta de grupo alheio, trocar o link de afiliado e republicar sem conferir nada. A diferença aqui é onde a oferta entra: para eles o canal alheio é fonte da verdade, para nós é fonte de descoberta. A verdade continua sendo a nossa série de preços.
+
+**O ganho maior não é a oferta, é o catálogo.** Todo produto avistado num canal alheio entra no nosso catálogo e começa a coletar preço. Isso resolve o arranque a frio: em vez de cadastrar 150 anúncios à mão, o sistema cadastra milhares sozinho, e o volume de ofertas validáveis cresce junto com a série.
+
+**Como colher, decidido:** canais públicos pela web (`t.me/s/<canal>`), que é conteúdo público sem conta envolvida, **e** leitura por conta de usuário do Telegram, com número dedicado já adquirido, para alcançar grupo fechado.
+
+**Riscos aceitos conscientemente:** automatizar conta de usuário é área cinzenta nos termos do Telegram e a conta pode ser banida. Por isso: número dedicado, nunca o pessoal; leitura somente, nada de publicar ou responder pela conta de usuário; ritmo baixo. A leitura por web pública não tem esse risco e é o caminho preferido sempre que o canal for público.
+
+**O que não se copia:** o texto da mensagem alheia. Aproveitamos o fato — produto, preço, link — e a mensagem é montada pelo nosso template.
+
+**Mudaria se:** a conta de usuário for banida com frequência, restando só a via web pública.
+
+---
+
+## D-013 · Escala alvo: 30 ofertas por dia, com rampe honesto
+**Data:** 2026-07-27
+
+A meta operacional é **30 ofertas validadas por dia**, não 5 a 10. O canal precisa parecer vivo.
+
+**Motivo:** o limite nunca foi a curadoria, era o tamanho do catálogo. Cinco ofertas por dia é o que sai de 150 anúncios monitorados. Com alguns milhares de anúncios, 30 validadas por dia é consequência aritmética, sem afrouxar nenhum critério.
+
+**O rampe é real e precisa ser dito:** o primeiro dia de colheita valida quase nada, porque produto recém-descoberto não tem série. A capacidade cresce com a série — poucas na primeira semana, algo em torno de dez a quinze na terceira, trinta a partir da sexta. Quem promete trinta validadas no dia um não está validando nada.
+
+**Consequência para o produto:** o concorrente publica de 50 a 100 por dia repassando oferta alheia. Somos outro produto, e isso precisa estar escrito na descrição do canal — senão o membro compara pelo volume e acha que o canal está parado.
+
+**Mudaria se:** a taxa de aprovação mostrar que os limiares estão apertados demais para o nicho. Por isso `detecta_ofertas` devolve avaliados e aprovados: a taxa de aprovação é a métrica que diz se o parâmetro está certo.
+
+---
+
+## D-014 · Limiares da curadoria são dado, não código
+**Data:** 2026-07-27
+
+Todo limiar da curadoria vive na tabela `parametro`: dias mínimos de série, janela da mediana, desconto mínimo, comissão mínima, nota e reputação mínimas, intervalo de recompra.
+
+**Motivo:** esses números vão ser ajustados toda semana no começo, olhando o que passou e o que foi publicado. Se cada ajuste exigir deploy, o ajuste vira raro — e limiar que não se ajusta é limiar errado.
+
+**Mudaria se:** nada. Percentual de comissão já seguia essa regra pelo mesmo motivo.
+
+---
+
 ## Pendências que ainda não são decisões
 
 **Extração automática de título e preço.** Hoje o cadastro é manual: o operador cola o link e digita título e preço. O sistema só lê a URL para descobrir a loja e o código do anúncio — nenhuma requisição sai para o site. **Isso bloqueia o coletor diário da Fase 1.**
