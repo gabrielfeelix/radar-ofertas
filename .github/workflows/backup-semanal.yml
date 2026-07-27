@@ -1,0 +1,59 @@
+name: Backup semanal
+
+# O plano gratuito do Supabase NÃO faz backup nenhum. Está escrito
+# na página de preços: "Backups: Not included". Backup diário só
+# existe a partir do Pro, e mesmo lá com retenção de 7 dias.
+#
+# Isso importa mais aqui do que num projeto comum: o ativo deste
+# negócio é a série histórica de preços. Ela leva meses para se
+# formar e não pode ser refeita — preço de terça passada não existe
+# mais em lugar nenhum do mundo. Perder o banco é perder o produto.
+#
+# Este workflow faz um dump semanal e guarda como artefato do
+# repositório, que é privado. Não é uma solução de nível empresarial;
+# é o suficiente para transformar "perdi tudo" em "perdi no máximo
+# uma semana", de graça.
+
+on:
+  schedule:
+    # Domingo, 05:00 UTC (02:00 em São Paulo).
+    - cron: "0 5 * * 0"
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instala o cliente do Postgres
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          # A versão do cliente precisa acompanhar a do servidor
+          # (Postgres 17, fixado em supabase/config.toml).
+          sudo apt-get install -y -qq postgresql-client-17 \
+            || sudo apt-get install -y -qq postgresql-client
+
+      - name: Gera o dump
+        env:
+          # String de conexão do Supabase, em Project Settings >
+          # Database > Connection string. Contém a senha do banco.
+          PGURL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          arquivo="radar-ofertas-$(date -u +%Y-%m-%d).dump"
+          # Formato custom (-Fc): comprimido e restaurável seletivamente.
+          # Só o schema public: o resto é do próprio Supabase e volta
+          # sozinho num projeto novo.
+          pg_dump --format=custom --no-owner --no-privileges \
+                  --schema=public --file="$arquivo" "$PGURL"
+          ls -lh "$arquivo"
+          echo "ARQUIVO=$arquivo" >> "$GITHUB_ENV"
+
+      - name: Guarda o backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARQUIVO }}
+          path: ${{ env.ARQUIVO }}
+          # Doze semanas de backups vivos ao mesmo tempo.
+          retention-days: 90
+          compression-level: 0

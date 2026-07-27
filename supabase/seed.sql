@@ -1,0 +1,6 @@
+-- Dados de exemplo para o banco local.
+--
+-- Vazio de proposito: percentual de comissao e limiar de curadoria
+-- sao configuracao de verdade e vivem em migration, nao aqui.
+-- Este arquivo existe so para o "supabase db reset" parar de avisar
+-- que nao encontrou seed.

@@ -1,0 +1,37 @@
+name: Verifica
+
+# Roda a cada push e em cada pull request. Serve para o Gabriel não
+# depender de lembrar de rodar `pnpm verifica` antes de commitar —
+# se algo quebrar, chega e-mail do GitHub em vez de a descoberta
+# acontecer duas semanas depois.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verifica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.32.1
+
+      - uses: actions/setup-node@v4
+        with:
+          # Lê o .nvmrc, então a versão aqui é a mesma dos dois PCs.
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Tipos
+        run: pnpm exec tsc --noEmit
+
+      - name: Lint
+        run: pnpm exec eslint .
+
+      - name: Build
+        run: pnpm build

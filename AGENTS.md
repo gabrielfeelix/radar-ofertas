@@ -20,9 +20,10 @@ Contexto completo de negócio, divisão de receita e fluxo do dinheiro: `docs/ne
 
 ## 2. Stack — decidida, não rediscuta
 
-- **Banco e auth:** Supabase (Postgres). Agendamento com `pg_cron`. Coletores em Edge Functions.
+- **Banco e auth:** Supabase (Postgres). Coletores em Edge Functions.
 - **Painel:** Next.js (App Router) + TypeScript.
-- **Hospedagem do painel:** Cloudflare Pages ou Netlify. **Não Vercel Hobby** — o plano gratuito da Vercel não permite uso comercial, e este projeto gera receita. Vercel só no plano Pro pago.
+- **Hospedagem do painel:** Cloudflare Workers, com o adaptador OpenNext (`@opennextjs/cloudflare`). **Não Cloudflare Pages** — a integração nativa não roda Next.js em modo servidor e o `next-on-pages` foi descontinuado (D-016). **Não Vercel Hobby** — o plano gratuito da Vercel não permite uso comercial, e este projeto gera receita.
+- **Agendamento:** GitHub Actions, não `pg_cron` (D-015). Mantém o projeto gratuito do Supabase acordado e falha de forma visível.
 - **Redirecionador de links:** Supabase Edge Function, domínio próprio.
 - **Telegram:** Bot API oficial.
 - **WhatsApp:** link de compartilhamento oficial (`wa.me`), envio manual por humano.
@@ -56,7 +57,9 @@ Se você acha que outra tecnologia é melhor, escreva a sugestão em `docs/decis
 
 ## 4. Fase atual e escopo
 
-**Fase atual: 0 — Prova de rastreio.**
+**Fase atual: 0 em andamento, com a base da Fase 1 em construção em paralelo.**
+
+As duas não conflitam: o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
 Este projeto avança por fases. Cada fase tem um critério de conclusão. **Não construa nada de uma fase futura, mesmo que pareça fácil e mesmo que o usuário peça de passagem.** Se ele pedir algo fora da fase atual, avise que é da Fase N, explique o custo de antecipar, e pergunte se quer mesmo. Escopo inflado é o principal risco deste projeto.
 
@@ -65,12 +68,14 @@ Resumo das fases (detalhe em `docs/roadmap.md`):
 | Fase | Objetivo | Concluída quando |
 |---|---|---|
 | 0 | Provar que o subid volta no relatório de comissão | Uma compra real de teste aparece no relatório com o subid correto |
-| 1 | Radar silencioso, sem grupo | 150+ anúncios coletando preço diariamente há 3 semanas |
-| 2 | Primeiro grupo, do próprio dono | Primeira comissão confirmada, rastreada até a publicação |
+| 1 | Radar silencioso e motor de curadoria, sem canal | A detecção aprova 30+ ofertas por dia, por uma semana, sem afrouxar parâmetro |
+| 2 | Primeiro canal, do próprio dono | Primeira comissão confirmada, rastreada até a publicação |
 | 3 | Multi-parceiro | Um parceiro real operando com split e painel próprio |
 | 4 | Parceria com youtuber | — |
 
-**Fora do escopo até a Fase 4, sem exceção:** extensão de navegador, IA escrevendo mensagens, integração com APIs oficiais de marketplace, aplicativo mobile, cadastro de membros, gráfico de histórico de preço, arquitetura multi-workspace de SaaS.
+**Fora do escopo até a Fase 4, sem exceção:** extensão de navegador, IA escrevendo mensagens, aplicativo mobile, cadastro de membros, gráfico bonito de histórico de preço, arquitetura multi-workspace de SaaS.
+
+*Integração com API oficial de marketplace saiu desta lista.* Ela era considerada luxo de fase avançada, mas a pesquisa de mercado mostrou que é o contrário: a via oficial é a única que não depende de raspagem frágil, e a Shopee publica a dela abertamente. É trabalho de Fase 1 (D-010).
 
 ---
 
@@ -82,6 +87,8 @@ O núcleo é a separação entre quatro conceitos que costumam virar uma tabela 
 - **anuncio** — esse produto numa loja específica (o mesmo produto em três lojas são três anúncios)
 - **oferta** — um anúncio que ficou barato agora, com começo, fim e nota
 - **publicacao** — uma oferta enviada para um canal, que é o que gera link, clique e comissão
+
+A curadoria é a única coisa que separa este projeto de um repassador de oferta alheia. Ela mora **no banco**, em `avalia_anuncios` — nunca duplique essa regra em TypeScript. Detalhe em `docs/dados.md` e no porquê em `docs/mercado.md`.
 
 Schema completo, campos e índices: `docs/dados.md`. Não crie tabela fora do que está lá sem registrar a decisão.
 

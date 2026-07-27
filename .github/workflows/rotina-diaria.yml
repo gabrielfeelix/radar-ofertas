@@ -1,0 +1,75 @@
+name: Rotina diária
+
+# Coleta os preços e roda a manutenção do banco, uma vez por dia.
+#
+# Por que aqui e não no pg_cron do Supabase:
+#
+#   1. As fontes divergem sobre o pg_cron estar disponível no plano
+#      gratuito — ele depende de um processo de fundo, que é o tipo
+#      de coisa que planos gratuitos costumam cortar. Depender disso
+#      é descobrir o problema em produção.
+#   2. Projeto gratuito do Supabase é PAUSADO depois de uma semana
+#      sem atividade. Esta rotina, rodando todo dia, mantém o
+#      projeto de pé sozinha.
+#   3. Aqui o histórico de execução fica visível, com log e e-mail
+#      quando falha. No pg_cron, falha silenciosa é o padrão.
+#
+# Quando o projeto for para o plano Pro, dá para mover isto para o
+# pg_cron sem mudar nada do lado do banco: as duas rotas chamam as
+# mesmas funções.
+#
+# ATENÇÃO: o GitHub desativa workflow agendado depois de 60 dias sem
+# nenhum commit no repositório. Se o projeto ficar dois meses parado,
+# a coleta para em silêncio e a série fica com um buraco. O painel
+# mostra os anúncios parados justamente para isso aparecer.
+
+on:
+  schedule:
+    # 09:00 UTC = 06:00 em São Paulo. Cedo o suficiente para a fila
+    # estar pronta quando o operador acordar.
+    - cron: "0 9 * * *"
+  # Permite rodar à mão pelo site do GitHub, para testar.
+  workflow_dispatch:
+
+jobs:
+  rotina:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coleta de preços
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SEGREDO: ${{ secrets.COLETA_SEGREDO }}
+        run: |
+          set -euo pipefail
+          resposta=$(curl --silent --show-error --fail-with-body \
+            --max-time 600 \
+            -X POST "$URL/functions/v1/coleta-diaria" \
+            -H "Authorization: Bearer $CHAVE" \
+            -H "x-coleta-segredo: $SEGREDO")
+          echo "$resposta"
+          echo "### Coleta" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo "$resposta" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Manutenção e detecção de ofertas
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          # Expurgo, expiração, compactação e detecção — nesta ordem,
+          # decidida no banco pela função manutencao_diaria.
+          resposta=$(curl --silent --show-error --fail-with-body \
+            --max-time 600 \
+            -X POST "$URL/rest/v1/rpc/manutencao_diaria" \
+            -H "apikey: $CHAVE" \
+            -H "Authorization: Bearer $CHAVE" \
+            -H "Content-Type: application/json" \
+            -d '{}')
+          echo "$resposta"
+          echo "### Manutenção" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo "$resposta" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

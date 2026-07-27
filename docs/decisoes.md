@@ -171,6 +171,45 @@ Todo limiar da curadoria vive na tabela `parametro`: dias mínimos de série, ja
 
 ---
 
+## D-015 · Agendador no GitHub Actions, não no pg_cron
+**Data:** 2026-07-27
+
+A rotina diária — coleta, expurgo, expiração, compactação e detecção — é disparada por workflow agendado do GitHub Actions, que chama a Edge Function e a função `manutencao_diaria`.
+
+**Motivo:** as fontes divergem sobre o `pg_cron` estar disponível fora do plano Pro, e ele depende de processo de fundo, que é o que planos gratuitos costumam cortar. Além disso, projeto gratuito do Supabase é pausado após uma semana de inatividade — a rotina diária mantém o projeto de pé como efeito colateral. E falha no GitHub é visível, com log e e-mail; no `pg_cron` a falha é silenciosa.
+
+**Pegadinha registrada:** o GitHub desativa workflow agendado após 60 dias sem commit no repositório.
+
+**Mudaria se:** o projeto for para o plano Pro. A troca é indolor, porque as duas rotas chamam as mesmas funções do banco.
+
+---
+
+## D-016 · Painel na Cloudflare via OpenNext, não Cloudflare Pages — corrige a D-004
+**Data:** 2026-07-27
+
+A D-004 dizia "Cloudflare Pages ou Netlify". A parte do Cloudflare Pages está **errada** e fica revogada aqui.
+
+**Motivo:** o pacote `@cloudflare/next-on-pages` foi descontinuado, e a integração nativa do Cloudflare Pages não roda Next.js em modo servidor. A própria Cloudflare passou a recomendar o adaptador **OpenNext** sobre **Cloudflare Workers**, que chegou a 1.0 em fevereiro de 2026 e suporta Next.js 16. A diferença prática é grande: o OpenNext roda no runtime Node, enquanto o caminho antigo só suportava o runtime Edge — e Server Actions com acesso ao banco precisam do Node.
+
+**Segue valendo da D-004:** nada de Vercel no plano gratuito, porque o plano Hobby não permite uso comercial.
+
+**Mudaria se:** o OpenNext se mostrar instável no deploy real. A alternativa é Netlify, que suporta Next.js em modo servidor sem adaptador.
+
+---
+
+## D-017 · A série antiga perde resolução, não desaparece
+**Data:** 2026-07-27
+
+A série guarda um ponto por dia nos últimos 120 dias e um ponto por semana antes disso — sempre o de menor preço da semana.
+
+**Motivo:** medido neste banco, cada ponto custa 187 bytes com índices. Com dez mil anúncios a série cresce 682 MB por ano e estoura os 500 MB do plano gratuito em oito meses, em produção e com o canal no ar. A curadoria usa janela de 30 dias, então nada na regra perde precisão com a compactação, e a tendência de longo prazo continua legível. Os mesmos dez mil anúncios passam a caber em 290 MB por ano.
+
+Guardar o **menor** da semana, e não a média, é decisão de produto: a série existe para responder "quão barato isso já esteve", e média esconde justamente o vale que interessa.
+
+**Mudaria se:** o projeto for para um plano com disco folgado, e mesmo assim o ganho seria pequeno.
+
+---
+
 ## Pendências que ainda não são decisões
 
 **Extração automática de título e preço.** Hoje o cadastro é manual: o operador cola o link e digita título e preço. O sistema só lê a URL para descobrir a loja e o código do anúncio — nenhuma requisição sai para o site. **Isso bloqueia o coletor diário da Fase 1.**
