@@ -113,7 +113,11 @@ port = 54324
 # sender_name = "Admin"
 
 [storage]
-enabled = true
+# Desligado: o projeto nao guarda arquivo. Imagem de produto e
+# referenciada por URL da propria loja, nunca copiada. Manter o
+# servico ligado so adicionava um container a mais para dar
+# problema no start.
+enabled = false
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
