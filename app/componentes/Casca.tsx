@@ -108,6 +108,13 @@ async function montaNavegacao(): Promise<{
       titulo: "Distribuição",
       itens: [{ href: "/canais", rotulo: "Canais", ponto: "#2AABEE" }],
     },
+    {
+      titulo: "Ajustes",
+      itens: [
+        { href: "/ajustes/curadoria", rotulo: "Rigor da curadoria", ponto: "#4B5563" },
+        { href: "/ajustes/nichos", rotulo: "Nichos", ponto: "#4B5563" },
+      ],
+    },
   ];
 
   const resumo: ResumoDaBarra[] =

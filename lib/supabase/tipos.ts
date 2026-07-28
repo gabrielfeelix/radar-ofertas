@@ -144,6 +144,38 @@ export type RendimentoDaFonteLinha = {
   descartadas: number;
 };
 
+/**
+ * Limiar de curadoria.
+ *
+ * Vive em dado, e não em código, exatamente para poder ser ajustado
+ * sem publicar versão nova do sistema. `nicho_id` nulo é o valor
+ * global; com nicho, é o que sobrescreve para aquele nicho (D-023).
+ */
+export type ParametroLinha = {
+  id: string;
+  operacao_id: string;
+  chave: string;
+  nicho_id: string | null;
+  valor: number;
+  descricao: string | null;
+  atualizado_em: string;
+  criado_em: string;
+};
+
+/**
+ * Contador diário de reprovação por comporta.
+ *
+ * Agregado, e não uma linha por anúncio avaliado: a pergunta é "qual
+ * limiar está matando tudo", e uma linha por avaliação daria um milhão
+ * de linhas por ano para responder uma pergunta de soma.
+ */
+export type ComportaDiaLinha = {
+  operacao_id: string;
+  dia: string;
+  comporta: string;
+  reprovados: number;
+};
+
 export type OfertaStatus = "nova" | "aprovada" | "rejeitada" | "adiada" | "expirada";
 
 export type OfertaLinha = {
@@ -274,6 +306,8 @@ export type Banco = {
       fonte_descoberta: Tabela<FonteDescobertaLinha, "operacao_id" | "identificador">;
       mencao: Tabela<MencaoLinha, "operacao_id" | "fonte_id" | "post_externo_id" | "url_bruta">;
       execucao_rotina: Tabela<ExecucaoRotinaLinha, "operacao_id" | "tarefa">;
+      parametro: Tabela<ParametroLinha, "operacao_id" | "chave" | "valor">;
+      comporta_dia: Tabela<ComportaDiaLinha, "operacao_id" | "dia" | "comporta">;
     };
     Views: {
       anuncio_serie: { Row: AnuncioSerieLinha; Relationships: [] };
