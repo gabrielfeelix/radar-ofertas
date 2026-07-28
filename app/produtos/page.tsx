@@ -1,8 +1,9 @@
+import { Identidade } from "@/app/componentes/Identidade";
 import Link from "next/link";
 
 import { FormularioAnuncio } from "@/app/componentes/FormularioAnuncio";
-import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
-import { EtiquetaDeLoja } from "@/app/componentes/EtiquetaDeLoja";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
+import { EtiquetaDeLoja } from "@/app/componentes/Chip";
 import { formataReais } from "@/lib/dinheiro";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type {
@@ -99,7 +100,7 @@ export default async function Produtos({
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Catálogo"
         titulo="Produtos"
         subtitulo="O que está no radar. A série de preço leva meses para se formar e não pode ser refeita — este catálogo é o ativo do projeto."
@@ -114,27 +115,23 @@ export default async function Produtos({
             />
           </div>
         }
-      />
-
-      <Kpis
-        itens={[
-          { rotulo: "Produtos", valor: `${produtos.length}`, nota: `${anuncios.length} anúncios` },
-          {
-            rotulo: "Sem nicho",
-            valor: `${semNicho}`,
-            nota: semNicho > 0 ? "não chegam a canal nenhum" : "todos roteáveis",
-            cor: semNicho > 0 ? "text-atencao" : "text-sucesso",
-          },
-          {
-            rotulo: "Parados",
-            valor: `${parados}`,
-            nota: `sem coleta há ${DIAS_PARA_ALERTA}+ dias`,
-            cor: parados > 0 ? "text-perigo" : "text-sucesso",
-          },
-        ]}
-      />
-
-      <div className="flex w-full max-w-5xl flex-col gap-5 px-6 pt-5 pb-10">
+        kpis={[
+        { rotulo: "Produtos", valor: `${produtos.length}`, nota: `${anuncios.length} anúncios` },
+        {
+          rotulo: "Sem nicho",
+          valor: `${semNicho}`,
+          nota: semNicho > 0 ? "não chegam a canal nenhum" : "todos roteáveis",
+          cor: semNicho > 0 ? "text-atencao" : "text-sucesso",
+        },
+        {
+          rotulo: "Parados",
+          valor: `${parados}`,
+          nota: `sem coleta há ${DIAS_PARA_ALERTA}+ dias`,
+          cor: parados > 0 ? "text-perigo" : "text-sucesso",
+        },
+      ]}
+        medida="larga"
+      >
         <div className="flex flex-wrap items-center gap-3">
           <Chip href={comFiltros("/produtos", { grao, q: busca })} rotulo="todos" ativo={!nichoFiltro} />
           {nichos.map((nicho) => (
@@ -219,7 +216,7 @@ export default async function Produtos({
           </p>
           <FormularioAnuncio nichos={nichos.map((n) => ({ id: n.id, nome: n.nome }))} />
         </details>
-      </div>
+      </Pagina>
     </>
   );
 }
@@ -276,12 +273,7 @@ function TabelaDeProdutos({
             className="grid grid-cols-1 gap-3 border-b border-borda-sutil px-5 py-3 last:border-0 hover:bg-superficie-alt lg:grid-cols-[minmax(180px,1fr)_130px_90px_120px_100px] lg:items-center"
           >
             <span className="flex min-w-0 items-center gap-4">
-              <span
-                className="flex size-12 flex-none items-center justify-center rounded-md border border-borda-sutil bg-preenchimento text-xs text-texto-fraco"
-                aria-hidden
-              >
-                foto
-              </span>
+              <Identidade nome={produto.titulo_canonico} forma="caixa" tamanho="md" />
               <span className="min-w-0">
                 <span className="block truncate text-base font-semibold">
                   {produto.titulo_canonico}
@@ -325,7 +317,7 @@ function TabelaDeProdutos({
               {anuncios.length} {anuncios.length === 1 ? "loja" : "lojas"}
             </span>
 
-            <span className="font-mono text-base font-bold tabular-nums">
+            <span className="text-base font-bold tabular-nums">
               {menor != null ? formataReais(menor) : "—"}
             </span>
 
@@ -413,7 +405,7 @@ function TabelaDeAnuncios({
                     corFundo={loja?.cor_fundo}
                   />
                 </td>
-                <td className="px-5 py-3 text-right font-mono tabular-nums">
+                <td className="px-5 py-3 text-right tabular-nums">
                   {/*
                     Amazon nunca acumula série: a política de associados
                     limita a retenção de preço a 24 horas. A tela diz
@@ -425,12 +417,12 @@ function TabelaDeAnuncios({
                     `${serie?.dias_de_serie ?? 0}d`
                   )}
                 </td>
-                <td className="px-5 py-3 text-right font-mono tabular-nums">
+                <td className="px-5 py-3 text-right tabular-nums">
                   {serie?.menor_preco_centavos != null
                     ? formataReais(serie.menor_preco_centavos)
                     : "—"}
                 </td>
-                <td className="px-5 py-3 text-right font-mono tabular-nums text-texto-medio">
+                <td className="px-5 py-3 text-right tabular-nums text-texto-medio">
                   {serie?.mediana_preco_centavos != null
                     ? formataReais(serie.mediana_preco_centavos)
                     : "—"}

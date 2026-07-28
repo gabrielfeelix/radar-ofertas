@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { removeExcecao } from "@/app/acoes/ajustes";
 import { Botao } from "@/app/componentes/Botao";
-import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { CampoDeLimiar } from "@/app/componentes/CampoDeLimiar";
 import { formataLimiar, montaQuadroDaCuradoria, type Limiar } from "@/lib/curadoria";
 import type { NichoLinha } from "@/lib/supabase/tipos";
@@ -53,40 +53,36 @@ export default async function Curadoria() {
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Ajustes"
         titulo="Rigor da curadoria"
         subtitulo="Os limiares vivem em dado, e não em código, para poderem ser ajustados sem publicar versão nova. O efeito recente de cada um fica ao lado do controle."
-      />
-
-      <Kpis
-        itens={[
-          {
-            rotulo: `Aprovadas em ${dias} dias`,
-            valor: motorRodou ? `${aprovadas}` : "—",
-            nota: motorRodou ? "viraram oferta" : "o motor ainda não rodou",
-          },
-          {
-            rotulo: "Reprovadas",
-            valor: motorRodou ? `${totalReprovado}` : "—",
-            nota: motorRodou ? "barradas por alguma comporta" : "sem contagem ainda",
-          },
-          {
-            rotulo: "Taxa de aprovação",
-            valor: motorRodou ? `${taxa}%` : "—",
-            nota: motorRodou
-              ? taxa === 0
-                ? "nada passa: limiar apertado demais?"
-                : taxa > 40
-                  ? "alta: a curadoria está virando carimbo?"
-                  : "dentro do esperado"
-              : "sem execução, não existe taxa",
-            cor: motorRodou && (taxa === 0 || taxa > 40) ? "text-atencao" : undefined,
-          },
-        ]}
-      />
-
-      <div className="flex w-full max-w-4xl flex-col gap-5 px-6 pt-5 pb-10">
+        kpis={[
+        {
+          rotulo: `Aprovadas em ${dias} dias`,
+          valor: motorRodou ? `${aprovadas}` : "—",
+          nota: motorRodou ? "viraram oferta" : "o motor ainda não rodou",
+        },
+        {
+          rotulo: "Reprovadas",
+          valor: motorRodou ? `${totalReprovado}` : "—",
+          nota: motorRodou ? "barradas por alguma comporta" : "sem contagem ainda",
+        },
+        {
+          rotulo: "Taxa de aprovação",
+          valor: motorRodou ? `${taxa}%` : "—",
+          nota: motorRodou
+            ? taxa === 0
+              ? "nada passa: limiar apertado demais?"
+              : taxa > 40
+                ? "alta: a curadoria está virando carimbo?"
+                : "dentro do esperado"
+            : "sem execução, não existe taxa",
+          cor: motorRodou && (taxa === 0 || taxa > 40) ? "text-atencao" : undefined,
+        },
+      ]}
+        medida="media"
+      >
         {!motorRodou && (
           <p className="rounded-md border border-info-borda bg-info-fundo px-4 py-3 text-base text-info">
             O motor ainda não rodou nenhuma vez, então não existe taxa para observar. Ajustar
@@ -115,7 +111,7 @@ export default async function Curadoria() {
           </Link>
           .
         </p>
-      </div>
+      </Pagina>
     </>
   );
 }

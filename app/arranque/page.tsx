@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { montaTrilhaDeArranque, type EstadoDoPasso, type PassoDoArranque } from "@/lib/arranque";
 
 /**
@@ -59,13 +59,12 @@ export default async function Arranque() {
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Hoje"
         titulo="Trilha de arranque"
         subtitulo="A ordem em que a operação sai do zero. Cada passo destrava o seguinte — e esta tela some quando todos estiverem prontos."
-      />
-
-      <div className="flex w-full max-w-3xl flex-col gap-5 px-6 pt-5 pb-10">
+        medida="media"
+      >
         <section className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie px-5 py-4">
           <div className="flex items-baseline justify-between gap-3">
             <p className="text-md font-extrabold tracking-titulo">
@@ -106,7 +105,7 @@ export default async function Arranque() {
           na primeira semana, algo entre dez e quinze na terceira, trinta a partir da sexta. Fila
           vazia no começo é o normal, não defeito.
         </p>
-      </div>
+      </Pagina>
     </>
   );
 }

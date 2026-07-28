@@ -1,8 +1,9 @@
+import { Identidade } from "@/app/componentes/Identidade";
 import Link from "next/link";
 
 import { adiaOferta, aprovaOferta, rejeitaOferta } from "@/app/acoes/curadoria";
 import { Botao } from "@/app/componentes/Botao";
-import { EtiquetaDeLoja } from "@/app/componentes/EtiquetaDeLoja";
+import { EtiquetaDeLoja } from "@/app/componentes/Chip";
 import { formataReais } from "@/lib/dinheiro";
 import {
   COR_DA_LOJA,
@@ -59,12 +60,12 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
           </Link>
         </div>
 
-        <span
-          className="flex h-52 flex-none items-center justify-center rounded-lg border border-borda-sutil bg-preenchimento text-sm text-texto-fraco"
-          aria-hidden
-        >
-          foto do produto
-        </span>
+        <Identidade
+          nome={oferta.produto}
+          forma="caixa"
+          tamanho="livre"
+          className="h-52 w-full rounded-lg text-2xl"
+        />
 
         <div>
           <h2 className="text-lg font-bold leading-titulo tracking-titulo">{oferta.produto}</h2>
@@ -83,7 +84,7 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
         <div className="flex flex-wrap items-end gap-4 rounded-lg border border-marca-borda bg-[#FFF8F2] p-5">
           <div>
             <p className="text-xs font-bold uppercase tracking-eyebrow text-marca-texto">agora</p>
-            <p className="font-mono text-2xl font-extrabold leading-titulo tracking-titulo tabular-nums">
+            <p className="text-2xl font-extrabold leading-titulo tracking-titulo tabular-nums">
               {formataReais(oferta.precoAtualCentavos)}
             </p>
           </div>
@@ -91,11 +92,11 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
             <p className="text-xs font-bold uppercase tracking-eyebrow text-marca-texto">
               referência própria
             </p>
-            <p className="font-mono text-base font-semibold text-texto-medio tabular-nums">
+            <p className="text-base font-semibold text-texto-medio tabular-nums">
               {formataReais(oferta.precoReferenciaCentavos)}
             </p>
           </div>
-          <span className="ml-auto rounded-md bg-marca px-3 py-2 font-mono text-base font-extrabold text-white tabular-nums">
+          <span className="ml-auto rounded-md bg-marca px-3 py-2 text-base font-extrabold text-white tabular-nums">
             −{oferta.descontoPct}%
           </span>
         </div>
@@ -125,7 +126,7 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
         <section className="flex flex-col gap-3 rounded-lg border border-borda bg-superficie-alt p-4">
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">nota</p>
-            <p className="font-mono text-lg font-extrabold tracking-titulo tabular-nums">
+            <p className="text-lg font-extrabold tracking-titulo tabular-nums">
               {oferta.nota}
               <span className="text-sm font-semibold text-texto-fraco">/100</span>
             </p>
@@ -149,8 +150,8 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
                       </span>{" "}
                       <span className="text-texto-medio">{comporta.nome}</span>
                     </td>
-                    <td className="py-2 text-right font-mono tabular-nums">{comporta.observado}</td>
-                    <td className="py-2 text-right font-mono text-texto-fraco tabular-nums">
+                    <td className="py-2 text-right tabular-nums">{comporta.observado}</td>
+                    <td className="py-2 text-right text-texto-fraco tabular-nums">
                       {comporta.limiar}
                     </td>
                   </tr>
@@ -163,7 +164,7 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
         <section className="flex flex-col gap-2 text-base">
           <p className="flex items-baseline justify-between gap-3">
             <span className="text-texto-fraco">Comissão estimada</span>
-            <span className="font-mono font-bold tabular-nums">
+            <span className="font-bold tabular-nums">
               {formataReais(oferta.comissaoEstimadaCentavos)}{" "}
               <span className="font-sans text-xs font-semibold text-texto-fraco">est.</span>
             </span>
@@ -332,7 +333,7 @@ function Parcela({ rotulo, valor, maximo }: { rotulo: string; valor: number; max
           style={{ width: `${Math.round((valor / maximo) * 100)}%` }}
         />
       </span>
-      <span className="text-right font-mono text-xs font-semibold text-texto-fraco tabular-nums">
+      <span className="text-right text-xs font-semibold text-texto-fraco tabular-nums">
         {valor}/{maximo}
       </span>
     </span>

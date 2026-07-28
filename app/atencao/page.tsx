@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { montaQuadroDeAtencao, type Alerta, type Severidade } from "@/lib/atencao";
 
 /**
@@ -49,7 +49,7 @@ export default async function PrecisaDeAtencao({
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Hoje"
         titulo="Precisa de atenção"
         subtitulo={
@@ -57,9 +57,8 @@ export default async function PrecisaDeAtencao({
             ? "As falhas deste sistema são silenciosas: a coleta para e nada acontece na tela. Só aparece aqui o que exige ação humana."
             : "Só aparece aqui o que exige ação humana. Aviso que não pede ação treina a ignorar a área inteira."
         }
-      />
-
-      <div className="flex w-full max-w-4xl flex-col gap-5 px-6 pt-5 pb-10">
+        medida="media"
+      >
         {alertas.length > 0 && (
           <div className="flex flex-wrap items-center gap-3">
             <Filtro
@@ -102,7 +101,7 @@ export default async function PrecisaDeAtencao({
           Nada é resolvido aqui: esta tela aponta. Os números de coleta, catálogo e configuração
           vêm do banco; os de canais vêm da operação simulada, até o backend entrar.
         </p>
-      </div>
+      </Pagina>
     </>
   );
 }
@@ -120,7 +119,7 @@ function CartaoDeAlerta({ alerta }: { alerta: Alerta }) {
       <div
         className={`flex w-28 flex-none flex-col items-center justify-center gap-1 border-r px-4 py-5 ${cor.fundo} ${cor.borda}`}
       >
-        <span className={`font-mono text-2xl font-extrabold tracking-titulo ${cor.texto}`}>
+        <span className={`text-2xl font-extrabold tabular-nums tracking-titulo ${cor.texto}`}>
           {alerta.metrica}
         </span>
         <span className={`text-xs font-semibold ${cor.texto}`}>{alerta.metricaRotulo}</span>
@@ -244,7 +243,7 @@ function Filtro({
       }`}
     >
       {rotulo}
-      <span className="rounded-sm bg-white/60 px-2 font-mono text-xs font-bold tabular-nums">
+      <span className="rounded-sm bg-white/60 px-2 text-xs font-bold tabular-nums">
         {quantidade}
       </span>
     </Link>

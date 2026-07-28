@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { alternaCanal } from "@/app/acoes/canais";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao } from "@/app/componentes/Botao";
-import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import { buscaCanal, nomeDoNicho, parteDoDono, publicacoesDaFila } from "@/lib/simulacao/loja";
 
@@ -32,7 +32,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Canais"
         titulo={canal.nome}
         subtitulo={`${canal.plataforma === "telegram" ? "Telegram" : "WhatsApp"} · ${canal.nichos
@@ -47,9 +47,8 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
             </Botao>
           </form>
         }
-      />
-
-      <div className="flex w-full max-w-3xl flex-col gap-6 px-6 pt-5 pb-10">
+        medida="media"
+      >
       <AvisoSimulacao detalhe="Canal simulado. Editar aqui muda a capacidade que a tela de aprovar mostra, e nada mais." />
 
       {!canal.ativo && (
@@ -93,7 +92,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
           sozinho.
         </p>
       </section>
-      </div>
+      </Pagina>
     </>
   );
 }
@@ -102,7 +101,7 @@ function Numero({ rotulo, valor }: { rotulo: string; valor: number }) {
   return (
     <div className="rounded-lg border border-borda bg-superficie p-5">
       <p className="text-xs font-semibold uppercase tracking-eyebrow text-texto-fraco">{rotulo}</p>
-      <p className="font-mono text-2xl font-extrabold tabular-nums tracking-titulo">{valor}</p>
+      <p className="text-2xl font-extrabold tabular-nums tracking-titulo">{valor}</p>
     </div>
   );
 }
@@ -125,7 +124,7 @@ function Linha({
           style={{ width: `${Math.max(0, Math.min(100, valor))}%` }}
         />
       </span>
-      <span className="w-20 text-right font-mono font-bold tabular-nums">
+      <span className="w-20 text-right font-bold tabular-nums">
         R$ {valor.toFixed(2).replace(".", ",")}
       </span>
     </li>

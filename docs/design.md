@@ -242,9 +242,53 @@ O protótipo está no repositório, em `referencia-claude-deisgn/`. Abra antes d
 
 ---
 
+## A passada visual de 28/07 — o que estava feio, e por quê
+
+Com onze telas no ar, a comparação lado a lado com o protótipo mostrou que o problema não estava nos tokens. Estava no que **não** tinha virado componente: cada tela resolvia o mesmo pedaço do seu jeito, e o resultado só fica feio ao trocar de tela — que é onde ninguém revisa.
+
+Quatro peças entraram, e uma regra mudou.
+
+### `Identidade` — o rosto de uma entidade
+
+O protótipo tem doze espaços de imagem: foto de produto, logo de canal, logo de parceiro, logo de marketplace. O painel tinha **zero**, e no lugar deles uma caixa cinza com a palavra `foto` escrita dentro — texto de rascunho vazando para a tela. Sem rosto, uma lista de canais e uma de produtos viram a mesma parede de texto.
+
+A peça que faltava não era a imagem — é a **reserva**. Quase nada tem foto hoje e não vai ter enquanto a credencial de marketplace não chegar. Então a ausência é desenhada: inicial do nome sobre cor derivada do próprio nome, sempre a mesma cor para o mesmo item. Círculo para quem tem voz (canal, parceiro), caixa para coisa (produto, loja).
+
+A paleta dela **não** é token de sistema, e por isso não está em `globals.css`: é gerador de cor de terceiro, do mesmo tipo da cor de marketplace. Nenhum tom puxa para o laranja da marca — identidade competindo com a cor da ação é o começo do arco-íris.
+
+### `Chip` — uma etiqueta pequena, três papéis
+
+Cada tela tinha inventado a sua: retângulo verde cheio para WhatsApp, pílula com borda para nicho, chip vermelho para "sem credencial", chip cinza para o slug do banco. Em Marketplaces chegaram a aparecer **três seguidos dizendo quase a mesma coisa**. Vinte etiquetas coloridas na mesma tela não informam nada: viram textura.
+
+Ficam três papéis, e a restrição é o componente: **identidade** (o que a coisa é — aceita cor do banco), **estado** (em que situação está), **alerta** (o que exige ação, e por isso some quando está tudo bem). No máximo um de cada por linha.
+
+Nicho deixou de ser chip: aparece em toda linha e nunca muda de valor, então não distinguia nada e empurrava o título do produto para fora. Virou texto.
+
+### `Cartao` — a superfície, uma só
+
+O plano dizia que o cartão entraria "quando a primeira tela pedir". Cinco pediram, e cada uma escreveu à mão a mesma borda, o mesmo raio e o mesmo fundo com padding diferente.
+
+### `Pagina` — a medida, tirada da mão da tela
+
+Cabeçalho e faixa de indicadores iam até a borda da janela enquanto o conteúdo parava numa medida menor, e a medida variava de tela para tela: havia **cinco larguras diferentes** no mesmo painel. Dentro de cada arquivo estava tudo coerente, e é por isso que sobreviveu a duas revisões.
+
+A correção não é combinar a largura entre as telas — é tirar a escolha delas. A página declara uma medida (`estreita`, `media`, `larga`, `cheia`) e cabeçalho, indicadores e conteúdo ficam dentro dela por construção.
+
+### A regra do monoespaçado mudou
+
+Era "dinheiro em coluna precisa de largura fixa". Estava errado, e o erro se espalhou: preço, percentual, contagem, número de KPI e até texto de reserva de campo saíram em `JetBrains Mono`. O painel inteiro ficou com cara de despejo de terminal.
+
+**Mono é para texto literal** — subid, slug, SKU, comando, endereço. Dinheiro não é literal. O alinhamento de coluna que o mono parecia resolver é trabalho do `tabular-nums`, que a Manrope já tem.
+
+### E a faixa de indicadores parou de esticar
+
+Três indicadores numa tela larga viravam três retângulos de quase 500px com um número perdido no meio, pesando mais que o conteúdo abaixo. Agora têm largura mínima e não crescem.
+
+---
+
 ## O que ainda não é componente
 
-Card, tabela, etiqueta de estado, campo de formulário e barra de navegação **já existem no protótipo com forma consistente o bastante para reconhecer**, mas ainda não viram componente aqui. Entram quando a primeira tela real for construída, com a forma que a tela pedir — não antes.
+Tabela, campo de formulário e etiqueta de estado **já existem no protótipo com forma consistente o bastante para reconhecer**, mas ainda não viraram componente aqui. Entram quando a próxima tela pedir, com a forma que a tela pedir — não antes.
 
 Duas coisas do protótipo que já são boas e vão sobreviver inteiras:
 

@@ -110,7 +110,7 @@ export function BarraLateral({
           {resumo.map((linha) => (
             <p key={linha.rotulo} className="flex items-center justify-between gap-3 text-sm">
               <span className="text-texto-fraco">{linha.rotulo}</span>
-              <span className={`font-mono font-bold tabular-nums ${linha.cor ?? "text-texto"}`}>
+              <span className={`font-bold tabular-nums ${linha.cor ?? "text-texto"}`}>
                 {linha.valor}
               </span>
             </p>

@@ -184,7 +184,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
           <div>
             <span className="mb-2 block text-base font-semibold">Fica com você</span>
             <p
-              className={`rounded-md px-4 py-3 font-mono text-base font-bold tabular-nums ${
+              className={`rounded-md px-4 py-3 text-base font-bold tabular-nums ${
                 dono < 0 ? "bg-perigo-fundo text-perigo" : "bg-superficie text-texto"
               }`}
             >

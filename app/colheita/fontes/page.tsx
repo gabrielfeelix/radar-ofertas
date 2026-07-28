@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { alternaFonteAtiva, defineNichoDaFonte } from "@/app/acoes/fontes";
 import { Botao } from "@/app/componentes/Botao";
-import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioFonte } from "@/app/componentes/FormularioFonte";
 import { enderecoPublico } from "@/lib/canais";
 import { formataReais } from "@/lib/dinheiro";
@@ -54,27 +54,23 @@ export default async function Fontes() {
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Catálogo"
         titulo="Fontes de colheita"
         subtitulo="Canais de terceiros que lemos em busca de candidatas. Nunca publicamos nada neles, e o preço que eles alegam nunca entra na nossa série — quem decide se está barato é o motor, pelas mesmas comportas de qualquer anúncio."
-      />
-
-      <Kpis
-        itens={[
-          { rotulo: "Canais lendo", valor: `${ativas.length}`, nota: `${fontes.length} cadastrados` },
-          { rotulo: "Menções", valor: `${mencoes}`, nota: "links avistados" },
-          { rotulo: "Anúncios novos", valor: `${novos}`, nota: "entraram no catálogo" },
-          {
-            rotulo: "Descartadas",
-            valor: `${descartadas}`,
-            nota: mencoes > 0 ? `${Math.round((descartadas / mencoes) * 100)}% do total` : "—",
-            cor: descartadas > 0 ? "text-atencao" : undefined,
-          },
-        ]}
-      />
-
-      <div className="flex w-full max-w-5xl flex-col gap-7 px-6 pt-5 pb-10">
+        kpis={[
+        { rotulo: "Canais lendo", valor: `${ativas.length}`, nota: `${fontes.length} cadastrados` },
+        { rotulo: "Menções", valor: `${mencoes}`, nota: "links avistados" },
+        { rotulo: "Anúncios novos", valor: `${novos}`, nota: "entraram no catálogo" },
+        {
+          rotulo: "Descartadas",
+          valor: `${descartadas}`,
+          nota: mencoes > 0 ? `${Math.round((descartadas / mencoes) * 100)}% do total` : "—",
+          cor: descartadas > 0 ? "text-atencao" : undefined,
+        },
+      ]}
+        medida="larga"
+      >
       <section>
         <h2 className="mb-4 text-lg font-bold tracking-titulo">Rendimento por canal</h2>
 
@@ -158,15 +154,15 @@ export default async function Fontes() {
                       )}
                     </td>
 
-                    <td className="px-4 py-3 text-right font-mono tabular-nums">{fonte.mencoes}</td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums font-bold text-sucesso">
+                    <td className="px-4 py-3 text-right tabular-nums">{fonte.mencoes}</td>
+                    <td className="px-4 py-3 text-right tabular-nums font-bold text-sucesso">
                       {fonte.anuncios_novos}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums text-texto-medio">
+                    <td className="px-4 py-3 text-right tabular-nums text-texto-medio">
                       {fonte.ja_conhecidos}
                     </td>
                     <td
-                      className={`px-4 py-3 text-right font-mono tabular-nums ${
+                      className={`px-4 py-3 text-right tabular-nums ${
                         fonte.descartadas > 0 ? "text-atencao" : "text-texto-medio"
                       }`}
                     >
@@ -254,14 +250,14 @@ export default async function Fontes() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-texto-medio">@{linha.canal}</td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                    <td className="px-4 py-3 text-right tabular-nums">
                       {formataReais(linha.alegado)}
                     </td>
-                    <td className="px-4 py-3 text-right font-mono tabular-nums">
+                    <td className="px-4 py-3 text-right tabular-nums">
                       {formataReais(linha.observado)}
                     </td>
                     <td
-                      className={`px-4 py-3 text-right font-mono tabular-nums font-bold ${
+                      className={`px-4 py-3 text-right tabular-nums font-bold ${
                         linha.diferencaPct > 10
                           ? "text-perigo"
                           : linha.diferencaPct < -10
@@ -284,7 +280,7 @@ export default async function Fontes() {
           </div>
         )}
       </section>
-      </div>
+      </Pagina>
     </>
   );
 }

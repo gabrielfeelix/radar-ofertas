@@ -45,7 +45,7 @@ export function CampoDeLimiar({
           inputMode="decimal"
           defaultValue={valor ?? ""}
           size={6}
-          className="w-16 bg-transparent text-right font-mono text-base tabular-nums outline-none"
+          className="w-16 bg-transparent text-right text-base tabular-nums outline-none"
         />
         {sufixo && <span className="text-sm text-texto-fraco">{sufixo}</span>}
       </span>

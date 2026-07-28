@@ -1,3 +1,4 @@
+import { Identidade } from "@/app/componentes/Identidade";
 import Link from "next/link";
 
 import {
@@ -8,8 +9,8 @@ import {
 } from "@/app/acoes/curadoria";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao } from "@/app/componentes/Botao";
-import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
-import { EtiquetaDeLoja } from "@/app/componentes/EtiquetaDeLoja";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
+import { EtiquetaDeLoja } from "@/app/componentes/Chip";
 import { PainelDaOferta } from "@/app/componentes/PainelDaOferta";
 import { formataReais } from "@/lib/dinheiro";
 import {
@@ -70,10 +71,11 @@ export default async function Aprovar({
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Hoje"
         titulo="Aprovar"
         subtitulo="O que o motor detectou hoje. O preço de referência é a mediana da nossa própria série — nunca o “preço de” da loja."
+        medida="cheia"
         acoes={
           fila.length > 0 ? (
             <div className="flex items-center gap-1 rounded-md border border-borda bg-superficie p-1">
@@ -83,10 +85,7 @@ export default async function Aprovar({
             </div>
           ) : undefined
         }
-      />
-
-      <Kpis
-        itens={[
+        kpis={[
           {
             rotulo: "Ofertas na fila",
             valor: `${fila.length}`,
@@ -104,9 +103,7 @@ export default async function Aprovar({
             cor: estouro > 0 ? "text-atencao" : "text-sucesso",
           },
         ]}
-      />
-
-      <div className="flex flex-col gap-5 px-6 pt-5 pb-10">
+      >
         <AvisoSimulacao />
 
         {fila.length === 0 ? (
@@ -156,7 +153,7 @@ export default async function Aprovar({
             </ul>
           </section>
         )}
-      </div>
+      </Pagina>
 
       {detalhe && detalhe.status === "nova" && <PainelDaOferta oferta={detalhe} />}
     </>
@@ -187,16 +184,12 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
       {/* Produto: identidade, loja, nicho, série e os avisos que mudam a decisão. */}
       <div className="flex min-w-0 items-center gap-4">
         {/*
-          Espaço de imagem. A foto do produto não é enfeite — ela é
-          metade do reconhecimento numa lista de trinta. Fica cinza
-          até existir coleta que traga a imagem.
+          A foto do produto não é enfeite — é metade do reconhecimento
+          numa lista de trinta. Enquanto a coleta não trouxer imagem, a
+          inicial sobre cor derivada do nome faz o mesmo trabalho: o
+          mesmo produto tem sempre a mesma cor.
         */}
-        <span
-          className="flex size-16 flex-none items-center justify-center rounded-md border border-borda-sutil bg-preenchimento text-xs text-texto-fraco"
-          aria-hidden
-        >
-          foto
-        </span>
+        <Identidade nome={oferta.produto} forma="caixa" tamanho="lg" />
 
         <div className="flex min-w-0 flex-col gap-1">
           <p className="truncate text-base font-semibold tracking-titulo">{oferta.produto}</p>
@@ -241,23 +234,23 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
       </div>
 
       <div className="flex flex-col leading-titulo">
-        <span className="font-mono text-md font-bold tracking-titulo tabular-nums">
+        <span className="text-md font-bold tracking-titulo tabular-nums">
           {formataReais(oferta.precoAtualCentavos)}
         </span>
-        <span className="font-mono text-xs text-texto-fraco line-through tabular-nums">
+        <span className="text-xs text-texto-fraco line-through tabular-nums">
           {formataReais(oferta.precoReferenciaCentavos)}
         </span>
       </div>
 
       <div>
-        <span className="rounded-sm bg-marca-fundo px-3 py-1 font-mono text-sm font-bold text-marca-texto tabular-nums">
+        <span className="rounded-sm bg-marca-fundo px-3 py-1 text-sm font-bold text-marca-texto tabular-nums">
           −{oferta.descontoPct}%
         </span>
       </div>
 
       <AnelDaNota oferta={oferta} />
 
-      <div className="font-mono text-base font-bold tabular-nums lg:text-right">
+      <div className="text-base font-bold tabular-nums lg:text-right">
         {formataReais(oferta.comissaoEstimadaCentavos)}
       </div>
 
@@ -341,7 +334,7 @@ function AnelDaNota({ oferta }: { oferta: OfertaSimulada }) {
           strokeDasharray={`${preenchido} ${circunferencia}`}
         />
       </svg>
-      <span className="absolute font-mono text-sm font-bold tabular-nums">{oferta.nota}</span>
+      <span className="absolute text-sm font-bold tabular-nums">{oferta.nota}</span>
     </span>
   );
 }
@@ -412,7 +405,7 @@ function FilaVazia({ decididas }: { decididas: number }) {
                 className="flex items-center gap-4 rounded-md border border-borda-sutil bg-superficie-alt px-4 py-3"
               >
                 <span
-                  className="w-14 text-right font-mono text-lg font-extrabold tabular-nums tracking-titulo"
+                  className="w-14 text-right text-lg font-extrabold tabular-nums tracking-titulo"
                   style={{ color: cores[i] }}
                 >
                   {etapa.n}

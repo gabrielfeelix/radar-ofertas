@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 
 import { alternaAnuncioAtivo, defineNichoDoProduto } from "@/app/acoes/catalogo";
 import { Botao } from "@/app/componentes/Botao";
-import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
-import { EtiquetaDeLoja } from "@/app/componentes/EtiquetaDeLoja";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
+import { EtiquetaDeLoja } from "@/app/componentes/Chip";
 import { formataReais } from "@/lib/dinheiro";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type {
@@ -62,15 +62,14 @@ export default async function Produto({ params }: { params: Promise<{ id: string
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Catálogo"
         titulo={produto.titulo_canonico}
         subtitulo={`${anuncios.length} ${anuncios.length === 1 ? "anúncio" : "anúncios"} · ${
           diasDeSerie > 0 ? `${diasDeSerie} dias de série` : "sem série ainda"
         }${produto.categoria ? ` · ${produto.categoria}` : ""}`}
-      />
-
-      <div className="flex w-full max-w-4xl flex-col gap-6 px-6 pt-5 pb-10">
+        medida="media"
+      >
         <p className="text-sm text-texto-fraco">
           <Link href="/produtos" className="font-semibold text-marca-texto">
             ← voltar ao catálogo
@@ -170,7 +169,7 @@ export default async function Produto({ params }: { params: Promise<{ id: string
                   >
                     {oferta.status}
                   </span>
-                  <span className="font-mono text-base font-bold tabular-nums">
+                  <span className="text-base font-bold tabular-nums">
                     {formataReais(oferta.preco_atual_centavos)}
                   </span>
                   <span className="text-sm text-texto-fraco">
@@ -197,7 +196,7 @@ export default async function Produto({ params }: { params: Promise<{ id: string
             </p>
           )}
         </section>
-      </div>
+      </Pagina>
     </>
   );
 }
@@ -301,7 +300,7 @@ function Numero({
     <div>
       <p className="text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">{rotulo}</p>
       <p
-        className={`font-mono text-md font-bold tabular-nums ${destaque ? "text-sucesso" : "text-texto"}`}
+        className={`text-md font-bold tabular-nums ${destaque ? "text-sucesso" : "text-texto"}`}
       >
         {valor}
       </p>

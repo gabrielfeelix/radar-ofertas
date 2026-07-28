@@ -164,7 +164,19 @@ A tela nunca fala com a simulação: ela chama uma ação em `app/acoes/`, que h
 
 A raiz `/` leva para `/aprovar`: a casa do dono é o trabalho, não a consulta.
 
-**Casca e design** — barra lateral, barra superior e cabeçalho de página seguem o protótipo (`referencia-claude-deisgn/Radar de Ofertas.dc.html`, no repositório). Manrope e JetBrains Mono, tokens em `app/globals.css`, botão único em `app/componentes/Botao.tsx` — nenhuma tela escreve classe de botão à mão. O porquê de cada escolha está em `docs/design.md`.
+**Casca e design** — barra lateral, barra superior e cabeçalho de página seguem o protótipo (`referencia-claude-deisgn/Radar de Ofertas.dc.html`, no repositório). Manrope e JetBrains Mono, tokens em `app/globals.css`. O porquê de cada escolha está em `docs/design.md`.
+
+**Sistema visual, refeito em 28/07 depois da comparação com o protótipo.** O painel estava correto e feio, e o defeito não era de token: era o que não tinha virado componente. Cinco peças, e **nenhuma tela escreve nada disso à mão**:
+
+| Componente | Substitui |
+|---|---|
+| `Identidade` | a caixa cinza escrita "foto". Inicial sobre cor derivada do nome, estável por item |
+| `Chip` (+ `EtiquetaDeLoja`) | quatro sistemas de etiqueta paralelos. Três papéis, no máximo um de cada por linha |
+| `Cartao` | a mesma borda copiada à mão em cinco telas |
+| `Pagina` | cinco larguras diferentes. A tela declara uma medida; cabeçalho, KPIs e conteúdo ficam dentro dela |
+| `Botao` | laranja/vermelho/verde cheios competindo |
+
+E uma regra mudou: **monoespaçado é para texto literal** (subid, slug, SKU, comando), nunca para dinheiro — alinhar coluna é trabalho do `tabular-nums`. Detalhe e motivo de cada uma em `docs/design.md`, em "A passada visual de 28/07".
 
 **Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15) e a máquina de estados da simulação (27). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
 

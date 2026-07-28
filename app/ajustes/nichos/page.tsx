@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { alternaNichoAtivo, renomeiaNicho } from "@/app/acoes/ajustes";
 import { Botao } from "@/app/componentes/Botao";
-import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioNicho } from "@/app/componentes/FormularioNicho";
 import { formataLimiar, montaQuadroDaCuradoria } from "@/lib/curadoria";
 import { canais } from "@/lib/simulacao/loja";
@@ -48,13 +48,12 @@ export default async function Nichos() {
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Ajustes"
         titulo="Nichos"
         subtitulo="O eixo que liga produto a canal. Produto tem um nicho; canal aceita vários — é isso que faz o roteamento ser consulta ao banco, e não regra escrita à mão."
-      />
-
-      <div className="flex w-full max-w-4xl flex-col gap-5 px-6 pt-5 pb-10">
+        medida="media"
+      >
         {semNicho > 0 && (
           <p className="rounded-md border border-atencao-borda bg-atencao-fundo px-4 py-3 text-base text-atencao">
             {semNicho} {semNicho === 1 ? "produto está" : "produtos estão"} sem nicho e não{" "}
@@ -155,7 +154,7 @@ export default async function Nichos() {
                         {excecoes.map(({ limiar, excecao }) => (
                           <li key={limiar.chave} className="flex flex-wrap items-baseline gap-2 text-base">
                             <span className="text-texto-medio">{limiar.rotulo}:</span>
-                            <strong className="font-mono">
+                            <strong className="tabular-nums">
                               {formataLimiar(excecao.valor, limiar.formato)}
                             </strong>
                             <span className="text-sm text-texto-fraco">
@@ -190,7 +189,7 @@ export default async function Nichos() {
           </p>
           <FormularioNicho />
         </section>
-      </div>
+      </Pagina>
     </>
   );
 }
@@ -198,7 +197,7 @@ export default async function Nichos() {
 function Ligacao({ rotulo, valor, href }: { rotulo: string; valor: number; href: string }) {
   return (
     <Link href={href} className="flex items-baseline gap-2 hover:text-marca-texto">
-      <span className="font-mono text-lg font-extrabold tabular-nums tracking-titulo">{valor}</span>
+      <span className="text-lg font-extrabold tabular-nums tracking-titulo">{valor}</span>
       <span className="text-sm text-texto-fraco">{rotulo}</span>
     </Link>
   );

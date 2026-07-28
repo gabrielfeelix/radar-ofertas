@@ -1,3 +1,4 @@
+import { Identidade } from "@/app/componentes/Identidade";
 import Link from "next/link";
 
 import {
@@ -11,7 +12,7 @@ import {
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao, BotaoDePlataforma } from "@/app/componentes/Botao";
 import { BotaoWhatsApp } from "@/app/componentes/BotaoWhatsApp";
-import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { formataReais } from "@/lib/dinheiro";
 import {
   publicacoesDaFila,
@@ -62,17 +63,16 @@ export default async function Publicar() {
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Hoje"
         titulo="Publicar"
+        medida="media"
         subtitulo={
           pendentes.length === 0
             ? "Nada esperando envio."
             : "O WhatsApp abre com a mensagem pronta — você aperta enviar. O Telegram sai sozinho."
         }
-      />
-
-      <div className="flex w-full max-w-3xl flex-col gap-5 px-6 pt-5 pb-10">
+      >
         <AvisoSimulacao detalhe="Nada é publicado de verdade. O botão do WhatsApp abre o aplicativo com o texto, e o do Telegram só marca como enviado." />
 
         {total > 0 && (
@@ -189,7 +189,7 @@ export default async function Publicar() {
             </ul>
           </section>
         )}
-      </div>
+      </Pagina>
     </>
   );
 }
@@ -275,16 +275,11 @@ function CartaoDeEnvio({
   return (
     <article className="flex flex-col gap-4 p-5">
       <div className="flex items-start gap-4">
-        <span
-          className="flex size-20 flex-none items-center justify-center rounded-md border border-borda-sutil bg-preenchimento text-xs text-texto-fraco"
-          aria-hidden
-        >
-          foto
-        </span>
+        <Identidade nome={publicacao.produto} forma="caixa" tamanho="lg" />
         <div className="flex min-w-0 flex-col gap-1">
           <p className="text-base font-bold leading-titulo tracking-titulo">{publicacao.produto}</p>
           <p className="flex flex-wrap items-baseline gap-2">
-            <span className="font-mono text-xl font-extrabold tracking-titulo tabular-nums">
+            <span className="text-xl font-extrabold tracking-titulo tabular-nums">
               {formataReais(publicacao.precoNaFilaCentavos)}
             </span>
           </p>
@@ -384,9 +379,9 @@ function CartaoBloqueado({ publicacao }: { publicacao: PublicacaoSimulada }) {
 
       <p className="mt-3 text-base">
         O preço {subiu ? "subiu" : "caiu"} de{" "}
-        <span className="font-mono font-bold">{formataReais(publicacao.precoNaFilaCentavos)}</span>{" "}
+        <span className="font-bold tabular-nums">{formataReais(publicacao.precoNaFilaCentavos)}</span>{" "}
         para{" "}
-        <span className="font-mono font-bold">{formataReais(publicacao.precoAgoraCentavos)}</span>{" "}
+        <span className="font-bold tabular-nums">{formataReais(publicacao.precoAgoraCentavos)}</span>{" "}
         depois de entrar na fila.
       </p>
       <p className="mt-2 text-sm text-atencao">

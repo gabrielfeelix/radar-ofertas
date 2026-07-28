@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
+import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type {
   MencaoLinha,
@@ -70,13 +70,12 @@ export default async function Mencoes({
 
   return (
     <>
-      <CabecalhoDaPagina
+      <Pagina
         trilha="Catálogo"
         titulo="Menções com problema"
         subtitulo="Link avistado que não virou anúncio. É aqui que aparece formato de loja que o leitor ainda não entende — o tipo de falha que não dá erro em lugar nenhum e só se manifesta como catálogo crescendo devagar."
-      />
-
-      <div className="flex w-full max-w-5xl flex-col gap-6 px-6 pt-5 pb-10">
+        medida="larga"
+      >
       <section className="flex flex-wrap gap-3">
         <Filtro href="/colheita/mencoes" rotulo="todas" quantidade={total} ativo={filtro === null} />
         {RESULTADOS_COM_PROBLEMA.map((resultado) => (
@@ -171,7 +170,7 @@ export default async function Mencoes({
         </Link>
         .
       </p>
-      </div>
+      </Pagina>
     </>
   );
 }
@@ -260,7 +259,7 @@ function Filtro({
           : "border-borda bg-superficie text-texto-medio hover:bg-superficie-alt"
       }`}
     >
-      {rotulo} <span className="font-mono tabular-nums">{quantidade}</span>
+      {rotulo} <span className="tabular-nums">{quantidade}</span>
     </Link>
   );
 }
