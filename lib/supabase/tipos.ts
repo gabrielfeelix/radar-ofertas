@@ -1,26 +1,40 @@
 /**
- * Tipos do banco, escritos à mão para espelhar as migrations da
- * Fase 1.
+ * Tipos do banco, escritos à mão para espelhar as migrations.
  *
- * Assim que o projeto Supabase existir, estes tipos passam a ser
- * gerados a partir do banco de verdade com:
+ * Só está aqui o que a aplicação usa. Tabela que ainda não tem
+ * tela não entra: tipo sem uso envelhece sem que ninguém perceba.
  *
- *   supabase gen types typescript --linked > lib/supabase/tipos.ts
+ * Quando o projeto Supabase da nuvem existir, isto pode passar a
+ * ser gerado:
  *
- * Até lá, este arquivo é a fonte — e precisa ser atualizado junto
- * com qualquer migration nova.
+ *   pnpm db:tipos
  */
 
 export type MarketplaceLinha = {
   id: string;
+  operacao_id: string;
   slug: string;
   nome: string;
-  afiliado_id: string | null;
-  comissao_padrao_pct: number;
+  /** Só o dono lê, e por função. Nunca vem em SELECT do navegador. */
+  afiliado_id?: string | null;
+  /** Nulo = não configurado, que é diferente de zero. */
+  comissao_padrao_pct: number | null;
   suporta_subid: boolean | null;
   subid_tamanho_max: number | null;
   cache_preco_max_horas: number | null;
   base_de_historico: boolean;
+  cor_texto: string | null;
+  cor_fundo: string | null;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+};
+
+export type NichoLinha = {
+  id: string;
+  operacao_id: string;
+  nome: string;
+  slug: string;
   ativo: boolean;
   criado_em: string;
   atualizado_em: string;
@@ -28,6 +42,9 @@ export type MarketplaceLinha = {
 
 export type ProdutoLinha = {
   id: string;
+  operacao_id: string;
+  /** Nulo = não roteado para canal nenhum. É a fila da triagem. */
+  nicho_id: string | null;
   titulo_canonico: string;
   categoria: string | null;
   imagem_url: string | null;
@@ -37,15 +54,16 @@ export type ProdutoLinha = {
 
 export type AnuncioLinha = {
   id: string;
+  operacao_id: string;
   produto_id: string;
   marketplace_id: string;
   url_original: string;
   sku_externo: string;
   vendedor: string | null;
+  /** Nota do produto, 0 a 5. Sinal diferente da reputação do vendedor. */
   avaliacao: number | null;
-  /** Quantas avaliações. Nota 5,0 com 2 avaliações não vale nota 4,6 com 800. */
   avaliacao_qtd: number | null;
-  /** Normalizada de 0 a 1. Cada loja tem escala própria; a conversão é feita na fonte. */
+  /** Reputação do vendedor, normalizada de 0 a 1. */
   reputacao_vendedor: number | null;
   loja_oficial: boolean | null;
   vendas_estimadas: number | null;
@@ -55,78 +73,40 @@ export type AnuncioLinha = {
   atualizado_em: string;
 };
 
-export type ComissaoCategoriaLinha = {
-  id: string;
-  marketplace_id: string;
-  categoria: string;
-  percentual: number;
-  vigente_desde: string;
-  vigente_ate: string | null;
-  criado_em: string;
-};
-
-/** Limiares da curadoria. Ajustáveis sem deploy, porque mudam toda semana no começo. */
-export type ParametroLinha = {
-  chave: string;
-  valor: number;
-  descricao: string;
-  atualizado_em: string;
-};
-
-export type OfertaStatus = "nova" | "aprovada" | "rejeitada" | "expirada";
+export type OfertaStatus = "nova" | "aprovada" | "rejeitada" | "adiada" | "expirada";
 
 export type OfertaLinha = {
   id: string;
+  operacao_id: string;
   anuncio_id: string;
   preco_atual_centavos: number;
-  /** Mediana observada por nós. Nunca o "preço de" da loja, que é inflado. */
+  /** Mediana observada por nós. Nunca o "preço de" da loja. */
   preco_referencia_centavos: number;
-  /** Abaixo de 14, a mensagem não pode falar em desconto histórico. */
   referencia_janela_dias: number;
   dias_de_serie: number;
   desconto_pct: number;
   comissao_estimada_centavos: number;
-  /** Escala de 0 a 100, teto real 80 até a Fase 2 trazer canal. */
+  /** Falso: a mensagem não pode falar em mínimo histórico (regra 3.4). */
+  pode_afirmar_minimo: boolean;
+  /** Escala cheia de 0 a 100: desconto 50, comissão 30, vendedor 20. */
   nota: number;
   nota_desconto: number;
   nota_comissao: number;
-  nota_qualidade: number;
+  nota_vendedor: number;
   status: OfertaStatus;
+  motivo_rejeicao: string | null;
+  adiamentos: number;
   detectada_em: string;
+  decidida_em: string | null;
+  decidida_por: string | null;
   expirada_em: string | null;
   criado_em: string;
 };
 
-/** Veredito de `avalia_anuncio`. É o que responde "por que essa oferta não apareceu?". */
-export type VeredictoAnuncio = {
-  anuncio_id: string;
-  aprovada: boolean;
-  /** Vazio quando aprovada. Ex.: `serie_curta(5_de_14_dias)`, `comissao_baixa(144_centavos)`. */
-  motivos: string[];
-  preco_atual_centavos: number;
-  preco_referencia_centavos: number;
-  referencia_janela_dias: number;
-  dias_de_serie: number;
-  desconto_pct: number;
-  comissao_estimada_centavos: number;
-  nota: number;
-  nota_desconto: number;
-  nota_comissao: number;
-  nota_qualidade: number;
-};
-
-export type PrecoPontoLinha = {
-  id: number;
-  anuncio_id: string;
-  preco_centavos: number;
-  disponivel: boolean;
-  coletado_em: string;
-  dia_local: string;
-};
-
-/** View `anuncio_serie` — saúde da série histórica por anúncio. */
+/** View `anuncio_serie` — saúde da série por anúncio. */
 export type AnuncioSerieLinha = {
   anuncio_id: string;
+  operacao_id: string;
   produto_id: string;
   marketplace_id: string;
   marketplace_slug: string;
@@ -141,6 +121,48 @@ export type AnuncioSerieLinha = {
   mediana_preco_centavos: number | null;
 };
 
+/** View `saude_operacao` — os números agregados de "Precisa de atenção". */
+export type SaudeOperacaoLinha = {
+  operacao_id: string;
+  ultima_coleta: string | null;
+  ultima_coleta_ok: boolean | null;
+  anuncios_parados: number;
+  produtos_sem_nicho: number;
+  mencoes_com_problema: number;
+  ofertas_na_fila: number;
+  lojas_sem_credencial: number;
+  lojas_sem_comissao: number;
+  canais_ativos: number;
+};
+
+/**
+ * Veredito de `avalia_anuncio`. Responde tanto "por que esta oferta
+ * apareceu" quanto "por que este anúncio não virou oferta".
+ */
+export type VeredictoAnuncio = {
+  anuncio_id: string;
+  operacao_id: string;
+  aprovada: boolean;
+  /**
+   * Vazio quando aprovada. O nome da comporta vem antes do
+   * parêntese: `serie_curta(5_de_7_dias)`, `preco_recorrente(67%_dos_dias)`,
+   * `comissao_nao_configurada`.
+   */
+  motivos: string[];
+  preco_atual_centavos: number;
+  preco_referencia_centavos: number;
+  referencia_janela_dias: number;
+  dias_de_serie: number;
+  desconto_pct: number;
+  comissao_estimada_centavos: number;
+  pode_afirmar_minimo: boolean;
+  recorrencia_pct: number;
+  nota: number;
+  nota_desconto: number;
+  nota_comissao: number;
+  nota_vendedor: number;
+};
+
 type Tabela<Linha, Obrigatorios extends keyof Linha> = {
   Row: Linha;
   Insert: Pick<Linha, Obrigatorios> & Partial<Omit<Linha, Obrigatorios>>;
@@ -151,35 +173,18 @@ type Tabela<Linha, Obrigatorios extends keyof Linha> = {
 export type Banco = {
   public: {
     Tables: {
-      marketplace: Tabela<MarketplaceLinha, "slug" | "nome">;
-      produto: Tabela<ProdutoLinha, "titulo_canonico">;
+      marketplace: Tabela<MarketplaceLinha, "operacao_id" | "slug" | "nome">;
+      nicho: Tabela<NichoLinha, "operacao_id" | "nome" | "slug">;
+      produto: Tabela<ProdutoLinha, "operacao_id" | "titulo_canonico">;
       anuncio: Tabela<
         AnuncioLinha,
-        "produto_id" | "marketplace_id" | "url_original" | "sku_externo"
+        "operacao_id" | "produto_id" | "marketplace_id" | "url_original" | "sku_externo"
       >;
-      preco_ponto: Tabela<PrecoPontoLinha, "anuncio_id" | "preco_centavos">;
-      comissao_categoria: Tabela<
-        ComissaoCategoriaLinha,
-        "marketplace_id" | "categoria" | "percentual"
-      >;
-      parametro: Tabela<ParametroLinha, "chave" | "valor" | "descricao">;
-      oferta: Tabela<
-        OfertaLinha,
-        | "anuncio_id"
-        | "preco_atual_centavos"
-        | "preco_referencia_centavos"
-        | "referencia_janela_dias"
-        | "dias_de_serie"
-        | "desconto_pct"
-        | "comissao_estimada_centavos"
-        | "nota"
-        | "nota_desconto"
-        | "nota_comissao"
-        | "nota_qualidade"
-      >;
+      oferta: Tabela<OfertaLinha, "operacao_id" | "anuncio_id">;
     };
     Views: {
       anuncio_serie: { Row: AnuncioSerieLinha; Relationships: [] };
+      saude_operacao: { Row: SaudeOperacaoLinha; Relationships: [] };
     };
     Functions: {
       registra_preco: {
@@ -191,14 +196,6 @@ export type Banco = {
         };
         Returns: number;
       };
-      expurga_precos_expirados: {
-        Args: Record<string, never>;
-        Returns: number;
-      };
-      parametro: {
-        Args: { p_chave: string };
-        Returns: number;
-      };
       avalia_anuncio: {
         Args: { p_anuncio_id: string };
         Returns: VeredictoAnuncio[];
@@ -206,6 +203,16 @@ export type Banco = {
       detecta_ofertas: {
         Args: Record<string, never>;
         Returns: { avaliados: number; aprovados: number }[];
+      };
+      manutencao_diaria: {
+        Args: Record<string, never>;
+        Returns: unknown;
+      };
+      expurga_precos_expirados: { Args: Record<string, never>; Returns: number };
+      abre_execucao: { Args: { p_tarefa: string }; Returns: string };
+      fecha_execucao: {
+        Args: { p_id: string; p_sucesso: boolean; p_resumo?: unknown; p_erro?: string };
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;

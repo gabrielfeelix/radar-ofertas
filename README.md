@@ -14,8 +14,8 @@ A pesquisa de mercado (`docs/mercado.md`) confirmou que isso é raro: o padrão 
 
 ### Pronto e testado
 
-- **Banco** — 10 migrations: `marketplace`, `produto`, `anuncio`, `preco_ponto`, `comissao_categoria`, `parametro`, `oferta`, `fonte_descoberta`, `mencao`. RLS ligado, permissões explícitas, nenhum papel ganha nada por herança.
-- **Motor de curadoria** — duas comportas e a nota, dentro do banco. Dez casos verificados. Detecta 3.000 anúncios em 1,5 segundo.
+- **Banco** — 12 migrations, reescritas do zero em 27/07. `operacao_id` em toda tabela, papel como lista, nicho como entidade, limiar por nicho, contador de reprovação por comporta e registro de execução das rotinas. RLS e permissões explícitas: nada nasce aberto.
+- **Motor de curadoria** — as comportas e a nota (0 a 100), dentro do banco. Treze casos verificados. Detecta 3.000 anúncios em 1,4 segundo.
 - **Manutenção** — expurgo da Amazon, expiração de oferta, compactação da série antiga.
 - **Coletor diário** — fontes plugáveis por marketplace, esperando credencial.
 - **Colheita de canais** — lê canais públicos do Telegram, resolve os links encurtados e cadastra no catálogo o que ainda não conhecemos. Testada contra canal real: 18 anúncios novos em 8 segundos.

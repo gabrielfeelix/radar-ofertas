@@ -1,135 +1,197 @@
 # Modelo de dados
 
-Postgres via Supabase. Convenções: `snake_case`, português, tabela no singular, `id` + `criado_em` em toda tabela, RLS ligado desde a primeira migration.
+Postgres 17 via Supabase. Convenções: `snake_case`, português, tabela no singular, `id` e `criado_em` em toda tabela, RLS ligada desde a primeira migration.
 
-**Dinheiro sempre em `INTEGER` de centavos.** Nunca `float` ou `numeric` para valor monetário nesta base — a conversão para reais acontece só na exibição.
+**Dinheiro sempre `INTEGER` de centavos** (D-005). A conversão para reais acontece só na exibição.
 
-**Datas sempre `timestamptz` em UTC.** Exibição em `America/Sao_Paulo`.
+**Datas sempre `timestamptz` em UTC.** Exibição em `America/Sao_Paulo`. A função `hoje()` devolve a data no fuso da operação — "hoje" é o dia de quem opera, não o dia UTC.
 
 ---
 
 ## A separação central
 
-Quatro conceitos que costumam virar uma tabela só e depois viram um inferno de manutenção:
+Quatro conceitos que costumam virar uma tabela só e depois viram um inferno:
 
-- **produto** — a identidade da coisa. "Tapete higiênico SuperSecão 80×60".
-- **anuncio** — esse produto numa loja específica. O mesmo produto na Amazon, Shopee e Magalu são três anúncios com três preços.
-- **oferta** — um anúncio que ficou barato agora. Tem começo, fim e nota.
-- **publicacao** — uma oferta enviada para um canal. É o que gera link, clique e comissão.
+- **produto** — a identidade da coisa
+- **anuncio** — essa coisa numa loja específica. O mesmo tapete na Shopee, no Mercado Livre e na Amazon é **um** produto com **três** anúncios, três preços e três séries
+- **oferta** — um anúncio que ficou barato agora, já validado
+- **publicacao** — uma oferta enviada para um canal. É o que gera link, clique e comissão *(Fase 2)*
 
-Sem essa separação, o mesmo produto em três lojas vira três produtos duplicados e a nota da oferta fica impossível de calcular.
+Sem essa separação, o mesmo produto em três lojas vira três produtos duplicados e a nota fica impossível de calcular.
+
+---
+
+## As doze migrations
+
+| # | Arquivo | O que traz |
+|---|---|---|
+| 01 | `fundacao` | `operacao`, utilitários, e o padrão de permissão fechado |
+| 02 | `usuario_e_papeis` | `usuario` e as funções de contexto do RLS |
+| 03 | `nicho` | O eixo de roteamento |
+| 04 | `marketplace` | Lojas e comissão por nicho |
+| 05 | `parametros` | Limiares, com herança por nicho |
+| 06 | `produto_anuncio_preco` | O catálogo e a série |
+| 07 | `parceiro_e_canal` | Quem traz audiência e onde se publica |
+| 08 | `colheita` | Fontes de descoberta e menções |
+| 09 | `oferta_e_motor` | A curadoria |
+| 10 | `execucao_rotina` | O que permite ver falha silenciosa |
+| 11 | `rls` | Todas as policies, num arquivo só |
+| 12 | `permissoes` | Grants, inclusive os de coluna |
+
+---
+
+## operacao — a coluna que não dá para adicionar depois
+
+Toda tabela carrega `operacao_id`, e todo RLS passa por ela. Existe **uma** linha, e nada na interface menciona a palavra.
+
+É a única decisão do projeto cara de retroagir: login, telas e nichos entram depois sem dor, mas separação por operação toca toda tabela, toda policy e toda consulta. Fazer depois é reescrever o banco **com a série histórica dentro** — e a série não se refaz, porque preço de terça passada não existe mais em lugar nenhum.
+
+Isto não é escopo de SaaS: sem cadastro público, sem plano, sem cobrança. É deixar de fechar uma porta.
 
 ---
 
 ## Tabelas
 
-### parceiro
-Quem traz audiência.
+### usuario
+`id` (referencia `auth.users`), `operacao_id`, `nome`, `email`, **`papeis text[]`**, `parceiro_id`, `ativo`
 
-`id`, `nome`, `contato`, `chave_pix`, `tipo` (`proprio` | `amigo` | `youtuber`), `ativo`, `criado_em`
+**Papel é lista, não valor único.** `canal` guarda `split_audiencia_pct` e `split_operacao_pct` separados justamente porque a mesma pessoa pode trazer a audiência **e** operar — o arranjo mais provável entre amigos. Com papel único ela perderia o extrato ou perderia a fila, e nenhuma das duas daria erro: ela simplesmente não veria metade do que deveria.
 
-### canal
-Um grupo de WhatsApp ou canal de Telegram.
+### nicho
+`id`, `operacao_id`, `nome`, `slug`, `ativo`
 
-`id`, `parceiro_id`, `nome`, `plataforma` (`whatsapp` | `telegram`), `nicho`, `membros_estimados`, `posts_por_dia_max`, `horarios_permitidos` (array de hora local), `template_id`, `split_audiencia_pct`, `split_operacao_pct`, `operador_id`, `telegram_chat_id` (nullable), `ativo`, `criado_em`
-
-Os dois percentuais ficam separados porque um parceiro pode ter só audiência ou audiência e operação. O que sobra dos dois é a parte do dono.
+Produto tem um; canal aceita vários (D-019). É o roteamento **e** o nível onde os limiares são sobrescritos.
 
 ### marketplace
-`id`, `nome`, `afiliado_id`, `comissao_padrao_pct`, `suporta_subid` (bool), `cache_preco_max_horas`, `ativo`
+`id`, `operacao_id`, `slug`, `nome`, `afiliado_id`, `comissao_padrao_pct`, `suporta_subid`, `subid_tamanho_max`, `cache_preco_max_horas`, `base_de_historico`, `cor_texto`, `cor_fundo`, `ativo`
 
-O campo `cache_preco_max_horas` existe por causa da Amazon, que permite guardar preço por no máximo 24 horas. O coletor e a exibição respeitam esse campo por marketplace, não por regra fixa no código.
+`comissao_padrao_pct` é **nulo quando não configurado**, e isso é diferente de zero: zero silencioso reprovaria todas as ofertas da loja por "comissão baixa", que é diagnóstico errado para um problema de configuração.
+
+`afiliado_id` **não é concedido ao navegador** — permissão de coluna, migration 12. Quem precisa lê por `afiliado_id_do_marketplace()`, que confere o papel.
 
 ### comissao_categoria
-Percentual por categoria e marketplace. Nunca hardcode percentual no código — eles mudam por campanha.
+`id`, `operacao_id`, `marketplace_id`, **`nicho_id`**, `percentual`, `vigente_desde`, `vigente_ate`
 
-`id`, `marketplace_id`, `categoria`, `percentual`, `vigente_desde`, `vigente_ate`
-
-### produto
-`id`, `titulo_canonico`, `categoria`, `imagem_url`, `criado_em`
-
-### anuncio
-`id`, `produto_id`, `marketplace_id`, `url_original`, `sku_externo`, `vendedor`, `avaliacao`, `ativo`, `ultima_coleta_em`, `criado_em`
-
-Índice único em (`marketplace_id`, `sku_externo`) para não duplicar anúncio na mesma loja.
-
-### preco_ponto
-Série histórica. É a tabela que mais cresce.
-
-`id`, `anuncio_id`, `preco_centavos`, `disponivel` (bool), `coletado_em`
-
-Índice em (`anuncio_id`, `coletado_em desc`). Guarde no máximo um ponto por anúncio por dia; se coletar mais vezes, mantenha o menor do dia. Rotina de limpeza descarta pontos de marketplaces cujo `cache_preco_max_horas` seja menor que a idade do ponto — na prática, a Amazon.
+Chaveada por nicho, não por texto livre. A primeira modelagem usava `categoria text`, e o teste mostrou o efeito na hora: ninguém preenche texto livre, nenhuma linha casa, a comissão vira zero e **toda** oferta é reprovada.
 
 ### parametro
-Limiares da curadoria, ajustáveis sem deploy (D-014).
+`id`, `operacao_id`, `chave`, `nicho_id` (nulo = global), `valor`, `descricao`
 
-`chave`, `valor`, `descricao`, `atualizado_em`
+Linha sem nicho é o padrão; com nicho, sobrescreve (D-023). Lido por `parametro(chave, nicho)`, que cai no global quando não há sobrescrita. A view `limiar` entrega tudo pivotado, porque o motor lê como tabela, não como função escalar.
 
-Lidos pela função `parametro(chave)`, que falha alto se a chave não existir — devolver um padrão silencioso esconderia erro de digitação e faria o sistema curar com limiar que ninguém escolheu.
+**Os dois números de série são distintos, e a distinção importa:**
+
+| Chave | Padrão | O que trava |
+|---|---|---|
+| `dias_minimos_de_serie` | 7 | Abaixo disso não dá para **avaliar** |
+| `dias_para_afirmar` | 14 | Abaixo disso não dá para **afirmar** mínimo histórico |
+
+Entre 7 e 14 a oferta existe, mas a mensagem usa a redação honesta com a data de início da observação (regra 3.4).
+
+### produto
+`id`, `operacao_id`, `nicho_id`, `titulo_canonico`, `categoria`, `imagem_url`
+
+`nicho_id` nulo é estado real: a colheita traz volume e nem todo canal lido tem nicho. Produto sem nicho não é roteado — é a fila da triagem em lote.
+
+### anuncio
+`id`, `operacao_id`, `produto_id`, `marketplace_id`, `url_original`, `sku_externo`, `vendedor`, `avaliacao`, `avaliacao_qtd`, `reputacao_vendedor`, `loja_oficial`, `vendas_estimadas`, `ativo`, `ultima_coleta_em`
+
+Índice único em (`marketplace_id`, `sku_externo`). Sem ele, o mesmo link colado à mão e depois colhido de um canal cria dois anúncios e parte a série em duas, em silêncio.
+
+**`avaliacao` e `reputacao_vendedor` são sinais diferentes**, de propósito separados: produto ruim de vendedor bom e produto bom de vendedor ruim pedem decisões distintas. A tela pode juntar; o limiar não.
+
+### preco_ponto
+`id`, `anuncio_id`, `preco_centavos`, `disponivel`, `coletado_em`, `dia_local`
+
+A tabela que mais cresce. **187 bytes por ponto**, medido com índices.
+
+Duas regras vivem no banco, não no coletor: um ponto por anúncio por dia mantendo o menor (índice único + `registra_preco`), e expurgo pelo teto de retenção da loja.
+
+`compacta_serie_antiga()` guarda um ponto por dia nos últimos 120 e **um por semana** antes disso, sempre o menor da semana. Sem isso, dez mil anúncios estouram os 500 MB do plano gratuito em oito meses.
+
+### parceiro
+`id`, `operacao_id`, `nome`, `contato`, `chave_pix`, `tipo`, `ativo`
+
+`chave_pix` **não é concedida ao navegador** — mesma proteção de coluna do `afiliado_id`. RLS filtra linha; a linha do parceiro é legitimamente visível para ele. O que não pode é a chave de **outro** aparecer numa listagem por acidente.
+
+### canal e canal_nicho
+`canal`: `id`, `operacao_id`, `parceiro_id`, `nome`, `plataforma`, `telegram_chat_id`, `membros_estimados`, **`posts_por_dia_max`**, `horarios_permitidos`, `split_audiencia_pct`, `split_operacao_pct`, `operador_id`, `ativo`
+
+`posts_por_dia_max` é o **orçamento do dia**. Aprovar 30 ofertas em 3 canais gera 90 publicações contra a soma dos tetos — e sem esse número visível na aprovação, o dono aprova de graça e descobre o custo depois.
+
+### fonte_descoberta e mencao
+Colheita (D-012). A fonte tem `nicho_id`, e **o produto colhido herda esse nicho** — sem isso a colheita produz milhares de produtos não roteáveis.
+
+`mencao.preco_alegado_centavos` é alegação de terceiro e **nunca entra em `preco_ponto`**. Serve para comparar com o que nós coletamos: é assim que se descobre canal que mente.
 
 ### oferta
-`id`, `anuncio_id`, `preco_atual_centavos`, `preco_referencia_centavos`, `referencia_janela_dias`, `dias_de_serie`, `desconto_pct`, `nota`, `nota_desconto`, `nota_comissao`, `nota_qualidade`, `comissao_estimada_centavos`, `status` (`nova` | `aprovada` | `rejeitada` | `expirada`), `detectada_em`, `expirada_em`, `criado_em`
+`id`, `operacao_id`, `anuncio_id`, `preco_atual_centavos`, `preco_referencia_centavos`, `referencia_janela_dias`, `dias_de_serie`, `desconto_pct`, `comissao_estimada_centavos`, **`pode_afirmar_minimo`**, `nota`, `nota_desconto`, `nota_comissao`, `nota_vendedor`, `status`, **`motivo_rejeicao`**, `adiamentos`, `decidida_em`, `decidida_por`
 
-`referencia_janela_dias` registra sobre quantos dias de série a comparação foi feita. Se for menor que 14, a mensagem não pode falar em desconto histórico.
+Status: `nova` · `aprovada` · `rejeitada` · **`adiada`** · `expirada`.
 
-As parcelas da nota ficam gravadas separadas para que se entenda depois por que uma oferta ficou com determinada nota, sem precisar recalcular.
+`motivo_rejeicao` é obrigatório ao rejeitar, por *constraint*: é a matéria-prima da calibragem.
 
-**A nota vai de 0 a 100, mas o teto real hoje é 80.** Os 20 pontos de fadiga do canal e de desempenho histórico por categoria dependem de `canal`, que é da Fase 2. Ficam reservados de propósito, para que a nota de hoje continue comparável com a de amanhã em vez de sofrer inflação silenciosa.
+**A nota vai de 0 a 100, cheios:** desconto 50 (teto em 40% de queda) · comissão 30 (teto em R$ 10) · vendedor 20. Fadiga não gasta ponto de propósito — ela já é comporta. Produto repetido é **bloqueado**, não recebe nota menor: repetição não é oferta pior, é oferta que não deve sair.
 
-Quem decide é a função `avalia_anuncio(anuncio_id)`, que devolve o veredito com os motivos em texto — é a mesma função que responde "por que essa oferta não apareceu?" na tela. `detecta_ofertas()` roda depois da coleta e grava as aprovadas.
+### comporta_dia
+`operacao_id`, `dia`, `comporta`, `reprovados`
 
-### publicacao
-`id`, `oferta_id`, `canal_id`, `subid`, `mensagem_enviada`, `preco_no_envio_centavos`, `link_afiliado`, `status` (`fila` | `enviada` | `cancelada`), `agendada_para`, `enviada_em`, `enviada_por`, `criado_em`
+Responde qual comporta está matando tudo. É contador, e não uma linha por anúncio avaliado: três mil anúncios por dia dariam mais de um milhão de linhas por ano para responder uma pergunta agregada.
 
-Índice único em `subid`. Este campo é o que liga o dinheiro ao grupo.
+### execucao_rotina
+`id`, `operacao_id`, `tarefa`, `iniciada_em`, `terminada_em`, `sucesso`, `resumo` (jsonb), `erro`
 
-### clique
-`id`, `publicacao_id`, `ocorrido_em`, `ip_hash`, `user_agent`, `referer`
-
-**Hash do IP, nunca o IP.** Sem nome, telefone ou e-mail.
-
-### conversao
-`id`, `subid`, `publicacao_id`, `marketplace_id`, `pedido_externo_id`, `valor_pedido_centavos`, `comissao_centavos`, `estado` (`registrada` | `confirmada` | `cancelada` | `recebida`), `reportada_em`, `confirmada_em`, `recebida_em`, `ciclo_pagamento`
-
-O `publicacao_id` é resolvido a partir do `subid` na importação. Guarde os dois — se o subid vier corrompido, ainda dá para investigar.
-
-### repasse
-`id`, `parceiro_id`, `periodo_inicio`, `periodo_fim`, `base_recebida_centavos`, `percentual`, `valor_centavos`, `status` (`aberto` | `pago`), `pago_em`, `comprovante_url`, `criado_em`
-
-O cálculo só considera conversões no estado `recebida`.
-
-### template
-`id`, `nome`, `corpo`, `variaveis`, `canal_id` (nullable para template global), `criado_em`
-
-### usuario
-`id` (referencia `auth.users`), `nome`, `papel` (`dono` | `operador` | `parceiro`), `parceiro_id` (nullable), `criado_em`
+Sem esta tabela, "a coleta parou há cinco dias" é impossível de mostrar — o resumo ia para o log do agendador e sumia. E buraco de série não se recupera.
 
 ---
 
-## O subid
+## O motor
 
-Curto, alfanumérico, único por publicação. Formato: o id da publicação em base36 com prefixo `p`. Exemplo: `p1a2b3`.
+| Função | O que faz |
+|---|---|
+| `avalia_anuncios(ids?)` | **A regra.** Sem lista, o catálogo elegível; com lista, os ids dados |
+| `avalia_anuncio(id)` | Casca fina para a tela. Não repete regra nenhuma |
+| `detecta_ofertas()` | Uma passada, um INSERT, e os contadores por comporta |
+| `expira_ofertas()` | Mata oferta por prazo ou porque o preço voltou a subir |
+| `manutencao_diaria()` | Expurgo, expiração, compactação e detecção, nesta ordem |
 
-Se algum marketplace limitar o tamanho ou não devolver o campo no relatório, o plano B é um subid por canal (`c07`) em vez de por publicação. Perde-se saber qual oferta converteu, mantém-se a divisão de receita — que é o essencial.
+**Uma implementação só.** Reescrever a regra em TypeScript para a tela explicar produziria uma tela que explica uma coisa enquanto o sistema faz outra — e a tela seria acreditada.
 
-**A Fase 0 existe justamente para descobrir isso antes de construir qualquer coisa em cima.**
+Medido: **1,4 s para 3.000 anúncios com 600 mil pontos.**
+
+### As comportas
+
+**Pré-condições** — anúncio inativo, loja sem histórico, sem preço coletado, indisponível, preço desatualizado, sem referência.
+
+**Comporta de preço** — série curta · desconto insuficiente contra a **mediana que nós observamos** (nunca o "preço de" da loja) · não é o menor da janela longa · **preço recorrente** (D-024): se o anúncio passou mais que 40% dos dias neste preço, não é oferta — é o preço normal com etiqueta de promoção.
+
+**Comporta de qualidade** — comissão não configurada · comissão baixa · produto mal avaliado (só com amostra suficiente) · vendedor fraco · publicado recentemente.
+
+**Nunca reprova por informação ausente.** Se a loja não informa reputação, o anúncio não é punido — seria descartar anúncio bom por pobreza da API.
+
+A mediana **exclui o dia de hoje**: incluir puxaria a referência para baixo junto com a promoção, e o desconto apareceria menor do que é.
 
 ---
 
-## Row Level Security
+## Segurança
 
-Ligue RLS em todas as tabelas na primeira migration, não depois.
+**Duas camadas, e elas são diferentes.** RLS decide **quais linhas**; GRANT decide se o papel pode **tocar na tabela**. O Postgres checa o GRANT primeiro — RLS sem grant não protege, só esconde o erro.
 
-- `dono` enxerga tudo.
-- `operador` enxerga os canais em que é operador, e as ofertas, publicações e cliques desses canais.
-- `parceiro` enxerga apenas os próprios canais, publicações, conversões e repasses. **Somente leitura.**
+O padrão do schema é fechado desde a migration 01: no Postgres, função nasce concedendo `EXECUTE` a PUBLIC, que não é papel — é todo mundo, inclusive `anon`, cuja chave viaja dentro do JavaScript da página. Com o padrão alterado, cada objeto novo nasce fechado e a concessão vira ato explícito. Esquecer significa o servidor não conseguir chamar: falha barulhenta, que é o modo certo de falhar.
 
-Nunca exponha `afiliado_id` de marketplace nem `chave_pix` de outro parceiro em nenhuma policy.
+| Papel | Enxerga |
+|---|---|
+| `dono` | Tudo, dentro da própria operação |
+| `operador` | Os canais que opera, e o que pertence a eles. Sem nota, sem comissão |
+| `parceiro` | Só o que é dele, e só leitura |
+| `service_role` | Tudo, ignorando RLS. Só em código de servidor |
+
+`operador` **não escreve em `oferta`**: a D-020 separou aprovar de publicar, e dar escrita ali devolveria a ele um veto de curadoria pela porta dos fundos.
 
 ---
 
 ## Ordem de criação
 
-As migrations seguem a ordem de dependência: `marketplace` e `comissao_categoria` primeiro, depois `parceiro` e `canal`, depois `produto`, `anuncio` e `preco_ponto`, depois `oferta` e `publicacao`, e por último `clique`, `conversao` e `repasse`.
+As migrations seguem a dependência: operação e utilitários, usuário, nicho, marketplace, parâmetros, catálogo e série, parceiro e canal, colheita, oferta e motor, execução, RLS, permissões.
 
-Na Fase 1 apenas `marketplace`, `produto`, `anuncio` e `preco_ponto` são necessários. Não crie o resto antes da hora.
+**Migration aplicada não se altera — crie outra.** A reescrita de 27/07/2026 foi exceção deliberada e aprovada, com o banco vazio e nada publicado. Essa porta fecha quando o projeto Supabase da nuvem existir.

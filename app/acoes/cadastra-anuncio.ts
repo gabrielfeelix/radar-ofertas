@@ -34,7 +34,7 @@ export type ResultadoCadastro =
        */
       token: string;
     }
-  | { ok: false; campo: "link" | "titulo" | "preco" | "geral"; mensagem: string };
+  | { ok: false; campo: "link" | "titulo" | "nicho" | "preco" | "geral"; mensagem: string };
 
 export async function cadastraAnuncio(
   _anterior: ResultadoCadastro | null,
@@ -42,13 +42,25 @@ export async function cadastraAnuncio(
 ): Promise<ResultadoCadastro> {
   const linkBruto = String(form.get("link") ?? "");
   const titulo = String(form.get("titulo") ?? "").trim();
-  const categoria = String(form.get("categoria") ?? "").trim();
+  // Nicho é obrigatório no cadastro manual (D-019): é o eixo de
+  // roteamento. Produto sem nicho não chega a canal nenhum — ele
+  // existe como estado só porque a colheita traz volume, e para
+  // isso existe a triagem em lote.
+  const nichoId = String(form.get("nicho_id") ?? "").trim();
   const vendedor = String(form.get("vendedor") ?? "").trim();
   const precoBruto = String(form.get("preco") ?? "").trim();
 
   const leitura = leLinkDeProduto(linkBruto);
   if (!leitura.ok) {
     return { ok: false, campo: "link", mensagem: leitura.erro.mensagem };
+  }
+
+  if (nichoId === "") {
+    return {
+      ok: false,
+      campo: "nicho",
+      mensagem: "Escolha o nicho. É ele que decide para quais canais a oferta vai.",
+    };
   }
 
   if (titulo.length < 3) {
@@ -75,6 +87,12 @@ export async function cadastraAnuncio(
   }
 
   const db = supabaseServidor();
+
+  const { data: operacao } = await db.from("nicho").select("operacao_id").eq("id", nichoId).single();
+
+  if (!operacao) {
+    return { ok: false, campo: "nicho", mensagem: "Esse nicho não existe mais." };
+  }
 
   const { data: marketplace, error: erroMarketplace } = await db
     .from("marketplace")
@@ -120,8 +138,9 @@ export async function cadastraAnuncio(
   const { data: produto, error: erroProduto } = await db
     .from("produto")
     .insert({
+      operacao_id: operacao.operacao_id,
+      nicho_id: nichoId,
       titulo_canonico: titulo,
-      categoria: categoria === "" ? null : categoria,
     })
     .select("id")
     .single();
@@ -137,6 +156,7 @@ export async function cadastraAnuncio(
   const { data: anuncio, error: erroAnuncio } = await db
     .from("anuncio")
     .insert({
+      operacao_id: operacao.operacao_id,
       produto_id: produto.id,
       marketplace_id: marketplace.id,
       url_original: leitura.link.urlLimpa,

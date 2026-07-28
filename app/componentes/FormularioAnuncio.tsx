@@ -24,7 +24,9 @@ const NOME_DA_LOJA: Record<string, string> = {
   amazon: "Amazon",
 };
 
-export function FormularioAnuncio() {
+export type NichoOpcao = { id: string; nome: string };
+
+export function FormularioAnuncio({ nichos }: { nichos: NichoOpcao[] }) {
   const [resultado, acao, enviando] = useActionState<ResultadoCadastro | null, FormData>(
     cadastraAnuncio,
     null,
@@ -46,6 +48,7 @@ export function FormularioAnuncio() {
         acao={acao}
         enviando={enviando}
         resultado={resultado}
+        nichos={nichos}
       />
 
       {resultado?.ok === true && (
@@ -66,17 +69,19 @@ function Campos({
   acao,
   enviando,
   resultado,
+  nichos,
 }: {
   acao: (formData: FormData) => void;
   enviando: boolean;
   resultado: ResultadoCadastro | null;
+  nichos: NichoOpcao[];
 }) {
   const [link, setLink] = useState("");
 
   // Retorno imediato sobre o link, antes de enviar qualquer coisa.
   const leitura = link.trim() === "" ? null : leLinkDeProduto(link);
 
-  const erroDe = (campo: "link" | "titulo" | "preco") =>
+  const erroDe = (campo: "link" | "titulo" | "nicho" | "preco") =>
     resultado?.ok === false && resultado.campo === campo ? resultado.mensagem : null;
 
   return (
@@ -122,12 +127,24 @@ function Campos({
       </Campo>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Campo rotulo="Categoria" dica="Define o percentual de comissão.">
-          <input
-            name="categoria"
-            type="text"
+        <Campo
+          rotulo="Nicho"
+          dica="Decide para quais canais a oferta vai, e qual limiar vale."
+          erro={erroDe("nicho")}
+        >
+          <select
+            name="nicho_id"
+            required
+            defaultValue={nichos.length === 1 ? nichos[0].id : ""}
             className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
-          />
+          >
+            <option value="">escolha…</option>
+            {nichos.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.nome}
+              </option>
+            ))}
+          </select>
         </Campo>
 
         <Campo rotulo="Vendedor" dica="Opcional.">

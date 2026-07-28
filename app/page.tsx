@@ -5,6 +5,7 @@ import type {
   AnuncioLinha,
   AnuncioSerieLinha,
   MarketplaceLinha,
+  NichoLinha,
   ProdutoLinha,
 } from "@/lib/supabase/tipos";
 
@@ -40,7 +41,7 @@ export default async function Painel() {
     return <AvisoDeConfiguracao mensagem={(erro as Error).message} />;
   }
 
-  const { anuncios, produtos, marketplaces, series, agora } = dados;
+  const { anuncios, produtos, marketplaces, nichos, series, agora } = dados;
 
   const porProduto = new Map(produtos.map((p) => [p.id, p]));
   const porMarketplace = new Map(marketplaces.map((m) => [m.id, m]));
@@ -90,7 +91,7 @@ export default async function Painel() {
           Título e preço são digitados à mão por enquanto. Buscar isso sozinho na página depende dos
           termos de cada marketplace, e essa decisão ainda está em aberto.
         </p>
-        <FormularioAnuncio />
+        <FormularioAnuncio nichos={nichos.map((n) => ({ id: n.id, nome: n.nome }))} />
       </section>
 
       <section>
@@ -189,14 +190,15 @@ export default async function Painel() {
 async function buscaDados() {
   const db = supabaseServidor();
 
-  const [anuncios, produtos, marketplaces, series] = await Promise.all([
+  const [anuncios, produtos, marketplaces, nichos, series] = await Promise.all([
     db.from("anuncio").select("*").order("criado_em", { ascending: false }),
     db.from("produto").select("*"),
     db.from("marketplace").select("*"),
+    db.from("nicho").select("*").eq("ativo", true).order("nome"),
     db.from("anuncio_serie").select("*"),
   ]);
 
-  const falha = [anuncios, produtos, marketplaces, series].find((r) => r.error);
+  const falha = [anuncios, produtos, marketplaces, nichos, series].find((r) => r.error);
   if (falha?.error) {
     throw new Error(
       `O banco respondeu com erro: ${falha.error.message}. ` +
@@ -208,6 +210,7 @@ async function buscaDados() {
     anuncios: (anuncios.data ?? []) as AnuncioLinha[],
     produtos: (produtos.data ?? []) as ProdutoLinha[],
     marketplaces: (marketplaces.data ?? []) as MarketplaceLinha[],
+    nichos: (nichos.data ?? []) as NichoLinha[],
     series: (series.data ?? []) as AnuncioSerieLinha[],
     // Lido aqui, e não durante a renderização: o relógio é impuro
     // e o componente precisa ser previsível a cada render.
