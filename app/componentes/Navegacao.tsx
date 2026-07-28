@@ -14,6 +14,7 @@ import { usePathname } from "next/navigation";
 const ITENS = [
   { href: "/aprovar", rotulo: "Aprovar" },
   { href: "/publicar", rotulo: "Publicar" },
+  { href: "/canais", rotulo: "Canais" },
   { href: "/", rotulo: "Painel" },
   { href: "/colheita/fontes", rotulo: "Fontes" },
   { href: "/colheita/mencoes", rotulo: "Menções" },

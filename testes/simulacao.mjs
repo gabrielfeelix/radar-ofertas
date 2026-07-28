@@ -14,7 +14,13 @@
  */
 
 import {
+  alternaCanalAtivo,
+  atualizaCanal,
+  buscaCanal,
+  canais,
   canaisElegiveis,
+  criaCanal,
+  parteDoDono,
   decideOferta,
   desfazDecisao,
   desfazEnvio,
@@ -143,6 +149,62 @@ confere(
 confere(
   "e some com as publicações que ela tinha gerado",
   !publicacoesDaFila().some((p) => p.ofertaId === alvo.id),
+);
+
+// --- Canais -----------------------------------------------------
+// A parte do dono é o que sobra das duas parcelas, e não um terceiro
+// campo — senão existiria o estado em que os três somam 97.
+confere(
+  "a parte do dono fecha em 100 com as duas parcelas",
+  canais().every((c) => parteDoDono(c) + c.splitAudienciaPct + c.splitOperacaoPct === 100),
+);
+
+// Canal desligado para de receber publicação AGORA. Se continuasse
+// elegível até a próxima detecção, uma oferta aprovada no meio do
+// caminho iria para um canal que o dono achava que tinha desligado.
+const canalPet = canais().find((c) => c.nichos.includes("pet") && c.ativo);
+alternaCanalAtivo(canalPet.id, false);
+confere(
+  "canal desligado sai da elegibilidade na hora",
+  !canaisElegiveis("pet").some((c) => c.id === canalPet.id),
+);
+confere(
+  "e continua existindo, com o histórico dele",
+  buscaCanal(canalPet.id) !== undefined,
+);
+
+const vagasSemEle = vagasDeHoje();
+alternaCanalAtivo(canalPet.id, true);
+confere("religar devolve a capacidade", vagasDeHoje() > vagasSemEle);
+
+// Canal novo entra na capacidade e no roteamento do próprio nicho.
+const novoId = criaCanal({
+  nome: "Teste de Canal",
+  plataforma: "telegram",
+  nichos: ["eletronico"],
+  tetoDiario: 5,
+  audiencia: 100,
+  parceiro: "você",
+  operador: "você",
+  splitAudienciaPct: 20,
+  splitOperacaoPct: 10,
+  horarios: "12:00",
+});
+confere(
+  "canal novo passa a receber oferta do nicho dele",
+  canaisElegiveis("eletronico").some((c) => c.id === novoId),
+);
+confere("canal novo nasce sem nada publicado", buscaCanal(novoId).publicadasHoje === 0);
+confere("e a parte do dono dele é o que sobra", parteDoDono(buscaCanal(novoId)) === 70);
+
+atualizaCanal(novoId, {
+  ...buscaCanal(novoId),
+  nichos: ["pet"],
+});
+confere(
+  "trocar o nicho muda o roteamento",
+  canaisElegiveis("pet").some((c) => c.id === novoId) &&
+    !canaisElegiveis("eletronico").some((c) => c.id === novoId),
 );
 
 console.log(`\n${falhas === 0 ? "todos os casos passaram" : `${falhas} casos falharam`}`);

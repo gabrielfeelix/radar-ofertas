@@ -151,7 +151,7 @@ Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 **Design system** — tokens em `app/globals.css`, explicados em `docs/design.md`. Só cor, tipografia, espaçamento, raio e botão. Card fora de propósito.
 
-**Telas de decisão, com operação simulada (D-026)** — `/aprovar` e `/publicar`, sobre `lib/simulacao/`. Decidir da linha, capacidade no topo, rejeitar com motivo de lista curta, diagnóstico por comporta, Telegram em lote, desfazer no envio, bloqueio por preço mudado. A máquina de estados tem teste próprio em `testes/simulacao.mjs`.
+**Telas de decisão, com operação simulada (D-026)** — `/aprovar`, `/publicar` e `/canais` (com detalhe por canal), sobre `lib/simulacao/`. Decidir da linha, capacidade no topo, rejeitar com motivo de lista curta, diagnóstico por comporta, Telegram em lote, desfazer no envio, bloqueio por preço mudado. A máquina de estados tem teste próprio em `testes/simulacao.mjs`.
 
 **A ordem de trabalho mudou em 28/07, por decisão do dono:** interface primeiro, backend plugado depois, ação por ação. O que falta para essas telas terem dado real não é código — é credencial, domínio e canal. Leia a D-026 antes de propor voltar à ordem antiga.
 
@@ -159,9 +159,9 @@ Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 Continuar a interface, sempre com dado simulado, nesta ordem:
 
-1. **Canal** — nicho, plataforma, teto diário, split. Hoje os canais da simulação são constantes num arquivo; esta tela é o que permite ao testador montar a própria operação e mexer na capacidade, que é o número que muda comportamento na aprovação.
-2. **Precisa de atenção** — agrega, não lista. Só o que exige ação humana.
-3. **Trilha de arranque** — o próximo passo num sistema vazio.
+1. **Precisa de atenção** — agrega, não lista. Só o que exige ação humana: coleta que parou, rotina que falhou, produto sem nicho, publicação auto-declarada sem clique em 24h, e os dias que faltam para o GitHub desativar o agendador por inatividade.
+2. **Trilha de arranque** — o próximo passo num sistema vazio, enquanto a operação estiver incompleta.
+3. **Produtos e produto** — catálogo com busca, série por anúncio e histórico de rejeição.
 
 Depois, o plugue: cada ação de `app/acoes/` troca a chamada à simulação por escrita no banco, uma por vez, sem tocar na tela.
 

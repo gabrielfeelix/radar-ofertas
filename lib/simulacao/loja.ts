@@ -36,8 +36,39 @@ export type CanalSimulado = {
   tetoDiario: number;
   publicadasHoje: number;
   audiencia: number;
+  /** Quem traz a audiência. */
+  parceiro: string;
+  /** Quem publica todo dia. Pode ser a mesma pessoa do parceiro. */
   operador: string;
+  /**
+   * A divisão de receita, em duas parcelas separadas — nunca um
+   * número só. A mesma pessoa pode trazer a audiência e operar, ou
+   * só trazer a audiência, e arranjos diferentes convivem no mesmo
+   * sistema. O que sobra das duas é a parte do dono.
+   */
+  splitAudienciaPct: number;
+  splitOperacaoPct: number;
+  /** Horários permitidos, no fuso de São Paulo ainda que tudo grave em UTC. */
+  horarios: string;
+  /**
+   * Canal desativado para de receber publicação imediatamente, mas o
+   * histórico continua existindo — é ele que sustenta a prestação de
+   * contas ao parceiro depois.
+   */
+  ativo: boolean;
+  ultimaPublicacaoEm: string | null;
 };
+
+/** Os nichos que a operação simulada cobre. */
+export const NICHOS = [
+  { slug: "pet", nome: "Pet" },
+  { slug: "casa", nome: "Casa e cozinha" },
+  { slug: "eletronico", nome: "Eletrônico" },
+] as const;
+
+export function nomeDoNicho(slug: string): string {
+  return NICHOS.find((n) => n.slug === slug)?.nome ?? slug;
+}
 
 export type ParcelasDaNota = {
   /** 0 a 50 */
@@ -105,7 +136,17 @@ export const MOTIVOS_DE_REJEICAO = [
   "Não combina com os canais",
 ] as const;
 
-export const CANAIS: CanalSimulado[] = [
+/**
+ * Os canais da operação.
+ *
+ * Os quatro iniciais cobrem os arranjos que existem de verdade, e
+ * não quatro variações do mesmo caso: canal do próprio dono sem
+ * split, canal em que a mesma pessoa traz a audiência e opera, e
+ * canal em que uma pessoa traz e outra publica. Se os quatro fossem
+ * iguais, a tela de canal pareceria simples e quebraria no primeiro
+ * parceiro real.
+ */
+const canaisDaOperacao: CanalSimulado[] = [
   {
     id: "c1",
     nome: "Achados de Pet",
@@ -114,7 +155,14 @@ export const CANAIS: CanalSimulado[] = [
     tetoDiario: 6,
     publicadasHoje: 2,
     audiencia: 890,
+    parceiro: "você",
     operador: "você",
+    // Canal do próprio dono: nada a repassar.
+    splitAudienciaPct: 0,
+    splitOperacaoPct: 0,
+    horarios: "09:00 e 18:00",
+    ativo: true,
+    ultimaPublicacaoEm: "2026-07-27",
   },
   {
     id: "c2",
@@ -124,7 +172,14 @@ export const CANAIS: CanalSimulado[] = [
     tetoDiario: 10,
     publicadasHoje: 3,
     audiencia: 2400,
+    parceiro: "Bruno",
     operador: "Bruno",
+    // Traz a audiência e opera: as duas parcelas vão para ele.
+    splitAudienciaPct: 30,
+    splitOperacaoPct: 10,
+    horarios: "08:00, 12:00 e 20:00",
+    ativo: true,
+    ultimaPublicacaoEm: "2026-07-28",
   },
   {
     id: "c3",
@@ -134,7 +189,13 @@ export const CANAIS: CanalSimulado[] = [
     tetoDiario: 4,
     publicadasHoje: 4,
     audiencia: 1250,
+    parceiro: "você",
     operador: "você",
+    splitAudienciaPct: 0,
+    splitOperacaoPct: 0,
+    horarios: "10:00",
+    ativo: true,
+    ultimaPublicacaoEm: "2026-07-26",
   },
   {
     id: "c4",
@@ -144,9 +205,75 @@ export const CANAIS: CanalSimulado[] = [
     tetoDiario: 8,
     publicadasHoje: 1,
     audiencia: 5100,
+    parceiro: "Rafael",
+    // Traz a audiência, mas quem publica é outra pessoa.
     operador: "Marina",
+    splitAudienciaPct: 25,
+    splitOperacaoPct: 10,
+    horarios: "07:30 e 19:00",
+    ativo: true,
+    ultimaPublicacaoEm: "2026-07-28",
   },
 ];
+
+export function canais(): CanalSimulado[] {
+  return canaisDaOperacao.map((c) => ({ ...c }));
+}
+
+export function buscaCanal(id: string): CanalSimulado | undefined {
+  const canal = canaisDaOperacao.find((c) => c.id === id);
+  return canal ? { ...canal } : undefined;
+}
+
+export type DadosDoCanal = {
+  nome: string;
+  plataforma: Plataforma;
+  nichos: string[];
+  tetoDiario: number;
+  audiencia: number;
+  parceiro: string;
+  operador: string;
+  splitAudienciaPct: number;
+  splitOperacaoPct: number;
+  horarios: string;
+};
+
+export function criaCanal(dados: DadosDoCanal): string {
+  const id = `c${canaisDaOperacao.length + 1}_${canaisDaOperacao.length}`;
+
+  canaisDaOperacao.push({
+    id,
+    ...dados,
+    publicadasHoje: 0,
+    ativo: true,
+    ultimaPublicacaoEm: null,
+  });
+
+  return id;
+}
+
+export function atualizaCanal(id: string, dados: DadosDoCanal): void {
+  const canal = canaisDaOperacao.find((c) => c.id === id);
+  if (!canal) return;
+
+  Object.assign(canal, dados);
+}
+
+export function alternaCanalAtivo(id: string, ativo: boolean): void {
+  const canal = canaisDaOperacao.find((c) => c.id === id);
+  if (!canal) return;
+
+  canal.ativo = ativo;
+}
+
+/**
+ * A parte do dono é o que sobra — não é um terceiro campo editável.
+ * Guardar os três somando 100 permitiria o estado impossível de
+ * somarem 97, e alguém acabaria perguntando para onde foram os 3%.
+ */
+export function parteDoDono(canal: CanalSimulado): number {
+  return 100 - canal.splitAudienciaPct - canal.splitOperacaoPct;
+}
 
 /**
  * A fila de hoje.
@@ -339,13 +466,20 @@ export function buscaOferta(id: string): OfertaSimulada | undefined {
   return encontrada ? { ...encontrada } : undefined;
 }
 
+/**
+ * Canal desativado não é elegível. Ele para de receber publicação no
+ * instante em que é desligado — não no dia seguinte, não na próxima
+ * detecção.
+ */
 export function canaisElegiveis(nicho: string): CanalSimulado[] {
-  return CANAIS.filter((c) => c.nichos.includes(nicho));
+  return canais().filter((c) => c.ativo && c.nichos.includes(nicho));
 }
 
-/** Vagas de hoje: o que o teto de cada canal ainda permite. */
+/** Vagas de hoje: o que o teto de cada canal ativo ainda permite. */
 export function vagasDeHoje(): number {
-  return CANAIS.reduce((total, c) => total + Math.max(0, c.tetoDiario - c.publicadasHoje), 0);
+  return canais()
+    .filter((c) => c.ativo)
+    .reduce((total, c) => total + Math.max(0, c.tetoDiario - c.publicadasHoje), 0);
 }
 
 /**
@@ -426,7 +560,7 @@ export function publicacoesDaFila(): PublicacaoSimulada[] {
     if (oferta.status !== "aprovada") continue;
 
     for (const canalId of oferta.canaisEscolhidos) {
-      const canal = CANAIS.find((c) => c.id === canalId);
+      const canal = canaisDaOperacao.find((c) => c.id === canalId);
       if (!canal) continue;
 
       const id = `${oferta.id}:${canal.id}`;
