@@ -8,6 +8,7 @@ import { BarraSuperior, type EstadoDaRotina } from "./BarraSuperior";
 
 import { montaTrilhaDeArranque } from "@/lib/arranque";
 import { montaQuadroDeAtencao } from "@/lib/atencao";
+import type { UsuarioDaSessao } from "@/lib/sessao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { ofertasDaFila, publicacoesDaFila } from "@/lib/simulacao/loja";
 
@@ -24,7 +25,13 @@ import { ofertasDaFila, publicacoesDaFila } from "@/lib/simulacao/loja";
  * simulada (D-026), as de Fontes e Menções vêm do banco de verdade.
  */
 
-export async function Casca({ children }: { children: React.ReactNode }) {
+export async function Casca({
+  children,
+  usuario,
+}: {
+  children: React.ReactNode;
+  usuario: UsuarioDaSessao;
+}) {
   const { grupos, resumo, rotina } = await montaNavegacao();
 
   return (
@@ -33,7 +40,7 @@ export async function Casca({ children }: { children: React.ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <BarraInferior grupos={grupos} />
-        <BarraSuperior rotina={rotina} />
+        <BarraSuperior rotina={rotina} usuario={usuario} />
         {/*
           Um <main> só, aqui, com o título da tela dentro dele. Antes
           cada página abria o próprio, e o h1 ficava fora — leitor de

@@ -180,6 +180,16 @@ A raiz `/` leva para `/aprovar`: a casa do dono é o trabalho, não a consulta.
 
 E uma regra mudou: **monoespaçado é para texto literal** (subid, slug, SKU, comando), nunca para dinheiro — alinhar coluna é trabalho do `tabular-nums`. Detalhe e motivo de cada uma em `docs/design.md`, em "A passada visual de 28/07".
 
+**Login** — `/entrar`, e-mail e senha (D-022), sessão em cookie, `middleware.ts` barrando rota nova por padrão, papel decidindo a casa (dono → `/aprovar`, operador → `/publicar`). O banco já tinha tudo: `usuario`, `operacao_atual()`, `tem_papel()` e as policies existem desde 27/07.
+
+**Atenção, e está na D-027:** as telas continuam lendo pela `service_role`, que ignora RLS. Quem protege hoje é o middleware, não as policies. Trocar as leituras pela chave da pessoa é o passo seguinte, e **o gatilho é o primeiro operador de verdade receber acesso** — não uma data.
+
+Conta nasce por script enquanto a tela de convite (Fase 3) não existe:
+
+```
+pnpm usuario:cria "voce@exemplo.com" "Seu Nome" dono
+```
+
 **Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15) e a máquina de estados da simulação (27). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
 
 **Automação** — CI a cada push, rotina diária e backup semanal em `.github/workflows/`.

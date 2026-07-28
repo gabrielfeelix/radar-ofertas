@@ -20,6 +20,7 @@
     "db:reset": "supabase db reset",
     "db:status": "supabase status",
     "db:publica": "supabase db push",
+    "usuario:cria": "node --env-file=.env scripts/cria-usuario.mjs",
     "db:tipos": "supabase gen types typescript --local > lib/supabase/tipos.ts",
     "funcoes:serve": "supabase functions serve"
   },

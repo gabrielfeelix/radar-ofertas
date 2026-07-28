@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono, Manrope } from "next/font/google";
 
-import { Casca } from "@/app/componentes/Casca";
-
 import "./globals.css";
 
 /**
@@ -47,9 +45,13 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${manrope.variable} ${jetbrains.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-fundo text-texto">
-        <Casca>{children}</Casca>
-      </body>
+      {/*
+        A casca (barra lateral, barra superior) não mora aqui: ela é do
+        grupo `(painel)`. O Login precisa da mesma fonte e do mesmo
+        fundo, e de nada mais — barra lateral numa tela de entrar
+        mostra o menu do sistema para quem ainda não provou quem é.
+      */}
+      <body className="min-h-full bg-fundo text-texto">{children}</body>
     </html>
   );
 }

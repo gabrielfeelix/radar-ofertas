@@ -455,3 +455,22 @@ O efeito seria o pior tipo de falha: a colheita informando sucesso, a tela de me
 **Corrigido** com uma função só de inserção de descarte, que carrega a operação da fonte e confere o erro — conflito de índice único continua sendo silêncio, porque link repetido no mesmo post não é falha.
 
 **A regra que achou isso** está em `docs/plano.md`: teste com dado real. Nenhuma revisão de código teria pego, porque o código estava sintaticamente correto e o resumo da execução parecia bom.
+
+## D-027 · Login construído; a leitura de dado continua na service role, por enquanto
+**Data:** 2026-07-28
+
+A porta existe: middleware, sessão em cookie, `/entrar` com e-mail e senha, papel decidindo a casa, e `sair`. Segue a D-022 — senha e não link mágico, sem cadastro público.
+
+**O que ficou de fora, e está dito para não ser confundido com pronto:** as telas continuam lendo o banco pela `service_role`, que ignora RLS por desenho. As policies existem desde a migration 11 e ainda não são o que protege — quem protege hoje é o middleware.
+
+**Motivo de separar:** trocar as leituras pela chave da pessoa é mexer em todas as telas ao mesmo tempo. Feito junto com o login, o primeiro erro apareceria como "não devolve linha" sem dizer se a culpa é da sessão ou da policy — e são dois lugares muito diferentes para procurar.
+
+**Consequência honesta:** hoje qualquer conta com papel `dono` ou `operador` enxerga tudo da operação, porque o servidor lê como serviço. Isso é aceitável enquanto o painel roda na máquina do dono e a única conta é a dele. **Deixa de ser aceitável no dia em que o primeiro operador de verdade receber acesso** — e esse é o gatilho para fazer a troca, não uma data.
+
+**Parceiro puro não entra.** Quem tem só o papel `parceiro` recebe uma mensagem dizendo que o painel dele é da Fase 3, em vez de cair no painel do dono. Mandá-lo para dentro hoje, com a service role atrás, mostraria a ele a operação inteira — inclusive quanto os outros parceiros ganham. É a mesma razão do parágrafo acima, vista do outro lado.
+
+**A mensagem de erro do login é sempre a mesma** — senha errada, e-mail inexistente, conta sem convite e conta desativada devolvem "E-mail ou senha incorretos". Distinguir transformaria a tela num verificador de quem usa o sistema. A exceção é o parceiro: ele já provou a identidade, então não há o que vazar, e "senha incorreta" o faria trocar a senha para sempre tentando resolver o que não é problema dele.
+
+**Conta nasce por script**, `pnpm usuario:cria`, enquanto a tela de convite não existe (Fase 3). Ele cria as duas metades — a identidade em `auth.users` e o acesso em `public.usuario` — e desfaz a primeira se a segunda falhar. Identidade sem linha em `usuario` não entra em lugar nenhum, e é isso que mantém "sem convite não há entrada" verdadeiro mesmo se alguém criar conta pela API por fora.
+
+---

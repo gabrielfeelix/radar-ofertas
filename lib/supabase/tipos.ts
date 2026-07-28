@@ -10,6 +10,28 @@
  *   pnpm db:tipos
  */
 
+/**
+ * Quem tem acesso.
+ *
+ * `papeis` é lista e não valor único: a mesma pessoa pode trazer a
+ * audiência e operar o canal, e é o arranjo mais provável entre
+ * amigos. Com papel único ela perderia o extrato ou perderia a fila,
+ * e nenhuma das duas daria erro (`docs/dados.md`).
+ */
+export type UsuarioLinha = {
+  /** O mesmo id de `auth.users`. */
+  id: string;
+  operacao_id: string;
+  nome: string;
+  email: string;
+  papeis: string[];
+  /** Preenchido quando a pessoa é parceira. Liga ao extrato dela. */
+  parceiro_id: string | null;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+};
+
 export type MarketplaceLinha = {
   id: string;
   operacao_id: string;
@@ -314,6 +336,7 @@ type Tabela<Linha, Obrigatorios extends keyof Linha> = {
 export type Banco = {
   public: {
     Tables: {
+      usuario: Tabela<UsuarioLinha, "id" | "operacao_id" | "nome" | "email" | "papeis">;
       marketplace: Tabela<MarketplaceLinha, "operacao_id" | "slug" | "nome">;
       nicho: Tabela<NichoLinha, "operacao_id" | "nome" | "slug">;
       produto: Tabela<ProdutoLinha, "operacao_id" | "titulo_canonico">;

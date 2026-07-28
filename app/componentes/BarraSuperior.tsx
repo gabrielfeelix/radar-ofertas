@@ -1,3 +1,8 @@
+import { sai } from "@/app/acoes/sessao";
+import { Botao } from "@/app/componentes/Botao";
+import { Identidade } from "@/app/componentes/Identidade";
+import type { UsuarioDaSessao } from "@/lib/sessao";
+
 /**
  * Barra superior.
  *
@@ -19,7 +24,13 @@ export type EstadoDaRotina =
   | { situacao: "sem_registro" }
   | { situacao: "banco_fora" };
 
-export function BarraSuperior({ rotina }: { rotina: EstadoDaRotina }) {
+export function BarraSuperior({
+  rotina,
+  usuario,
+}: {
+  rotina: EstadoDaRotina;
+  usuario: UsuarioDaSessao;
+}) {
   return (
     <header className="sticky top-0 z-10 hidden items-center gap-5 border-b border-borda bg-superficie px-6 py-3 lg:flex">
       <form
@@ -39,17 +50,23 @@ export function BarraSuperior({ rotina }: { rotina: EstadoDaRotina }) {
       <div className="ml-auto flex items-center gap-4">
         <FaixaDaRotina rotina={rotina} />
 
+        {/*
+          Quem está usando, de verdade. Isto era "Gabriel · dono"
+          escrito à mão no código — e num sistema em que o papel muda o
+          que a tela mostra, saber com qual conta se está é o começo de
+          confiar no que se vê.
+        */}
         <div className="flex items-center gap-3 border-l border-borda pl-4">
-          <span
-            className="flex size-8 items-center justify-center rounded-circulo bg-linear-150 from-[#FFC79A] to-marca text-sm font-bold text-white"
-            aria-hidden
-          >
-            G
-          </span>
+          <Identidade nome={usuario.nome} forma="circulo" tamanho="sm" />
           <span className="flex flex-col leading-titulo">
-            <span className="text-sm font-semibold">Gabriel</span>
-            <span className="text-xs text-texto-fraco">dono</span>
+            <span className="text-sm font-semibold">{usuario.nome}</span>
+            <span className="text-xs text-texto-fraco">{usuario.papeis.join(" · ")}</span>
           </span>
+          <form action={sai}>
+            <Botao type="submit" variante="fantasma" tamanho="sm">
+              sair
+            </Botao>
+          </form>
         </div>
       </div>
     </header>
