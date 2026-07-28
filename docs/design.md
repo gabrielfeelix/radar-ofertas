@@ -209,6 +209,27 @@ A variante **marca** é o botão de publicar: verde do WhatsApp, azul do Telegra
 
 ---
 
+## A casca, construída em 28/07
+
+O protótipo tem uma casca, e ela é a maior parte do que faz o produto parecer um produto. Ela agora existe em código, em `app/componentes/`:
+
+| Componente | O que é |
+|---|---|
+| `BarraLateral` | 236px fixos, grupos com rótulo em maiúsculas, item com ponto de cor e contagem à direita, resumo da colheita no rodapé |
+| `BarraInferior` | a mesma navegação em faixa rolável, abaixo de `lg` — a fila de publicação é usada em pé, e menu sanduíche cobra um toque de quem tem dez minutos |
+| `BarraSuperior` | busca, estado da rotina e usuário |
+| `CabecalhoDaPagina` | trilha, título, subtítulo e ações da tela |
+| `Kpis` | a faixa de indicadores logo abaixo |
+
+**Duas diferenças deliberadas em relação ao protótipo**, ambas pelo mesmo motivo — não mostrar o que não existe:
+
+1. **A busca aparece desabilitada**, dizendo que chega na Fase 2. Campo que aceita texto e não busca nada é pior que campo nenhum: a pessoa digita, não acontece nada, e conclui que o catálogo está vazio.
+2. **O estado da rotina é o de verdade.** O protótipo mostra "Rotina 06:08" sempre em verde. Aqui, sem execução registrada, a faixa diz "rotina ainda não rodou", e com o banco fora do ar diz isso também — ausência de alerta só tranquiliza se der para distinguir "nada quebrado" de "a verificação não rodou".
+
+E uma diferença de fluxo, que vem de `docs/plano.md`: na fila de aprovação, **as ações ficam na linha**. No protótipo a decisão morava no painel lateral, o que custa cerca de 60 rolagens em 30 ofertas. O painel continua fazendo sentido para "esta aqui eu quero olhar".
+
+---
+
 ## O que ainda não é componente
 
 Card, tabela, etiqueta de estado, campo de formulário e barra de navegação **já existem no protótipo com forma consistente o bastante para reconhecer**, mas ainda não viram componente aqui. Entram quando a primeira tela real for construída, com a forma que a tela pedir — não antes.

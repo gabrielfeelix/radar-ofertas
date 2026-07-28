@@ -1,0 +1,154 @@
+import {
+  BarraInferior,
+  BarraLateral,
+  type GrupoDaBarra,
+  type ResumoDaBarra,
+} from "./BarraLateral";
+import { BarraSuperior, type EstadoDaRotina } from "./BarraSuperior";
+
+import { supabaseServidor } from "@/lib/supabase/servidor";
+import { ofertasDaFila, publicacoesDaFila } from "@/lib/simulacao/loja";
+
+/**
+ * A casca do painel: barra lateral, barra superior e o miolo.
+ *
+ * Ela busca os números das medalhas do menu, e faz isso tolerando o
+ * banco fora do ar. O painel roda na máquina do dono; se o Docker
+ * não estiver de pé, a casca inteira cair junto transformaria um
+ * aviso em tela branca.
+ *
+ * Repare na mistura, que é temporária e está escrita para não
+ * assustar: as contagens de Aprovar e Publicar vêm da operação
+ * simulada (D-026), as de Fontes e Menções vêm do banco de verdade.
+ */
+
+export async function Casca({ children }: { children: React.ReactNode }) {
+  const { grupos, resumo, rotina } = await montaNavegacao();
+
+  return (
+    <div className="flex min-h-screen items-stretch">
+      <BarraLateral grupos={grupos} resumo={resumo} />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <BarraInferior grupos={grupos} />
+        <BarraSuperior rotina={rotina} />
+        {children}
+      </div>
+    </div>
+  );
+}
+
+async function montaNavegacao(): Promise<{
+  grupos: GrupoDaBarra[];
+  resumo: ResumoDaBarra[];
+  rotina: EstadoDaRotina;
+}> {
+  const naFila = ofertasDaFila().length;
+  const aPublicar = publicacoesDaFila().filter((p) => !p.enviadaEm && !p.cancelada).length;
+
+  const banco = await leDoBanco();
+
+  const grupos: GrupoDaBarra[] = [
+    {
+      titulo: "Hoje",
+      itens: [
+        { href: "/aprovar", rotulo: "Aprovar", contagem: naFila, ponto: "#F16A0D" },
+        { href: "/publicar", rotulo: "Publicar", contagem: aPublicar, ponto: "#1FA855" },
+      ],
+    },
+    {
+      titulo: "Catálogo",
+      itens: [
+        { href: "/", rotulo: "Anúncios", contagem: banco?.anuncios, ponto: "#1B76B8" },
+        { href: "/colheita/fontes", rotulo: "Fontes", contagem: banco?.fontesAtivas, ponto: "#7A4FBF" },
+        {
+          href: "/colheita/mencoes",
+          rotulo: "Menções",
+          contagem: banco?.mencoesComProblema,
+          ponto: "#B4740A",
+        },
+      ],
+    },
+    {
+      titulo: "Distribuição",
+      itens: [{ href: "/canais", rotulo: "Canais", ponto: "#2AABEE" }],
+    },
+  ];
+
+  const resumo: ResumoDaBarra[] =
+    banco === null
+      ? []
+      : [
+          { rotulo: "menções", valor: `${banco.mencoes}` },
+          {
+            rotulo: "anúncios novos",
+            valor: `${banco.anuncios}`,
+            cor: banco.anuncios > 0 ? "text-sucesso" : "text-texto-fraco",
+          },
+          {
+            rotulo: "descartadas",
+            valor: `${banco.mencoesComProblema}`,
+            cor: banco.mencoesComProblema > 0 ? "text-atencao" : "text-texto-fraco",
+          },
+        ];
+
+  return { grupos, resumo, rotina: banco?.rotina ?? { situacao: "banco_fora" } };
+}
+
+/**
+ * Números do banco, ou `null` quando ele não responde.
+ *
+ * O `catch` engole o erro de propósito aqui, e só aqui: quem precisa
+ * explicar a falha em português é a tela, que tem espaço para dizer o
+ * que fazer. O menu só precisa não quebrar.
+ */
+async function leDoBanco(): Promise<{
+  anuncios: number;
+  fontesAtivas: number;
+  mencoes: number;
+  mencoesComProblema: number;
+  rotina: EstadoDaRotina;
+} | null> {
+  try {
+    const db = supabaseServidor();
+
+    const [anuncios, fontes, mencoes, problemas, execucao] = await Promise.all([
+      db.from("anuncio").select("id", { count: "exact", head: true }),
+      db.from("fonte_descoberta").select("id", { count: "exact", head: true }).eq("ativo", true),
+      db.from("mencao").select("id", { count: "exact", head: true }),
+      db
+        .from("mencao")
+        .select("id", { count: "exact", head: true })
+        .in("resultado", ["pendente", "nao_reconhecido", "loja_desconhecida", "erro"]),
+      db
+        .from("execucao_rotina")
+        .select("iniciada_em, sucesso")
+        .order("iniciada_em", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (anuncios.error) return null;
+
+    const ultima = execucao.data as { iniciada_em: string; sucesso: boolean | null } | null;
+
+    return {
+      anuncios: anuncios.count ?? 0,
+      fontesAtivas: fontes.count ?? 0,
+      mencoes: mencoes.count ?? 0,
+      mencoesComProblema: problemas.count ?? 0,
+      rotina: ultima
+        ? {
+            situacao: ultima.sucesso === false ? "falhou" : "ok",
+            quando: new Date(ultima.iniciada_em).toLocaleTimeString("pt-BR", {
+              hour: "2-digit",
+              minute: "2-digit",
+              timeZone: "America/Sao_Paulo",
+            }),
+          }
+        : { situacao: "sem_registro" },
+    };
+  } catch {
+    return null;
+  }
+}

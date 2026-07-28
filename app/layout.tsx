@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
-import { Navegacao } from "@/app/componentes/Navegacao";
+import { Casca } from "@/app/componentes/Casca";
 
 import "./globals.css";
 
@@ -32,9 +32,8 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-fundo text-texto">
-        <Navegacao />
-        {children}
+      <body className="min-h-full bg-fundo text-texto">
+        <Casca>{children}</Casca>
       </body>
     </html>
   );

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { alternaCanal } from "@/app/acoes/canais";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
+import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import {
   canais,
@@ -33,26 +34,35 @@ export default async function Canais() {
   const capacidade = ativos.reduce((total, c) => total + c.tetoDiario, 0);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      <header>
-        <h1 className="text-xl font-bold tracking-titulo">Canais</h1>
-        <p className="mt-2 text-base text-texto-fraco">
-          Para onde as ofertas vão. O nicho de cada canal é o que roteia — oferta de pet chega ao
-          canal de pet sem ninguém decidir na hora.
-        </p>
-      </header>
+    <>
+      <CabecalhoDaPagina
+        trilha="Distribuição"
+        titulo="Canais"
+        subtitulo="Para onde as ofertas vão. O nicho de cada canal é o que roteia — oferta de pet chega ao canal de pet sem ninguém decidir na hora."
+      />
 
+      <Kpis
+        itens={[
+          {
+            rotulo: "Canais ativos",
+            valor: `${ativos.length}`,
+            nota: `${lista.length} no total`,
+          },
+          {
+            rotulo: "Capacidade por dia",
+            valor: `${capacidade}`,
+            nota: `${capacidade * 7} por semana`,
+          },
+          {
+            rotulo: "Vagas restantes hoje",
+            valor: `${vagasDeHoje()}`,
+            nota: "o que ainda cabe",
+          },
+        ]}
+      />
+
+      <main className="flex w-full max-w-5xl flex-col gap-6 px-6 pt-5 pb-10">
       <AvisoSimulacao detalhe="Estes canais não existem. Nada é publicado neles, e a audiência é inventada." />
-
-      <section className="grid gap-5 sm:grid-cols-3">
-        <Indicador rotulo="Canais ativos" valor={`${ativos.length}`} detalhe={`${lista.length} no total`} />
-        <Indicador
-          rotulo="Capacidade por dia"
-          valor={`${capacidade}`}
-          detalhe={`${capacidade * 7} por semana`}
-        />
-        <Indicador rotulo="Vagas restantes hoje" valor={`${vagasDeHoje()}`} detalhe="o que ainda cabe" />
-      </section>
 
       <section className="flex flex-col gap-4">
         {lista.map((canal) => (
@@ -68,7 +78,8 @@ export default async function Canais() {
         </p>
         <FormularioCanal />
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 
@@ -167,16 +178,6 @@ function CartaoDeCanal({ canal }: { canal: CanalSimulado }) {
         </div>
       </div>
     </article>
-  );
-}
-
-function Indicador({ rotulo, valor, detalhe }: { rotulo: string; valor: string; detalhe: string }) {
-  return (
-    <div className="rounded-lg border border-borda bg-superficie p-5">
-      <p className="text-xs font-semibold uppercase tracking-eyebrow text-texto-fraco">{rotulo}</p>
-      <p className="font-mono text-2xl font-extrabold tabular-nums tracking-titulo">{valor}</p>
-      <p className="text-sm text-texto-fraco">{detalhe}</p>
-    </div>
   );
 }
 

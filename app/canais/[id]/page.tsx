@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { alternaCanal } from "@/app/acoes/canais";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
+import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import { buscaCanal, nomeDoNicho, parteDoDono, publicacoesDaFila } from "@/lib/simulacao/loja";
 
@@ -30,36 +30,28 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
   const dono = parteDoDono(canal);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
-      <nav className="text-sm text-texto-fraco">
-        <Link href="/canais" className="font-semibold text-marca-texto">
-          Canais
-        </Link>{" "}
-        / {canal.nome}
-      </nav>
+    <>
+      <CabecalhoDaPagina
+        trilha="Canais"
+        titulo={canal.nome}
+        subtitulo={`${canal.plataforma === "telegram" ? "Telegram" : "WhatsApp"} · ${canal.nichos
+          .map(nomeDoNicho)
+          .join(", ")} · ${canal.audiencia.toLocaleString("pt-BR")} pessoas`}
+        acoes={
+          <form action={alternaCanal}>
+            <input type="hidden" name="canal_id" value={canal.id} />
+            <input type="hidden" name="ativo" value={canal.ativo ? "false" : "true"} />
+            <button
+              type="submit"
+              className="rounded-md border border-borda bg-superficie px-4 py-3 text-base font-semibold text-texto-medio"
+            >
+              {canal.ativo ? "Desligar canal" : "Ligar canal"}
+            </button>
+          </form>
+        }
+      />
 
-      <header className="flex flex-wrap items-start gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold tracking-titulo">{canal.nome}</h1>
-          <p className="mt-2 text-base text-texto-fraco">
-            {canal.plataforma === "telegram" ? "Telegram" : "WhatsApp"} ·{" "}
-            {canal.nichos.map(nomeDoNicho).join(", ")} ·{" "}
-            {canal.audiencia.toLocaleString("pt-BR")} pessoas
-          </p>
-        </div>
-
-        <form action={alternaCanal}>
-          <input type="hidden" name="canal_id" value={canal.id} />
-          <input type="hidden" name="ativo" value={canal.ativo ? "false" : "true"} />
-          <button
-            type="submit"
-            className="rounded-md border border-borda bg-superficie px-4 py-3 text-base font-semibold text-texto-medio"
-          >
-            {canal.ativo ? "Desligar canal" : "Ligar canal"}
-          </button>
-        </form>
-      </header>
-
+      <main className="flex w-full max-w-3xl flex-col gap-6 px-6 pt-5 pb-10">
       <AvisoSimulacao detalhe="Canal simulado. Editar aqui muda a capacidade que a tela de aprovar mostra, e nada mais." />
 
       {!canal.ativo && (
@@ -103,7 +95,8 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
           sozinho.
         </p>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 

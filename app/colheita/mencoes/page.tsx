@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type {
   MencaoLinha,
@@ -68,16 +69,14 @@ export default async function Mencoes({
   const total = RESULTADOS_COM_PROBLEMA.reduce((soma, r) => soma + (contagem[r] ?? 0), 0);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-6">
-      <header>
-        <h1 className="text-xl font-bold tracking-titulo">Menções com problema</h1>
-        <p className="mt-2 text-base text-texto-fraco">
-          Link avistado que não virou anúncio. É aqui que aparece formato de loja que o leitor ainda
-          não entende — o tipo de falha que não dá erro em lugar nenhum e só se manifesta como
-          catálogo crescendo devagar.
-        </p>
-      </header>
+    <>
+      <CabecalhoDaPagina
+        trilha="Catálogo"
+        titulo="Menções com problema"
+        subtitulo="Link avistado que não virou anúncio. É aqui que aparece formato de loja que o leitor ainda não entende — o tipo de falha que não dá erro em lugar nenhum e só se manifesta como catálogo crescendo devagar."
+      />
 
+      <main className="flex w-full max-w-5xl flex-col gap-6 px-6 pt-5 pb-10">
       <section className="flex flex-wrap gap-3">
         <Filtro href="/colheita/mencoes" rotulo="todas" quantidade={total} ativo={filtro === null} />
         {RESULTADOS_COM_PROBLEMA.map((resultado) => (
@@ -172,7 +171,8 @@ export default async function Mencoes({
         </Link>
         .
       </p>
-    </main>
+      </main>
+    </>
   );
 }
 

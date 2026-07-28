@@ -1,3 +1,4 @@
+import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioAnuncio } from "@/app/componentes/FormularioAnuncio";
 import { formataReais } from "@/lib/dinheiro";
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -55,15 +56,14 @@ export default async function Painel() {
   const parados = ativos.filter((a) => diasDesde(a.ultima_coleta_em, agora) >= DIAS_PARA_ALERTA);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 p-6">
-      <header>
-        <h1 className="text-2xl font-semibold">Radar de Ofertas</h1>
-        <p className="text-sm text-neutral-500">
-          Fase 1 · radar silencioso. Nenhum grupo ainda — o objetivo aqui é acumular série de preço
-          antes de precisar dela.
-        </p>
-      </header>
+    <>
+      <CabecalhoDaPagina
+        trilha="Catálogo"
+        titulo="Anúncios monitorados"
+        subtitulo="Fase 1 · radar silencioso. Nenhum grupo ainda — o objetivo aqui é acumular série de preço antes de precisar dela."
+      />
 
+      <main className="flex w-full max-w-5xl flex-col gap-8 px-6 pt-5 pb-10">
       <section className="grid gap-4 sm:grid-cols-3">
         <Indicador
           rotulo="Anúncios ativos"
@@ -183,7 +183,8 @@ export default async function Painel() {
           </div>
         )}
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 

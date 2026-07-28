@@ -8,6 +8,7 @@ import {
 } from "@/app/acoes/publicacao";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { BotaoWhatsApp } from "@/app/componentes/BotaoWhatsApp";
+import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
 import { formataReais } from "@/lib/dinheiro";
 import { publicacoesDaFila, type PublicacaoSimulada } from "@/lib/simulacao/loja";
 
@@ -49,16 +50,18 @@ export default async function Publicar() {
   const whatsappProntas = prontas.filter((p) => p.canal.plataforma === "whatsapp");
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-5 p-5">
-      <header>
-        <h1 className="text-xl font-bold tracking-titulo">Publicar</h1>
-        <p className="mt-2 text-base text-texto-fraco">
-          {pendentes.length === 0
+    <>
+      <CabecalhoDaPagina
+        trilha="Hoje"
+        titulo="Publicar"
+        subtitulo={
+          pendentes.length === 0
             ? "Nada esperando envio."
-            : `${pendentes.length} ${pendentes.length === 1 ? "publicação" : "publicações"} esperando. O WhatsApp abre com a mensagem pronta — você aperta enviar.`}
-        </p>
-      </header>
+            : `${pendentes.length} ${pendentes.length === 1 ? "publicação" : "publicações"} esperando. O WhatsApp abre com a mensagem pronta — você aperta enviar.`
+        }
+      />
 
+      <main className="flex w-full max-w-3xl flex-col gap-5 px-6 pt-5 pb-10">
       <AvisoSimulacao detalhe="Nada é publicado de verdade. O botão do WhatsApp abre o aplicativo com o texto, e o do Telegram só marca como enviado." />
 
       {pendentes.length === 0 && enviadas.length === 0 && (
@@ -177,7 +180,8 @@ export default async function Publicar() {
           </ul>
         </section>
       )}
-    </main>
+      </main>
+    </>
   );
 }
 

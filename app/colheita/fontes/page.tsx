@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { alternaFonteAtiva, defineNichoDaFonte } from "@/app/acoes/fontes";
+import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioFonte } from "@/app/componentes/FormularioFonte";
 import { enderecoPublico } from "@/lib/canais";
 import { formataReais } from "@/lib/dinheiro";
@@ -51,28 +52,28 @@ export default async function Fontes() {
   const descartadas = soma(fontes, (f) => f.descartadas);
 
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-7 p-6">
-      <header>
-        <h1 className="text-xl font-bold tracking-titulo">Fontes de colheita</h1>
-        <p className="mt-2 text-base text-texto-fraco">
-          Canais de terceiros que lemos em busca de candidatas. Nunca publicamos nada neles, e o
-          preço que eles alegam nunca entra na nossa série — quem decide se está barato é o motor,
-          pelas mesmas comportas de qualquer anúncio.
-        </p>
-      </header>
+    <>
+      <CabecalhoDaPagina
+        trilha="Catálogo"
+        titulo="Fontes de colheita"
+        subtitulo="Canais de terceiros que lemos em busca de candidatas. Nunca publicamos nada neles, e o preço que eles alegam nunca entra na nossa série — quem decide se está barato é o motor, pelas mesmas comportas de qualquer anúncio."
+      />
 
-      <section className="grid gap-5 sm:grid-cols-4">
-        <Indicador rotulo="Canais lendo" valor={`${ativas.length}`} detalhe={`${fontes.length} cadastrados`} />
-        <Indicador rotulo="Menções" valor={`${mencoes}`} detalhe="links avistados" />
-        <Indicador rotulo="Anúncios novos" valor={`${novos}`} detalhe="entraram no catálogo" />
-        <Indicador
-          rotulo="Descartadas"
-          valor={`${descartadas}`}
-          detalhe={mencoes > 0 ? `${Math.round((descartadas / mencoes) * 100)}% do total` : "—"}
-          alerta={descartadas > 0}
-        />
-      </section>
+      <Kpis
+        itens={[
+          { rotulo: "Canais lendo", valor: `${ativas.length}`, nota: `${fontes.length} cadastrados` },
+          { rotulo: "Menções", valor: `${mencoes}`, nota: "links avistados" },
+          { rotulo: "Anúncios novos", valor: `${novos}`, nota: "entraram no catálogo" },
+          {
+            rotulo: "Descartadas",
+            valor: `${descartadas}`,
+            nota: mencoes > 0 ? `${Math.round((descartadas / mencoes) * 100)}% do total` : "—",
+            cor: descartadas > 0 ? "text-atencao" : undefined,
+          },
+        ]}
+      />
 
+      <main className="flex w-full max-w-5xl flex-col gap-7 px-6 pt-5 pb-10">
       <section>
         <h2 className="mb-4 text-lg font-bold tracking-titulo">Rendimento por canal</h2>
 
@@ -288,7 +289,8 @@ export default async function Fontes() {
           </div>
         )}
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 
@@ -412,32 +414,6 @@ function descreveQuando(quando: string | null): string {
   if (dias === 0) return "hoje";
   if (dias === 1) return "ontem";
   return `há ${dias} dias`;
-}
-
-function Indicador({
-  rotulo,
-  valor,
-  detalhe,
-  alerta,
-}: {
-  rotulo: string;
-  valor: string;
-  detalhe: string;
-  alerta?: boolean;
-}) {
-  return (
-    <div className="rounded-lg border border-borda bg-superficie p-5">
-      <p className="text-xs font-semibold uppercase tracking-eyebrow text-texto-fraco">{rotulo}</p>
-      <p
-        className={`text-2xl font-extrabold tabular-nums tracking-titulo ${
-          alerta ? "text-atencao" : ""
-        }`}
-      >
-        {valor}
-      </p>
-      <p className="text-sm text-texto-fraco">{detalhe}</p>
-    </div>
-  );
 }
 
 function AvisoDeConfiguracao({ mensagem }: { mensagem: string }) {

@@ -174,6 +174,25 @@ export type OfertaLinha = {
   criado_em: string;
 };
 
+/**
+ * Registro de execução das rotinas.
+ *
+ * Existe porque as falhas deste sistema são silenciosas: a coleta
+ * para e nada acontece na tela. Sem esta tabela, "não rodou" e
+ * "rodou e não achou nada" são indistinguíveis.
+ */
+export type ExecucaoRotinaLinha = {
+  id: string;
+  operacao_id: string;
+  tarefa: string;
+  iniciada_em: string;
+  terminada_em: string | null;
+  /** Nulo enquanto está rodando. */
+  sucesso: boolean | null;
+  resumo: unknown;
+  erro: string | null;
+};
+
 /** View `anuncio_serie` — saúde da série por anúncio. */
 export type AnuncioSerieLinha = {
   anuncio_id: string;
@@ -254,6 +273,7 @@ export type Banco = {
       oferta: Tabela<OfertaLinha, "operacao_id" | "anuncio_id">;
       fonte_descoberta: Tabela<FonteDescobertaLinha, "operacao_id" | "identificador">;
       mencao: Tabela<MencaoLinha, "operacao_id" | "fonte_id" | "post_externo_id" | "url_bruta">;
+      execucao_rotina: Tabela<ExecucaoRotinaLinha, "operacao_id" | "tarefa">;
     };
     Views: {
       anuncio_serie: { Row: AnuncioSerieLinha; Relationships: [] };
