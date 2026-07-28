@@ -274,6 +274,25 @@ Cabeçalho e faixa de indicadores iam até a borda da janela enquanto o conteúd
 
 A correção não é combinar a largura entre as telas — é tirar a escolha delas. A página declara uma medida (`estreita`, `media`, `larga`, `cheia`) e cabeçalho, indicadores e conteúdo ficam dentro dela por construção.
 
+### `Modal` — criar deixou de ser bloco solto
+
+Criar canal, nicho, fonte e produto era um formulário permanente no pé da página, e criar exceção de limiar era um `<details>` que abria dentro do cartão. Os dois têm o mesmo defeito, e não é de gosto: **criar é um ato, e ato precisa de foco.**
+
+Formulário fixo no pé da tela compete com a lista o tempo todo — está sempre ali, sempre vazio, ocupando a altura que a lista queria. Acordeão é pior: ao abrir, empurra o conteúdo abaixo, então quem preenche termina num lugar diferente de onde começou.
+
+O gatilho virou botão no cabeçalho da página, que é onde se procura a ação da tela.
+
+Três decisões dentro dele:
+
+- **`<dialog>` nativo.** Traz de graça a armadilha de foco, o Escape, o `aria-modal` e o fundo inerte. A versão em `div` de tudo isso é o lugar clássico onde a acessibilidade se perde sem ninguém notar.
+- **Fechar é contexto, não propriedade.** As telas são componentes de servidor, e função não atravessa a fronteira para o cliente — `<Modal><FormularioNicho /></Modal>` só funciona porque o formulário pergunta ao contexto. Fora de um modal o `useFechaModal` devolve uma função vazia, e o mesmo formulário serve à edição em página inteira.
+- **O conteúdo só é montado com o modal aberto**, para o formulário nascer limpo em vez de guardar o que foi digitado e abandonado antes.
+
+Duas armadilhas que custaram tempo e ficam anotadas:
+
+1. **Nunca ponha classe de display na tag `<dialog>`.** O `<dialog>` fechado é escondido pelo `display: none` do navegador, e um `flex` o sobrescreve — o modal fica visível o tempo todo, por cima da tela. A coluna que rola é o `<div>` de dentro.
+2. **O preflight do Tailwind zera o `margin: auto`** que centraliza o `<dialog>` modal. Sem uma regra explícita, ele nasce grudado no canto superior esquerdo.
+
 ### A regra do monoespaçado mudou
 
 Era "dinheiro em coluna precisa de largura fixa". Estava errado, e o erro se espalhou: preço, percentual, contagem, número de KPI e até texto de reserva de campo saíram em `JetBrains Mono`. O painel inteiro ficou com cara de despejo de terminal.

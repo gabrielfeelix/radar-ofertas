@@ -7,6 +7,7 @@ import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { Cartao } from "@/app/componentes/Cartao";
 import { Chip } from "@/app/componentes/Chip";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
+import { Modal } from "@/app/componentes/Modal";
 import { Identidade } from "@/app/componentes/Identidade";
 import {
   canais,
@@ -42,6 +43,16 @@ export default async function Canais() {
       trilha="Distribuição"
       titulo="Canais"
       subtitulo="Para onde as ofertas vão. O nicho de cada canal é o que roteia — oferta de pet chega ao canal de pet sem ninguém decidir na hora."
+      acoes={
+        <Modal
+          rotuloDoGatilho="Novo canal"
+          titulo="Novo canal"
+          largura="larga"
+          descricao="Todo canal aponta para um parceiro desde a primeira linha — e no começo esse parceiro é você mesmo."
+        >
+          <FormularioCanal />
+        </Modal>
+      }
       kpis={[
         {
           rotulo: "Canais ativos",
@@ -74,14 +85,6 @@ export default async function Canais() {
         ))}
       </section>
 
-      <Cartao espaco="lg" className="mt-2">
-        <h2 className="mb-1 text-lg font-bold tracking-titulo">Novo canal</h2>
-        <p className="mb-5 text-base text-texto-fraco">
-          Todo canal aponta para um parceiro desde a primeira linha — e no começo esse parceiro é
-          você mesmo.
-        </p>
-        <FormularioCanal />
-      </Cartao>
     </Pagina>
   );
 }

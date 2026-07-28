@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 import { criaNicho, type ResultadoNicho } from "@/app/acoes/ajustes";
 import { Botao } from "@/app/componentes/Botao";
+import { useFechaModal } from "@/app/componentes/Modal";
 
 /**
  * Criar nicho.
@@ -17,6 +18,14 @@ export function FormularioNicho() {
     criaNicho,
     null,
   );
+
+  const fechaModal = useFechaModal();
+
+  // Deu certo: fecha o modal. A confirmação é o nicho aparecendo na
+  // lista atrás — mais forte que uma linha verde num painel que some.
+  useEffect(() => {
+    if (resultado?.ok) fechaModal();
+  }, [resultado, fechaModal]);
 
   return (
     <form action={acao} className="flex flex-wrap items-end gap-3" key={resultado?.ok ? resultado.token : "novo"}>

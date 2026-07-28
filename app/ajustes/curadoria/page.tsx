@@ -4,6 +4,7 @@ import { removeExcecao } from "@/app/acoes/ajustes";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { CampoDeLimiar } from "@/app/componentes/CampoDeLimiar";
+import { Modal } from "@/app/componentes/Modal";
 import { formataLimiar, montaQuadroDaCuradoria, type Limiar } from "@/lib/curadoria";
 import type { NichoLinha } from "@/lib/supabase/tipos";
 
@@ -203,25 +204,31 @@ function CartaoDoLimiar({
             lado ou carimba tudo do outro.
           */}
           {limiar.porNicho && semExcecao.length > 0 && (
-            <details className="mt-3">
-              <summary className="cursor-pointer list-none text-sm font-bold text-marca-texto">
-                + exceção para um nicho
-              </summary>
-              <ul className="mt-3 flex flex-col gap-2">
-                {semExcecao.map((nicho) => (
-                  <li key={nicho.id} className="flex flex-wrap items-center gap-3">
-                    <span className="w-32 text-base text-texto-medio">{nicho.nome}</span>
-                    <CampoDeLimiar
-                      chave={limiar.chave}
-                      valor={limiar.valorGlobal}
-                      nichoId={nicho.id}
-                      sufixo={SUFIXO[limiar.formato]}
-                      rotuloDoBotao="criar exceção"
-                    />
-                  </li>
-                ))}
-              </ul>
-            </details>
+            <div className="mt-3">
+              <Modal
+                rotuloDoGatilho="+ exceção para um nicho"
+                varianteDoGatilho="fantasma"
+                tamanhoDoGatilho="sm"
+                titulo={`Exceção de ${limiar.rotulo.toLowerCase()}`}
+                largura="media"
+                descricao="Vale só para o nicho escolhido. Os outros continuam seguindo o valor global, e mudam junto quando ele mudar."
+              >
+                <ul className="flex flex-col gap-3">
+                  {semExcecao.map((nicho) => (
+                    <li key={nicho.id} className="flex flex-wrap items-center gap-3">
+                      <span className="w-32 text-base text-texto-medio">{nicho.nome}</span>
+                      <CampoDeLimiar
+                        chave={limiar.chave}
+                        valor={limiar.valorGlobal}
+                        nichoId={nicho.id}
+                        sufixo={SUFIXO[limiar.formato]}
+                        rotuloDoBotao="criar exceção"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </Modal>
+            </div>
           )}
         </div>
       )}

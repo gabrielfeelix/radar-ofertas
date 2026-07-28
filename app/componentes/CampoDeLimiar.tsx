@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 
 import { salvaLimiar, type ResultadoAjuste } from "@/app/acoes/ajustes";
+import { useFechaModal } from "@/app/componentes/Modal";
 
 /**
  * O campo que altera um limiar de curadoria.
@@ -32,6 +33,14 @@ export function CampoDeLimiar({
     salvaLimiar,
     null,
   );
+
+  // Criar exceção acontece dentro de um modal; salvar o valor global
+  // acontece na própria linha da tela. O mesmo campo serve aos dois, e
+  // fora do modal `fechaModal` não faz nada.
+  const fechaModal = useFechaModal();
+  useEffect(() => {
+    if (resultado?.ok && nichoId) fechaModal();
+  }, [resultado, nichoId, fechaModal]);
 
   return (
     <form action={acao} className="flex flex-wrap items-center gap-2">

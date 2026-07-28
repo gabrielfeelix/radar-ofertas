@@ -4,6 +4,7 @@ import { alternaNichoAtivo, renomeiaNicho } from "@/app/acoes/ajustes";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioNicho } from "@/app/componentes/FormularioNicho";
+import { Modal } from "@/app/componentes/Modal";
 import { formataLimiar, montaQuadroDaCuradoria } from "@/lib/curadoria";
 import { canais } from "@/lib/simulacao/loja";
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -53,6 +54,16 @@ export default async function Nichos() {
         titulo="Nichos"
         subtitulo="O eixo que liga produto a canal. Produto tem um nicho; canal aceita vários — é isso que faz o roteamento ser consulta ao banco, e não regra escrita à mão."
         medida="media"
+        acoes={
+          <Modal
+            rotuloDoGatilho="Novo nicho"
+            titulo="Novo nicho"
+            largura="estreita"
+            descricao="Nicho novo nasce herdando todos os limiares do global. Só configure exceção quando o comportamento daquele assunto for diferente de verdade — vinte por cento em ração é oferta excelente, vinte por cento em eletrônico é terça-feira comum."
+          >
+            <FormularioNicho />
+          </Modal>
+        }
       >
         {semNicho > 0 && (
           <p className="rounded-md border border-atencao-borda bg-atencao-fundo px-4 py-3 text-base text-atencao">
@@ -180,15 +191,6 @@ export default async function Nichos() {
           })}
         </ul>
 
-        <section className="rounded-lg border border-borda bg-superficie p-5">
-          <h2 className="mb-1 text-lg font-bold tracking-titulo">Novo nicho</h2>
-          <p className="mb-5 max-w-[70ch] text-base text-texto-fraco">
-            Nicho novo nasce herdando todos os limiares do global. Só configure exceção quando o
-            comportamento daquele assunto for diferente de verdade — vinte por cento em ração é
-            oferta excelente, vinte por cento em eletrônico é terça-feira comum.
-          </p>
-          <FormularioNicho />
-        </section>
       </Pagina>
     </>
   );

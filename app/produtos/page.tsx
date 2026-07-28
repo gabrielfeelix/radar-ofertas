@@ -2,6 +2,7 @@ import { Identidade } from "@/app/componentes/Identidade";
 import Link from "next/link";
 
 import { FormularioAnuncio } from "@/app/componentes/FormularioAnuncio";
+import { Modal } from "@/app/componentes/Modal";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { EtiquetaDeLoja } from "@/app/componentes/Chip";
 import { formataReais } from "@/lib/dinheiro";
@@ -105,6 +106,21 @@ export default async function Produtos({
         titulo="Produtos"
         subtitulo="O que está no radar. A série de preço leva meses para se formar e não pode ser refeita — este catálogo é o ativo do projeto."
         acoes={
+          <>
+            {/*
+              Cadastrar por link é botão, não item de menu: com a
+              colheita ligada, ele deixou de ser o caminho principal de
+              entrada do catálogo e virou a exceção — o produto que você
+              viu e quer acompanhar agora.
+            */}
+            <Modal
+              rotuloDoGatilho="Cadastrar por link"
+              titulo="Cadastrar por link"
+              largura="larga"
+              descricao="Quando você viu um produto e quer acompanhar. Título e preço são digitados à mão — buscar isso sozinho na página depende dos termos de cada marketplace, e essa decisão ainda está em aberto."
+            >
+              <FormularioAnuncio nichos={nichos.map((n) => ({ id: n.id, nome: n.nome }))} />
+            </Modal>
           <div className="flex items-center gap-1 rounded-md border border-borda bg-superficie p-1">
             <span className="px-2 text-xs text-texto-fraco">ver por</span>
             <Aba href={comFiltros("/produtos", { nicho: nichoFiltro, q: busca })} rotulo="Produto" ativo={grao === "produto"} />
@@ -114,6 +130,7 @@ export default async function Produtos({
               ativo={grao === "anuncio"}
             />
           </div>
+          </>
         }
         kpis={[
         { rotulo: "Produtos", valor: `${produtos.length}`, nota: `${anuncios.length} anúncios` },
@@ -197,25 +214,6 @@ export default async function Produtos({
           />
         )}
 
-        {/*
-          Cadastrar por link é botão, não item de menu: com a colheita
-          ligada, ele deixou de ser o caminho principal de entrada do
-          catálogo e virou a exceção — o produto que você viu e quer
-          acompanhar agora.
-        */}
-        <details className="rounded-lg border border-borda bg-superficie p-5">
-          <summary className="cursor-pointer list-none text-lg font-bold tracking-titulo">
-            Cadastrar por link
-            <span className="ml-2 text-base font-normal text-texto-fraco">
-              quando você viu um produto e quer acompanhar
-            </span>
-          </summary>
-          <p className="mt-2 mb-5 text-base text-texto-fraco">
-            Título e preço são digitados à mão. Buscar isso sozinho na página depende dos termos de
-            cada marketplace, e essa decisão ainda está em aberto.
-          </p>
-          <FormularioAnuncio nichos={nichos.map((n) => ({ id: n.id, nome: n.nome }))} />
-        </details>
       </Pagina>
     </>
   );

@@ -4,6 +4,7 @@ import { alternaFonteAtiva, defineNichoDaFonte } from "@/app/acoes/fontes";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioFonte } from "@/app/componentes/FormularioFonte";
+import { Modal } from "@/app/componentes/Modal";
 import { enderecoPublico } from "@/lib/canais";
 import { formataReais } from "@/lib/dinheiro";
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -58,6 +59,16 @@ export default async function Fontes() {
         trilha="Catálogo"
         titulo="Fontes de colheita"
         subtitulo="Canais de terceiros que lemos em busca de candidatas. Nunca publicamos nada neles, e o preço que eles alegam nunca entra na nossa série — quem decide se está barato é o motor, pelas mesmas comportas de qualquer anúncio."
+        acoes={
+          <Modal
+            rotuloDoGatilho="Adicionar canal"
+            titulo="Adicionar canal de colheita"
+            largura="media"
+            descricao="Só canal público. Grupo fechado depende de leitura por conta de usuário, que ainda não existe — falta a string de sessão, e ela nunca entra no Git."
+          >
+            <FormularioFonte nichos={nichos.map((n) => ({ id: n.id, nome: n.nome }))} />
+          </Modal>
+        }
         kpis={[
         { rotulo: "Canais lendo", valor: `${ativas.length}`, nota: `${fontes.length} cadastrados` },
         { rotulo: "Menções", valor: `${mencoes}`, nota: "links avistados" },
@@ -197,15 +208,6 @@ export default async function Fontes() {
             não canal ruim.
           </p>
         )}
-      </section>
-
-      <section className="rounded-lg border border-borda bg-superficie p-5">
-        <h2 className="mb-1 text-lg font-bold tracking-titulo">Adicionar canal</h2>
-        <p className="mb-5 text-base text-texto-fraco">
-          Só canal público. Grupo fechado depende de leitura por conta de usuário, que ainda não
-          existe — falta a string de sessão, e ela nunca entra no Git.
-        </p>
-        <FormularioFonte nichos={nichos.map((n) => ({ id: n.id, nome: n.nome }))} />
       </section>
 
       <section>

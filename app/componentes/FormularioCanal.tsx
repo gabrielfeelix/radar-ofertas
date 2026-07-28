@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { salvaCanal, type ResultadoCanal } from "@/app/acoes/canais";
 import { NICHOS, type CanalSimulado } from "@/lib/simulacao/loja";
 import { Botao } from "@/app/componentes/Botao";
+import { useFechaModal } from "@/app/componentes/Modal";
 
 /**
  * Formulário de canal — o mesmo para criar e para editar.
@@ -24,6 +25,15 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
     salvaCanal,
     null,
   );
+
+  const fechaModal = useFechaModal();
+
+  // Deu certo: fecha o modal, quando existe um. A confirmação é o item
+  // aparecendo na lista atrás — mais forte que uma linha verde dentro
+  // de um painel que some em seguida.
+  useEffect(() => {
+    if (resultado?.ok) fechaModal();
+  }, [resultado, fechaModal]);
 
   const [audiencia, setAudiencia] = useState(canal?.splitAudienciaPct ?? 0);
   const [operacao, setOperacao] = useState(canal?.splitOperacaoPct ?? 0);

@@ -182,6 +182,56 @@ summary::-webkit-details-marker {
   background: #ffe2cc;
 }
 
+/* =============================================================
+   Modal
+
+   O `<dialog>` nativo aparece e some sem transição nenhuma, o que faz
+   um formulário de criar parecer um erro de renderização. Duas
+   animações curtas resolvem: o painel sobe 8px enquanto aparece, o
+   fundo escurece junto. `allow-discrete` é o que permite animar a
+   entrada de um elemento que estava com `display: none`.
+   ============================================================= */
+
+/* O navegador centraliza o `<dialog>` modal com `margin: auto`, e o
+   preflight do Tailwind zera a margem de tudo — inclusive dele. Sem
+   esta linha o modal nasce grudado no canto superior esquerdo. */
+dialog {
+  margin: auto;
+}
+
+dialog[open] {
+  animation: modal-entra 160ms ease-out;
+}
+
+dialog[open]::backdrop {
+  animation: fundo-entra 160ms ease-out;
+}
+
+@keyframes modal-entra {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes fundo-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Página não rola atrás do modal aberto. */
+body:has(dialog[open]) {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  dialog[open],
+  dialog[open]::backdrop {
+    animation: none;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

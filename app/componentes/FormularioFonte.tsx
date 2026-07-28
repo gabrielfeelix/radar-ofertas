@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 
 import { cadastraFonte, type ResultadoFonte } from "@/app/acoes/fontes";
 import { leIdentificadorDeCanal } from "@/lib/canais";
 
 import type { NichoOpcao } from "./FormularioAnuncio";
 import { Botao } from "@/app/componentes/Botao";
+import { useFechaModal } from "@/app/componentes/Modal";
 
 /**
  * Cadastro de canal de colheita.
@@ -22,6 +23,15 @@ export function FormularioFonte({ nichos }: { nichos: NichoOpcao[] }) {
     cadastraFonte,
     null,
   );
+
+  const fechaModal = useFechaModal();
+
+  // Deu certo: fecha o modal, quando existe um. A confirmação é o item
+  // aparecendo na lista atrás — mais forte que uma linha verde dentro
+  // de um painel que some em seguida.
+  useEffect(() => {
+    if (resultado?.ok) fechaModal();
+  }, [resultado, fechaModal]);
 
   return (
     <div className="flex flex-col gap-4">
