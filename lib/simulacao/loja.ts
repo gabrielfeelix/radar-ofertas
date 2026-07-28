@@ -512,6 +512,37 @@ export function desfazDecisao(id: string): void {
   oferta.canaisEscolhidos = [];
 }
 
+/**
+ * A série de preço que o painel de detalhe desenha.
+ *
+ * Gerada a partir do próprio id da oferta, sem sorteio: `Math.random`
+ * daria um gráfico diferente a cada carregamento da mesma tela, e um
+ * gráfico que muda sozinho é a forma mais rápida de alguém deixar de
+ * confiar no que a tela mostra.
+ *
+ * A forma imita o que a série real tem: ruído pequeno em volta da
+ * mediana, e a queda de agora no último ponto. É esse contraste que a
+ * tela precisa comunicar — a referência é o que NÓS observamos, nunca
+ * o "preço de" da loja.
+ */
+export function serieDePrecos(oferta: OfertaSimulada): number[] {
+  const pontos = Math.min(oferta.diasDeSerie, 30);
+  const serie: number[] = [];
+
+  let semente = 0;
+  for (const letra of oferta.id) semente += letra.charCodeAt(0);
+
+  for (let dia = 0; dia < pontos - 1; dia++) {
+    // Oscilação determinística de ±6% em volta da referência.
+    semente = (semente * 1103515245 + 12345) % 2147483648;
+    const variacao = ((semente % 1000) / 1000 - 0.5) * 0.12;
+    serie.push(Math.round(oferta.precoReferenciaCentavos * (1 + variacao)));
+  }
+
+  serie.push(oferta.precoAtualCentavos);
+  return serie;
+}
+
 /* =============================================================
    Publicações — o que a aprovação gerou.
    ============================================================= */

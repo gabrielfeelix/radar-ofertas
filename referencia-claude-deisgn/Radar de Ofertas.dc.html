@@ -1,0 +1,2178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>
+  body { margin: 0; background: #F5F6F8; }
+  * { box-sizing: border-box; }
+  a { color: #F16A0D; text-decoration: none; }
+  a:hover { color: #C9540A; }
+  ::selection { background: #FFE2CC; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #DFE1E6; border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
+</style>
+</helmet>
+<div style="--ac: {{ ac }}; display: flex; align-items: stretch; min-height: 100vh; background: #F5F6F8; color: #14161A; font-family: Manrope, system-ui, sans-serif; font-size: 14px; line-height: 1.45; -webkit-font-smoothing: antialiased;">
+
+  <aside style="width: 236px; flex: none; background: #FFFFFF; border-right: 1px solid #E9EAEE; padding: 16px 0 20px; display: flex; flex-direction: column; gap: 22px; position: sticky; top: 0; height: 100vh; overflow-y: auto;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 0 16px;">
+      <div style="width: 30px; height: 30px; flex: none; border-radius: 9px; background: linear-gradient(150deg, #FF9147, var(--ac, #F16A0D)); display: flex; align-items: center; justify-content: center;">
+        <div style="width: 10px; height: 10px; border-radius: 50%; border: 2.5px solid #FFFFFF;"></div>
+      </div>
+      <div style="font-weight: 800; font-size: 15.5px; letter-spacing: -0.02em;">Radar</div>
+      <div style="margin-left: auto; font-size: 11px; font-weight: 600; color: #8A9099; padding: 2px 7px; border-radius: 6px; background: #F3F4F6;">v1</div>
+    </div>
+
+    <nav style="display: flex; flex-direction: column; gap: 18px;">
+      <sc-for list="{{ nav }}" as="g" hint-placeholder-count="4">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <div style="padding: 0 18px 6px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #A3A8B0;">{{ g.titulo }}</div>
+          <sc-for list="{{ g.itens }}" as="it" hint-placeholder-count="3">
+            <sc-if value="{{ it.ativo }}" hint-placeholder-val="{{ false }}">
+              <div style="margin: 0 10px; display: flex; align-items: center; gap: 9px; padding: 8px 11px; border-radius: 9px; cursor: default; font-size: 13.5px; font-weight: 700; background: var(--ac, #F16A0D); color: #FFFFFF;">
+                <span style="width: 6px; height: 6px; flex: none; border-radius: 2px; background: rgba(255,255,255,0.85);"></span>
+                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ it.rotulo }}</span>
+                <span style="font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.22); color: #FFFFFF;">{{ it.contagem }}</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ it.inativo }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ it.onClick }}" style="margin: 0 10px; display: flex; align-items: center; gap: 9px; padding: 8px 11px; border-radius: 9px; cursor: pointer; font-size: 13.5px; font-weight: 500; color: {{ it.fg }};" style-hover="background: #F5F6F8;">
+                <span style="width: 6px; height: 6px; flex: none; border-radius: 2px; background: {{ it.ponto }};"></span>
+                <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ it.rotulo }}</span>
+                <span style="font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 6px; background: #F3F4F6; color: #8A9099;">{{ it.contagem }}</span>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+      </sc-for>
+    </nav>
+
+    <div style="margin-top: auto; padding: 0 18px; display: flex; flex-direction: column; gap: 9px;">
+      <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #A3A8B0;">Coleta de hoje</div>
+      <sc-for list="{{ resumo }}" as="r" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12.5px;">
+          <span style="color: #6B7280;">{{ r.rotulo }}</span>
+          <span style="font-weight: 700; color: {{ r.cor }};">{{ r.valor }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </aside>
+
+  <main style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+
+    <header style="background: #FFFFFF; border-bottom: 1px solid #E9EAEE; padding: 11px 24px; display: flex; align-items: center; gap: 16px; position: sticky; top: 0; z-index: 6;">
+      <div style="display: flex; align-items: center; gap: 9px; padding: 8px 12px; border-radius: 9px; background: #F5F6F8; border: 1px solid #E9EAEE; color: #9AA0AA; font-size: 13px; flex: 1; max-width: 380px;">
+        <span style="width: 11px; height: 11px; border: 1.6px solid #B6BBC3; border-radius: 50%; flex: none;"></span>
+        <input type="text" placeholder="Buscar produto, anúncio ou canal" value="{{ buscaValor }}" onChange="{{ buscar }}" style="flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font-family: Manrope, system-ui, sans-serif; font-size: 13px; color: #14161A; padding: 0;">
+        <span style="font-family: 'JetBrains Mono', monospace; font-size: 11px; padding: 1px 5px; border-radius: 5px; background: #FFFFFF; border: 1px solid #E9EAEE;">⌘K</span>
+      </div>
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 8px; background: #F0FAF3; border: 1px solid #D6EFE0; font-size: 12px; font-weight: 600; color: #167A45;">
+          <span style="width: 6px; height: 6px; border-radius: 50%; background: #22A45D;"></span>Rotina 06:08
+        </div>
+        <div style="display: flex; align-items: center; gap: 9px; padding-left: 12px; border-left: 1px solid #E9EAEE;">
+          <div style="width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(150deg, #FFC79A, #F16A0D); display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-size: 12px; font-weight: 700;">M</div>
+          <div style="display: flex; flex-direction: column; line-height: 1.2;">
+            <span style="font-size: 12.5px; font-weight: 600;">Marco</span>
+            <span style="font-size: 11px; color: #9AA0AA;">dono</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div style="padding: 20px 24px 8px; display: flex; align-items: flex-end; gap: 18px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 260px; display: flex; flex-direction: column; gap: 5px;">
+        <div style="display: flex; align-items: center; gap: 7px; font-size: 12px; color: #9AA0AA;">
+          <span>{{ grupoAtual }}</span><span>/</span><span style="color: #6B7280; font-weight: 600;">{{ titulo }}</span>
+        </div>
+        <h1 style="margin: 0; font-size: 25px; font-weight: 800; letter-spacing: -0.03em;">{{ titulo }}</h1>
+        <div style="color: #6B7280; font-size: 13.5px; max-width: 70ch; text-wrap: pretty;">{{ subtitulo }}</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 9px;">
+        <sc-if value="{{ mostrarOrdem }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 9px; background: #FFFFFF; border: 1px solid #E9EAEE;">
+            <span style="padding: 0 6px 0 8px; font-size: 11.5px; color: #9AA0AA;">ordenar</span>
+            <div onClick="{{ ordenarNota }}" style="padding: 5px 11px; border-radius: 7px; cursor: pointer; font-size: 12.5px; font-weight: 600; background: {{ ordNotaBg }}; color: {{ ordNotaFg }};">Nota</div>
+            <div onClick="{{ ordenarComissao }}" style="padding: 5px 11px; border-radius: 7px; cursor: pointer; font-size: 12.5px; font-weight: 600; background: {{ ordComBg }}; color: {{ ordComFg }};">Comissão</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ temAcao }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ acaoClick }}" style="padding: 9px 15px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 700; color: #FFFFFF; background: var(--ac, #F16A0D); box-shadow: 0 1px 2px rgba(241,106,13,0.35); white-space: nowrap;" style-hover="filter: brightness(1.07);">{{ acaoRotulo }}</div>
+        </sc-if>
+      </div>
+    </div>
+
+    <sc-if value="{{ mostrarKpis }}" hint-placeholder-val="{{ true }}">
+    <div style="padding: 12px 24px 4px; display: flex; gap: 12px; flex-wrap: wrap;">
+      <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="5">
+        <div style="flex: 1 1 170px; min-width: 160px; padding: 14px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E9EAEE; display: flex; flex-direction: column; gap: 5px;">
+          <div style="font-size: 12px; font-weight: 600; color: #8A9099;">{{ k.rotulo }}</div>
+          <div style="font-size: 23px; font-weight: 800; letter-spacing: -0.03em;">{{ k.valor }}</div>
+          <div style="font-size: 11.5px; font-weight: 600; color: {{ k.cor }};">{{ k.nota }}</div>
+        </div>
+      </sc-for>
+    </div>
+    </sc-if>
+
+    <sc-if value="{{ ehAprovacao }}" hint-placeholder-val="{{ true }}">
+      <section data-screen-label="Fila de aprovação" style="flex: 1; display: flex; flex-wrap: wrap; align-items: flex-start; gap: 14px; padding: 12px 24px 40px; min-height: 0;">
+
+        <div style="flex: 3 1 620px; min-width: 0; border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; overflow-y: hidden; overflow-x: auto;">
+          <sc-if value="{{ temFila }}" hint-placeholder-val="{{ true }}">
+            <div>
+              <div style="display: grid; grid-template-columns: minmax(150px, 1fr) 106px 74px 52px 86px 50px; align-items: center; gap: 12px; padding: 11px 16px; min-width: 588px; border-bottom: 1px solid #EDEEF1; background: #FAFAFB; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">
+                <div>Produto</div><div>Preço</div><div>Desconto</div><div>Nota</div><div style="text-align: right;">Comissão</div><div style="text-align: right;">Canais</div>
+              </div>
+              <sc-for list="{{ fila }}" as="o" hint-placeholder-count="4">
+                <div onClick="{{ o.selecionar }}" style="display: grid; grid-template-columns: minmax(150px, 1fr) 106px 74px 52px 86px 50px; align-items: center; gap: 12px; padding: 13px 16px; min-width: 588px; border-bottom: 1px solid #F1F2F4; cursor: pointer; background: {{ o.bg }}; box-shadow: {{ o.marca }};" style-hover="background: #FAFAFB;">
+                  <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                    <div style="width: 64px; height: 64px; flex: none; border-radius: 11px; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                      <image-slot id="{{ o.slotId }}" shape="rounded" radius="11" placeholder="{{ o.slotLabel }}"></image-slot>
+                    </div>
+                    <div style="min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+                      <div style="font-size: 13.5px; font-weight: 600; letter-spacing: -0.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ o.produto }}</div>
+                      <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <span style="font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: {{ o.lojaBg }}; color: {{ o.lojaFg }};">{{ o.loja }}</span>
+                        <span style="font-size: 11.5px; color: #9AA0AA;">{{ o.nicho }} · {{ o.serieRotulo }}</span>
+                        <sc-if value="{{ o.semLastro }}" hint-placeholder-val="{{ false }}">
+                          <span style="font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 5px; background: #FEF4E2; color: #B4740A;">sem lastro</span>
+                        </sc-if>
+                        <sc-if value="{{ o.repetido }}" hint-placeholder-val="{{ false }}">
+                          <span style="font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 5px; background: #FDECEC; color: #C13232;">repetido</span>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 1px;">
+                    <span style="font-size: 15px; font-weight: 700; letter-spacing: -0.02em;">{{ o.preco }}</span>
+                    <span style="font-size: 11.5px; color: #A3A8B0; text-decoration: line-through;">{{ o.ref }}</span>
+                  </div>
+                  <div><span style="font-size: 12.5px; font-weight: 700; padding: 4px 9px; border-radius: 7px; background: #FFF1E6; color: #D2590A;">{{ o.desconto }}</span></div>
+                  <div style="position: relative; width: 38px; height: 38px;">
+                    <svg viewBox="0 0 38 38" style="width: 38px; height: 38px; transform: rotate(-90deg);">
+                      <circle cx="19" cy="19" r="16" fill="none" stroke="#EDEEF1" stroke-width="3.5"></circle>
+                      <circle cx="19" cy="19" r="16" fill="none" stroke="{{ o.notaCor }}" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="{{ o.dash }}"></circle>
+                    </svg>
+                    <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">{{ o.nota }}</div>
+                  </div>
+                  <div style="text-align: right; font-size: 13.5px; font-weight: 700;">{{ o.comissao }}</div>
+                  <div style="text-align: right; font-size: 12.5px; color: #6B7280;">{{ o.nCanais }}</div>
+                </div>
+              </sc-for>
+              <div style="padding: 11px 18px; font-size: 11.5px; color: #9AA0AA;">A comissão é estimativa: o percentual muda a cada campanha e só é confirmado no relatório da loja.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ filaVazia }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 34px 26px; display: flex; flex-direction: column; gap: 22px; max-width: 680px;">
+              <div style="font-size: 21px; font-weight: 800; letter-spacing: -0.025em;">Nenhuma oferta hoje.</div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <sc-for list="{{ funil }}" as="f" hint-placeholder-count="4">
+                  <div style="display: flex; align-items: center; gap: 14px; padding: 12px 15px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1;">
+                    <div style="font-size: 20px; font-weight: 800; width: 54px; text-align: right; letter-spacing: -0.03em; color: {{ f.cor }};">{{ f.n }}</div>
+                    <div style="flex: 1; font-size: 13px; color: #6B7280;">{{ f.rotulo }}</div>
+                    <div style="width: 110px; height: 5px; border-radius: 3px; background: #EDEEF1; overflow: hidden;">
+                      <div style="height: 5px; border-radius: 3px; background: {{ f.cor }}; width: {{ f.pct }};"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="font-size: 13.5px; color: #6B7280; line-height: 1.65; text-wrap: pretty;">Cada anúncio novo só passa a ser avaliável depois de acumular série de preço própria. Na primeira semana quase não há oferta; a partir da sexta o normal é trinta por dia. <strong style="color: #14161A; font-weight: 700;">Fila vazia agora é o previsto, não defeito.</strong> Se quiser afrouxar o motor, faça em <span style="color: var(--ac, #F16A0D); font-weight: 600;">Ajustes → Curadoria</span>, onde a taxa de aprovação aparece ao lado do controle.</div>
+              <div onClick="{{ reporFila }}" style="align-self: flex-start; padding: 9px 15px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; background: #FFFFFF; border: 1px solid #E1E3E8; color: #4B5563;" style-hover="background: #F5F6F8;">Repor a fila (demonstração)</div>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ ehPOferta }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ fecharPainel }}" style="position: fixed; inset: 0; background: rgba(20,22,26,0.34); display: flex; justify-content: flex-end; z-index: 45;">
+          <aside onClick="{{ pararClique }}" style="width: 520px; max-width: 100%; height: 100%; overflow-y: auto; background: #FFFFFF; border-left: 1px solid #E9EAEE; box-shadow: -20px 0 60px rgba(20,22,26,0.18); padding: 20px 22px 34px; display: flex; flex-direction: column; gap: 18px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+              <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: #9AA0AA;">detalhe da oferta</div>
+              <div onClick="{{ fecharPainel }}" style="cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E9EAEE; font-size: 15px; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">×</div>
+            </div>
+
+            <div style="flex: none; height: 210px; border-radius: 14px; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+              <image-slot id="{{ sel.slotDet }}" shape="rect" placeholder="foto do produto"></image-slot>
+            </div>
+            <div style="display: flex; gap: 13px; align-items: flex-start; margin-top: -6px;">
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px;">
+                <div style="font-size: 16px; font-weight: 700; line-height: 1.3; letter-spacing: -0.02em;">{{ sel.produto }}</div>
+                <div style="display: flex; align-items: center; gap: 7px;">
+                  <span style="font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: {{ sel.lojaBg }}; color: {{ sel.lojaFg }};">{{ sel.loja }}</span>
+                  <span style="font-size: 11.5px; color: #9AA0AA;">nicho {{ sel.nicho }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; padding: 15px; border-radius: 12px; background: #FFF8F2; border: 1px solid #FBE0C9;">
+              <div style="display: flex; flex-direction: column; gap: 1px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #B08157;">agora</div>
+                <div style="font-size: 27px; font-weight: 800; line-height: 1.05; letter-spacing: -0.035em;">{{ sel.preco }}</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 1px; padding-bottom: 3px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #B08157;">referência própria</div>
+                <div style="font-size: 14px; font-weight: 600; color: #6B7280;">{{ sel.ref }}</div>
+              </div>
+              <div style="margin-left: auto; font-size: 14px; font-weight: 800; padding: 6px 12px; border-radius: 8px; color: #FFFFFF; background: var(--ac, #F16A0D);">{{ sel.desconto }}</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">série própria · {{ sel.serieRotulo }}</div>
+                <div style="font-size: 11.5px; color: #A3A8B0;">desde {{ sel.desde }}</div>
+              </div>
+              <svg viewBox="0 0 400 92" preserveAspectRatio="none" style="width: 100%; height: 88px; display: block; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1;">
+                <defs>
+                  <linearGradient id="rad-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--ac, #F16A0D)" stop-opacity="0.20"></stop>
+                    <stop offset="100%" stop-color="var(--ac, #F16A0D)" stop-opacity="0"></stop>
+                  </linearGradient>
+                </defs>
+                <polygon points="{{ sel.area }}" fill="url(#rad-fill)"></polygon>
+                <polyline points="{{ sel.linhaRef }}" fill="none" stroke="#CFD3DA" stroke-width="1" stroke-dasharray="4 5" vector-effect="non-scaling-stroke"></polyline>
+                <polyline points="{{ sel.spark }}" fill="none" stroke="var(--ac, #F16A0D)" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
+                <circle cx="{{ sel.pontoX }}" cy="{{ sel.pontoY }}" r="3.6" fill="#FFFFFF" stroke="var(--ac, #F16A0D)" stroke-width="2.2"></circle>
+              </svg>
+              <div style="font-size: 12.5px; color: #6B7280; line-height: 1.55; text-wrap: pretty;">{{ sel.redacao }}</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; background: #FAFAFB; border: 1px solid #EDEEF1;">
+              <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">nota</div>
+                <div style="font-size: 21px; font-weight: 800; letter-spacing: -0.03em;">{{ sel.nota }}<span style="font-size: 12px; font-weight: 600; color: #A3A8B0;">/100</span></div>
+              </div>
+              <sc-for list="{{ sel.parcelas }}" as="p" hint-placeholder-count="3">
+                <div style="display: grid; grid-template-columns: 72px 1fr 42px; align-items: center; gap: 10px;">
+                  <div style="font-size: 12.5px; color: #6B7280;">{{ p.rotulo }}</div>
+                  <div style="height: 6px; background: #EDEEF1; border-radius: 3px; overflow: hidden;">
+                    <div style="height: 6px; border-radius: 3px; background: var(--ac, #F16A0D); width: {{ p.pct }};"></div>
+                  </div>
+                  <div style="font-size: 11.5px; font-weight: 600; text-align: right; color: #6B7280;">{{ p.valor }}</div>
+                </div>
+              </sc-for>
+              <div onClick="{{ abrirDiag }}" style="align-self: flex-start; margin-top: 2px; font-size: 12.5px; font-weight: 700; color: var(--ac, #F16A0D); cursor: pointer;" style-hover="color: #C9540A;">Por que esta oferta apareceu →</div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+                <div style="font-size: 13px; color: #6B7280;">Comissão estimada</div>
+                <div style="font-size: 14px; font-weight: 700;">{{ sel.comissao }} <span style="font-size: 11px; font-weight: 600; color: #A3A8B0;">est.</span></div>
+              </div>
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+                <div style="font-size: 13px; color: #6B7280;">Último post deste produto</div>
+                <div style="font-size: 13px; font-weight: 600;">{{ sel.ultimoPost }}</div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px; padding-top: 5px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">iria para</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                  <sc-for list="{{ sel.canais }}" as="c" hint-placeholder-count="3">
+                    <div onClick="{{ c.alternar }}" style="display: flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 600; border: 1px solid {{ c.borda }}; background: {{ c.bg }}; color: {{ c.fg }};">
+                      <span style="width: 6px; height: 6px; border-radius: 50%; background: {{ c.ponto }};"></span>
+                      <span>{{ c.nome }}</span>
+                      <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: #A3A8B0;">{{ c.plataforma }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="font-size: 11.5px; color: #A3A8B0;">{{ sel.canaisNota }}</div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; gap: 8px;">
+                <div onClick="{{ aprovar }}" style="flex: 1.4; text-align: center; padding: 13px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 700; color: #FFFFFF; background: var(--ac, #F16A0D); box-shadow: 0 1px 2px rgba(241,106,13,0.35);" style-hover="filter: brightness(1.07);">{{ rotuloAprovar }}</div>
+                <div onClick="{{ alternarMotivo }}" style="flex: 1; text-align: center; padding: 13px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: #4B5563; background: #FFFFFF; border: 1px solid #E1E3E8;" style-hover="border-color: #E5A9A9; color: #C13232; background: #FEF7F7;">Rejeitar</div>
+              </div>
+              <sc-if value="{{ motivoAberto }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 10px; border: 1px solid #F3D9D9; background: #FEF7F7;">
+                  <div style="font-size: 12.5px; color: #B23A3A;">O motivo é obrigatório e fica gravado — é com ele que os limiares são calibrados depois.</div>
+                  <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    <sc-for list="{{ motivos }}" as="m" hint-placeholder-count="5">
+                      <div onClick="{{ m.escolher }}" style="padding: 7px 11px; border-radius: 8px; border: 1px solid #EFD3D3; background: #FFFFFF; cursor: pointer; font-size: 12.5px; font-weight: 600; color: #4B5563;" style-hover="background: #C13232; color: #FFFFFF; border-color: #C13232;">{{ m.rotulo }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="display: flex; gap: 8px;">
+                <div onClick="{{ adiar }}" style="flex: 1; text-align: center; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: #6B7280; background: #FFFFFF; border: 1px solid #E9EAEE;" style-hover="background: #F5F6F8; color: #14161A;">Adiar para amanhã</div>
+                <div style="flex: 1; text-align: center; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: #6B7280; background: #FFFFFF; border: 1px solid #E9EAEE;" style-hover="background: #F5F6F8; color: #14161A;">Abrir na loja ↗</div>
+              </div>
+              <sc-if value="{{ temLog }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 12px; color: #A3A8B0;">
+                  <span>{{ logRotulo }}</span>
+                  <span onClick="{{ desfazer }}" style="cursor: pointer; font-weight: 700; color: var(--ac, #F16A0D);">desfazer</span>
+                </div>
+              </sc-if>
+            </div>
+          </aside>
+          </div>
+        </sc-if>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehAtencao }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Precisa de atenção" style="padding: 12px 24px 40px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <sc-for list="{{ filtrosSev }}" as="f" hint-placeholder-count="4">
+            <div onClick="{{ f.usar }}" style="display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; background: {{ f.bg }}; color: {{ f.fg }}; border: 1px solid {{ f.borda }};" style-hover="filter: brightness(0.98);">
+              <span>{{ f.rotulo }}</span>
+              <span style="font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: {{ f.tagBg }}; color: {{ f.tagFg }};">{{ f.n }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <sc-for list="{{ alertas }}" as="a" hint-placeholder-count="5">
+            <div style="display: flex; align-items: stretch; gap: 0; border-radius: 13px; background: #FFFFFF; border: 1px solid #E9EAEE; overflow: hidden;" style-hover="border-color: #D7DAE0;">
+              <div style="width: 108px; flex: none; padding: 16px 14px; background: {{ a.bg }}; border-right: 1px solid {{ a.borda }}; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+                <div style="font-size: 26px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: {{ a.cor }};">{{ a.metrica }}</div>
+                <div style="font-size: 11px; font-weight: 600; color: {{ a.cor }};">{{ a.metricaRotulo }}</div>
+              </div>
+              <div style="flex: 1; min-width: 0; padding: 15px 18px; display: flex; flex-direction: column; gap: 7px;">
+                <div style="display: flex; align-items: center; gap: 9px; flex-wrap: wrap;">
+                  <span style="font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; background: {{ a.bg }}; color: {{ a.cor }};">{{ a.sevRotulo }}</span>
+                  <span style="font-size: 11.5px; font-weight: 600; color: #8A9099;">{{ a.area }}</span>
+                  <span style="width: 3px; height: 3px; border-radius: 50%; background: #D7DAE0;"></span>
+                  <span style="font-size: 11.5px; color: #9AA0AA;">{{ a.quando }}</span>
+                </div>
+                <div style="font-size: 15px; font-weight: 700; letter-spacing: -0.02em;">{{ a.titulo }}</div>
+                <div style="font-size: 13px; color: #6B7280; line-height: 1.55; max-width: 78ch; text-wrap: pretty;">{{ a.detalhe }}</div>
+                <div style="display: flex; align-items: center; gap: 7px; margin-top: 2px;">
+                  <span style="width: 5px; height: 5px; border-radius: 50%; background: {{ a.cor }};"></span>
+                  <span style="font-size: 12px; font-weight: 600; color: {{ a.cor }};">{{ a.impacto }}</span>
+                </div>
+              </div>
+              <div style="flex: none; padding: 15px 18px; display: flex; align-items: center;">
+                <div onClick="{{ a.abrir }}" style="padding: 9px 15px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 700; color: #14161A; background: #FFFFFF; border: 1px solid #DDE0E6; white-space: nowrap;" style-hover="background: #F5F6F8; border-color: #C6CAD2;">{{ a.acao }} →</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="padding: 6px 2px; font-size: 12.5px; color: #A3A8B0; max-width: 80ch; text-wrap: pretty;">Só aparece aqui o que exige ação humana. Aviso que não pede ação treina o dono a ignorar a área inteira — e aí o aviso que importa passa junto. Nada é resolvido nesta tela: ela aponta.</div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehEnvio }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Fila de envio" style="flex: 1; display: flex; flex-direction: column; gap: 14px; padding: 12px 24px 40px;">
+
+        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; padding: 3px; border-radius: 10px; background: #FFFFFF; border: 1px solid #E9EAEE;">
+            <div onClick="{{ verDesktop }}" style="padding: 7px 14px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 700; background: {{ dispDesk }}; color: {{ dispDeskFg }};">Desktop</div>
+            <div onClick="{{ verCelular }}" style="padding: 7px 14px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 700; background: {{ dispCel }}; color: {{ dispCelFg }};">Celular</div>
+          </div>
+          <div style="font-size: 12.5px; color: #6B7280; max-width: 72ch; text-wrap: pretty;">Mesma tela, mesmo dado, dois tamanhos. <strong style="color: #14161A; font-weight: 700;">Dá para publicar do desktop</strong> — o Telegram sai pelo robô e o WhatsApp abre no WhatsApp Web com o texto pronto. O celular é obrigatório só para quem publica em pé, de manhã, longe do computador.</div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: flex-start; gap: 14px;">
+
+        <sc-if value="{{ ehCelular }}" hint-placeholder-val="{{ true }}">
+        <div style="flex: 3 1 460px; min-width: 0; border-radius: 16px; border: 1px solid #E9EAEE; background: linear-gradient(168deg, #FFEFE1, #FAFAFB 58%); padding: 26px 20px 30px; display: flex; flex-direction: column; align-items: center; gap: 16px;">
+
+          <div style="width: 412px; max-width: 100%; padding: 10px; border-radius: 46px; background: #16181C; box-shadow: 0 26px 60px rgba(20,22,26,0.30);">
+            <div style="background: #FFFFFF; border-radius: 37px; overflow: hidden; height: 748px; display: flex; flex-direction: column;">
+
+              <div style="flex: none; padding: 12px 24px 6px; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 13px; font-weight: 700;">06:41</span>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <span style="width: 15px; height: 9px; border-radius: 2px; background: #14161A;"></span>
+                  <span style="width: 11px; height: 9px; border-radius: 2px; background: #14161A;"></span>
+                  <span style="width: 22px; height: 10px; border-radius: 3px; border: 1.5px solid #14161A;"></span>
+                </div>
+              </div>
+
+              <div style="flex: none; padding: 8px 18px 14px; border-bottom: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+                  <div style="display: flex; flex-direction: column; gap: 1px;">
+                    <div style="font-size: 22px; font-weight: 800; letter-spacing: -0.03em;">{{ envioTitulo }}</div>
+                    <div style="font-size: 12px; color: #9AA0AA;">{{ envioSub }}</div>
+                  </div>
+                  <div onClick="{{ alternarOperador }}" style="display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; cursor: pointer; font-size: 11.5px; font-weight: 700; color: #6B7280; background: #F5F6F8; border: 1px solid #E9EAEE; white-space: nowrap;" style-hover="background: #EDEEF1;">
+                    <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ac, #F16A0D);"></span>{{ rotuloPapel }}
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px;">
+                    <span style="font-size: 13px; font-weight: 700; color: #14161A;">{{ faltamRotulo }}</span>
+                    <span style="font-size: 11.5px; color: #9AA0AA;">{{ contadorRotulo }}</span>
+                  </div>
+                  <div style="height: 6px; border-radius: 3px; background: #EDEEF1; overflow: hidden;">
+                    <div style="height: 6px; border-radius: 3px; background: var(--ac, #F16A0D); width: {{ pctFeitas }};"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex: 1; min-height: 0; overflow-y: auto;">
+                <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="2">
+                  <div style="display: flex; flex-direction: column;">
+                    <div style="display: flex; align-items: center; gap: 8px; padding: 12px 18px 8px; background: #FAFAFB; border-bottom: 1px solid #EDEEF1;">
+                      <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ g.ponto }};"></span>
+                      <span style="font-size: 13.5px; font-weight: 700;">{{ g.canal }}</span>
+                      <span style="font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E9EAEE; color: #8A9099;">{{ g.plataforma }}</span>
+                      <span style="margin-left: auto; font-size: 11px; color: #A3A8B0;">{{ g.teto }}</span>
+                    </div>
+
+                    <sc-for list="{{ g.pubs }}" as="p" hint-placeholder-count="2">
+                      <div style="padding: 15px 16px 17px; border-bottom: 1px solid #F1F2F4; display: flex; flex-direction: column; gap: 13px;">
+
+                        <div style="display: flex; gap: 13px; align-items: flex-start;">
+                          <div style="width: 88px; height: 88px; flex: none; border-radius: 13px; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                            <image-slot id="{{ p.slotId }}" shape="rounded" radius="13" placeholder="foto"></image-slot>
+                          </div>
+                          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+                            <div style="font-size: 14.5px; font-weight: 700; line-height: 1.3; letter-spacing: -0.015em;">{{ p.produto }}</div>
+                            <div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+                              <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.03em;">{{ p.precoFmt }}</span>
+                              <span style="font-size: 12px; color: #A3A8B0; text-decoration: line-through;">{{ p.refFmt }}</span>
+                              <span style="font-size: 11.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: #FFF1E6; color: #D2590A;">{{ p.desconto }}</span>
+                            </div>
+                            <div style="font-size: 11.5px; color: #9AA0AA;">{{ p.loja }} · {{ p.prova }}</div>
+                          </div>
+                        </div>
+
+                        <sc-if value="{{ p.bloqueado }}" hint-placeholder-val="{{ false }}">
+                          <div style="display: flex; flex-direction: column; gap: 4px; padding: 12px 13px; border-radius: 11px; border: 1px solid #F3D9D9; background: #FEF7F7;">
+                            <div style="font-size: 13px; font-weight: 700; color: #C13232;">Envio bloqueado — o preço mudou</div>
+                            <div style="font-size: 12.5px; color: #6B7280; line-height: 1.5;">{{ p.aviso }}</div>
+                          </div>
+                        </sc-if>
+
+                        <div onClick="{{ p.verMsg }}" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #FAFAFB; border: 1px solid #EDEEF1; cursor: pointer;" style-hover="background: #F3F4F6;">
+                          <span style="font-size: 12.5px; font-weight: 600; color: #6B7280;">{{ p.msgRotulo }}</span>
+                          <span style="font-size: 11px; color: #A3A8B0;">{{ p.msgSeta }}</span>
+                        </div>
+                        <sc-if value="{{ p.msgAberta }}" hint-placeholder-val="{{ false }}">
+                          <div style="font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; color: #4B5563; background: #FFFFFF; border: 1px dashed #DDE0E6; border-radius: 11px; padding: 12px 13px;">{{ p.mensagem }}</div>
+                        </sc-if>
+
+                        <sc-if value="{{ p.bloqueado }}" hint-placeholder-val="{{ false }}">
+                          <div style="text-align: center; padding: 16px 14px; border-radius: 12px; cursor: pointer; font-size: 15px; font-weight: 700; background: #FFFFFF; color: #C13232; border: 1.5px solid #E9B9B9;" style-hover="background: #FEF7F7;">Atualizar o preço e reenfileirar</div>
+                        </sc-if>
+                        <sc-if value="{{ p.liberado }}" hint-placeholder-val="{{ true }}">
+                          <div onClick="{{ p.enviar }}" style="display: flex; align-items: center; justify-content: center; gap: 9px; padding: 17px 14px; border-radius: 12px; cursor: pointer; font-size: 15.5px; font-weight: 700; color: #FFFFFF; background: {{ p.botaoBg }}; border: 1px solid {{ p.botaoBorda }};" style-hover="filter: brightness(1.06);">
+                            <span style="width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.85);"></span>{{ p.botao }}
+                          </div>
+                        </sc-if>
+
+                        <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                          <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 3px 7px; border-radius: 5px; background: #F5F6F8; border: 1px solid #EDEEF1; color: #8A9099;">subid {{ p.subid }}</span>
+                          <span style="font-size: 11.5px; color: #A3A8B0;">{{ p.conferido }}</span>
+                          <sc-if value="{{ p.mostrarComissao }}" hint-placeholder-val="{{ true }}">
+                            <span style="font-size: 11.5px; color: #A3A8B0;">{{ p.comissao }} est.</span>
+                          </sc-if>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 18px; padding-top: 2px; border-top: 1px solid #F5F6F8;">
+                          <span style="padding-top: 10px; font-size: 12.5px; font-weight: 600; color: #8A9099; cursor: pointer;" style-hover="color: #14161A;">Editar texto</span>
+                          <span style="padding-top: 10px; font-size: 12.5px; font-weight: 600; color: #8A9099; cursor: pointer;" style-hover="color: #14161A;">Já enviei</span>
+                          <span style="padding-top: 10px; margin-left: auto; font-size: 12.5px; font-weight: 600; color: #C79A9A; cursor: pointer;" style-hover="color: #C13232;">Cancelar</span>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+
+                <sc-if value="{{ tudoFeito }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding: 60px 26px; display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center;">
+                    <div style="width: 58px; height: 58px; border-radius: 50%; background: #EAF7F0; border: 2px solid #BFE6D2; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #22A45D;">✓</div>
+                    <div style="font-size: 19px; font-weight: 800; letter-spacing: -0.025em;">Tudo publicado</div>
+                    <div style="font-size: 13px; color: #6B7280; line-height: 1.6; max-width: 30ch; text-wrap: pretty;">{{ envioRodape }}</div>
+                    <div onClick="{{ reporEnvio }}" style="margin-top: 6px; padding: 9px 15px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 600; background: #FFFFFF; border: 1px solid #E1E3E8; color: #6B7280;" style-hover="background: #F5F6F8;">Repor a fila (demonstração)</div>
+                  </div>
+                </sc-if>
+              </div>
+
+              <div style="flex: none; padding: 9px 0 11px; display: flex; justify-content: center;">
+                <div style="width: 128px; height: 5px; border-radius: 3px; background: #14161A; opacity: 0.22;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        </sc-if>
+
+        <sc-if value="{{ ehDesktop }}" hint-placeholder-val="{{ false }}">
+        <div style="flex: 3 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 14px; padding: 15px 18px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE;">
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+              <div style="display: flex; align-items: baseline; gap: 10px;">
+                <span style="font-size: 15px; font-weight: 800; letter-spacing: -0.02em;">{{ faltamRotulo }}</span>
+                <span style="font-size: 12px; color: #9AA0AA;">{{ contadorRotulo }}</span>
+              </div>
+              <div style="height: 6px; border-radius: 3px; background: #EDEEF1; overflow: hidden;">
+                <div style="height: 6px; border-radius: 3px; background: var(--ac, #F16A0D); width: {{ pctFeitas }};"></div>
+              </div>
+            </div>
+            <div onClick="{{ alternarOperador }}" style="display: flex; align-items: center; gap: 7px; padding: 8px 12px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #6B7280; background: #F5F6F8; border: 1px solid #E9EAEE; white-space: nowrap;" style-hover="background: #EDEEF1;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ac, #F16A0D);"></span>vendo como {{ rotuloPapel }}
+            </div>
+          </div>
+
+          <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="2">
+            <div style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; overflow: hidden;">
+              <div style="display: flex; align-items: center; gap: 9px; padding: 12px 18px; background: #FAFAFB; border-bottom: 1px solid #EDEEF1;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: {{ g.ponto }};"></span>
+                <span style="font-size: 13.5px; font-weight: 700;">{{ g.canal }}</span>
+                <span style="font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 999px; background: #FFFFFF; border: 1px solid #E9EAEE; color: #8A9099;">{{ g.plataforma }}</span>
+                <span style="margin-left: auto; font-size: 11.5px; color: #A3A8B0;">{{ g.teto }} · {{ g.contagem }}</span>
+              </div>
+              <sc-for list="{{ g.pubs }}" as="p" hint-placeholder-count="2">
+                <div style="display: flex; align-items: flex-start; gap: 16px; padding: 16px 18px; border-bottom: 1px solid #F1F2F4;">
+                  <div style="width: 96px; height: 96px; flex: none; border-radius: 12px; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                    <image-slot id="{{ p.slotId }}" shape="rounded" radius="12" placeholder="foto"></image-slot>
+                  </div>
+                  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+                    <div style="font-size: 15px; font-weight: 700; letter-spacing: -0.02em;">{{ p.produto }}</div>
+                    <div style="display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;">
+                      <span style="font-size: 19px; font-weight: 800; letter-spacing: -0.03em;">{{ p.precoFmt }}</span>
+                      <span style="font-size: 12px; color: #A3A8B0; text-decoration: line-through;">{{ p.refFmt }}</span>
+                      <span style="font-size: 11.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: #FFF1E6; color: #D2590A;">{{ p.desconto }}</span>
+                      <span style="font-size: 11.5px; color: #9AA0AA;">{{ p.loja }} · {{ p.prova }}</span>
+                    </div>
+                    <sc-if value="{{ p.bloqueado }}" hint-placeholder-val="{{ false }}">
+                      <div style="display: flex; flex-direction: column; gap: 3px; padding: 11px 13px; border-radius: 11px; border: 1px solid #F3D9D9; background: #FEF7F7;">
+                        <div style="font-size: 12.5px; font-weight: 700; color: #C13232;">Envio bloqueado — o preço mudou</div>
+                        <div style="font-size: 12.5px; color: #6B7280; line-height: 1.5;">{{ p.aviso }}</div>
+                      </div>
+                    </sc-if>
+                    <div onClick="{{ p.verMsg }}" style="align-self: flex-start; display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 8px; background: #FAFAFB; border: 1px solid #EDEEF1; cursor: pointer;" style-hover="background: #F3F4F6;">
+                      <span style="font-size: 12px; font-weight: 600; color: #6B7280;">{{ p.msgRotulo }}</span>
+                      <span style="font-size: 10px; color: #A3A8B0;">{{ p.msgSeta }}</span>
+                    </div>
+                    <sc-if value="{{ p.msgAberta }}" hint-placeholder-val="{{ false }}">
+                      <div style="font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; color: #4B5563; background: #FFFFFF; border: 1px dashed #DDE0E6; border-radius: 11px; padding: 12px 13px;">{{ p.mensagem }}</div>
+                    </sc-if>
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                      <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; padding: 3px 7px; border-radius: 5px; background: #F5F6F8; border: 1px solid #EDEEF1; color: #8A9099;">subid {{ p.subid }}</span>
+                      <span style="font-size: 11.5px; color: #A3A8B0;">{{ p.conferido }}</span>
+                      <sc-if value="{{ p.mostrarComissao }}" hint-placeholder-val="{{ true }}">
+                        <span style="font-size: 11.5px; color: #A3A8B0;">{{ p.comissao }} est.</span>
+                      </sc-if>
+                    </div>
+                  </div>
+                  <div style="width: 208px; flex: none; display: flex; flex-direction: column; gap: 8px;">
+                    <sc-if value="{{ p.liberado }}" hint-placeholder-val="{{ true }}">
+                      <div onClick="{{ p.enviar }}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 12px; border-radius: 11px; cursor: pointer; font-size: 14px; font-weight: 700; color: #FFFFFF; background: {{ p.botaoBg }}; border: 1px solid {{ p.botaoBorda }};" style-hover="filter: brightness(1.06);">
+                        <span style="width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.85);"></span>{{ p.botaoDesk }}
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ p.bloqueado }}" hint-placeholder-val="{{ false }}">
+                      <div style="text-align: center; padding: 14px 12px; border-radius: 11px; cursor: pointer; font-size: 13.5px; font-weight: 700; background: #FFFFFF; color: #C13232; border: 1.5px solid #E9B9B9;" style-hover="background: #FEF7F7;">Atualizar o preço</div>
+                    </sc-if>
+                    <div style="display: flex; gap: 6px;">
+                      <div style="flex: 1; text-align: center; padding: 9px 6px; border-radius: 9px; border: 1px solid #E9EAEE; background: #FFFFFF; cursor: pointer; font-size: 12px; font-weight: 600; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">Editar</div>
+                      <div style="flex: 1; text-align: center; padding: 9px 6px; border-radius: 9px; border: 1px solid #E9EAEE; background: #FFFFFF; cursor: pointer; font-size: 12px; font-weight: 600; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">Já enviei</div>
+                      <div style="flex: 1; text-align: center; padding: 9px 6px; border-radius: 9px; border: 1px solid #E9EAEE; background: #FFFFFF; cursor: pointer; font-size: 12px; font-weight: 600; color: #C79A9A;" style-hover="background: #FEF7F7; color: #C13232;">Cancelar</div>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ tudoFeito }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 54px 26px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; display: flex; flex-direction: column; align-items: center; gap: 13px; text-align: center;">
+              <div style="width: 56px; height: 56px; border-radius: 50%; background: #EAF7F0; border: 2px solid #BFE6D2; display: flex; align-items: center; justify-content: center; font-size: 23px; color: #22A45D;">✓</div>
+              <div style="font-size: 19px; font-weight: 800; letter-spacing: -0.025em;">Tudo publicado</div>
+              <div style="font-size: 13px; color: #6B7280; line-height: 1.6; max-width: 44ch; text-wrap: pretty;">{{ envioRodape }}</div>
+              <div onClick="{{ reporEnvio }}" style="margin-top: 4px; padding: 9px 15px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 600; background: #FFFFFF; border: 1px solid #E1E3E8; color: #6B7280;" style-hover="background: #F5F6F8;">Repor a fila (demonstração)</div>
+            </div>
+          </sc-if>
+        </div>
+        </sc-if>
+
+        <aside style="flex: 1 1 300px; min-width: 280px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; padding: 17px; display: flex; flex-direction: column; gap: 13px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between;">
+              <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">progresso de hoje</div>
+              <div style="font-size: 12px; font-weight: 700; color: var(--ac, #F16A0D);">{{ contadorRotulo }}</div>
+            </div>
+            <sc-for list="{{ progresso }}" as="c" hint-placeholder-count="3">
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ c.ponto }};"></span>
+                  <span style="font-size: 13px; font-weight: 600;">{{ c.canal }}</span>
+                  <span style="margin-left: auto; font-size: 12px; font-weight: 700; color: #6B7280;">{{ c.rotulo }}</span>
+                </div>
+                <div style="height: 5px; border-radius: 3px; background: #EDEEF1; overflow: hidden;">
+                  <div style="height: 5px; border-radius: 3px; background: {{ c.cor }}; width: {{ c.pct }};"></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; padding: 17px; display: flex; flex-direction: column; gap: 14px;">
+            <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">as regras desta tela</div>
+            <div style="font-size: 13px; color: #6B7280; line-height: 1.65; text-wrap: pretty;">Usada <strong style="color: #14161A; font-weight: 700;">em pé, com uma mão, de manhã</strong>. O envio no WhatsApp é manual por decisão de projeto: o sistema monta o texto e abre o aplicativo, e um humano aperta enviar.</div>
+            <div style="height: 1px; background: #EDEEF1;"></div>
+            <div style="font-size: 13px; color: #6B7280; line-height: 1.65; text-wrap: pretty;">Alvo do dia inteiro: <strong style="color: #14161A; font-weight: 700;">dez minutos</strong>. Por isso a mensagem vem fechada — ela já foi aprovada — e cada publicação tem um botão só.</div>
+            <div style="height: 1px; background: #EDEEF1;"></div>
+            <div style="font-size: 13px; color: #6B7280; line-height: 1.65; text-wrap: pretty;">Cada publicação sai com um <strong style="color: #14161A; font-weight: 700;">subid único</strong>. É ele que liga a venda ao canal quando o relatório do marketplace chegar.</div>
+          </div>
+        </aside>
+        </div>
+      </section>
+    </sc-if>
+    <sc-if value="{{ ehProdutos }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Produtos" style="padding: 16px 24px 40px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <sc-for list="{{ filtrosNicho }}" as="f" hint-placeholder-count="5">
+            <div onClick="{{ f.usar }}" style="padding: 7px 13px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; background: {{ f.bg }}; color: {{ f.fg }}; border: 1px solid {{ f.borda }};" style-hover="filter: brightness(0.98);">{{ f.rotulo }}</div>
+          </sc-for>
+          <div style="margin-left: auto; font-size: 12.5px; color: #9AA0AA;">Use a busca no topo para filtrar por nome.</div>
+        </div>
+        <div style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; overflow-y: hidden; overflow-x: auto;">
+          <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 116px 78px 108px 96px; align-items: center; gap: 12px; padding: 11px 16px; min-width: 620px; border-bottom: 1px solid #EDEEF1; background: #FAFAFB; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">
+            <div>Produto</div><div>Nicho</div><div>Lojas</div><div>Menor observado</div><div>Série</div>
+          </div>
+          <sc-for list="{{ produtos }}" as="p" hint-placeholder-count="8">
+            <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 116px 78px 108px 96px; align-items: center; gap: 12px; padding: 12px 16px; min-width: 620px; border-bottom: 1px solid #F1F2F4; cursor: pointer;" onClick="{{ p.abrir }}" style-hover="background: #FAFAFB;">
+              <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+                <div style="width: 52px; height: 52px; flex: none; border-radius: 10px; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                  <image-slot id="{{ p.slotId }}" shape="rounded" radius="10" placeholder="foto"></image-slot>
+                </div>
+                <div style="min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                  <div style="font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ p.nome }}</div>
+                  <div style="font-size: 11.5px; color: #9AA0AA;">{{ p.categoria }}</div>
+                </div>
+              </div>
+              <div><span style="font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: {{ p.nichoBg }}; color: {{ p.nichoFg }};">{{ p.nichoRotulo }}</span></div>
+              <div style="font-size: 13px; color: #6B7280;">{{ p.lojasRotulo }}</div>
+              <div style="font-size: 14px; font-weight: 700;">{{ p.menorFmt }}</div>
+              <div style="font-size: 13px; font-weight: 600; color: {{ p.serieCor }};">{{ p.diasFmt }}</div>
+            </div>
+          </sc-for>
+          <div style="padding: 12px 16px; font-size: 12px; color: #9AA0AA;">Produto e anúncio são coisas diferentes: o mesmo tapete na Shopee, no Mercado Livre e na Amazon é <strong style="color: #6B7280;">um</strong> produto com <strong style="color: #6B7280;">três</strong> anúncios.</div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehAnuncios }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Anúncios" style="padding: 16px 24px 40px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; overflow-y: hidden; overflow-x: auto;">
+          <div style="display: grid; grid-template-columns: minmax(170px, 1fr) 108px 72px 84px 84px 96px 150px; align-items: center; gap: 12px; padding: 11px 16px; min-width: 800px; border-bottom: 1px solid #EDEEF1; background: #FAFAFB; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">
+            <div>Anúncio</div><div>Loja</div><div>Série</div><div>Menor</div><div>Mediana</div><div>Última coleta</div><div>Estado</div>
+          </div>
+          <sc-for list="{{ anuncios }}" as="a" hint-placeholder-count="8">
+            <div style="display: grid; grid-template-columns: minmax(170px, 1fr) 108px 72px 84px 84px 96px 150px; align-items: center; gap: 12px; padding: 12px 16px; min-width: 800px; border-bottom: 1px solid #F1F2F4; cursor: pointer;" onClick="{{ a.abrir }}" style-hover="background: #FAFAFB;">
+              <div style="min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                <div style="font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ a.produto }}</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #A3A8B0;">{{ a.codigo }}</div>
+              </div>
+              <div style="font-size: 12.5px; color: #6B7280;">{{ a.loja }}</div>
+              <div style="font-size: 12.5px; color: #6B7280;">{{ a.diasFmt }}</div>
+              <div style="font-size: 13px; font-weight: 700;">{{ a.menorFmt }}</div>
+              <div style="font-size: 13px; color: #6B7280;">{{ a.medianaFmt }}</div>
+              <div style="font-size: 12.5px; font-weight: 600; color: {{ a.ultimaCor }};">{{ a.ultima }}</div>
+              <div><span style="font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; background: {{ a.estBg }}; color: {{ a.estCor }};">{{ a.estRotulo }}</span></div>
+            </div>
+          </sc-for>
+          <div style="padding: 12px 16px; font-size: 12px; color: #9AA0AA;">Ordenado pela última coleta. Anúncio da Amazon nunca acumula série: a política de associados limita a retenção de preço a 24 horas.</div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehNichos }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Nichos" style="padding: 16px 24px 40px; display: flex; gap: 14px; flex-wrap: wrap;">
+        <sc-for list="{{ nichos }}" as="n" hint-placeholder-count="3">
+          <div style="flex: 1 1 300px; min-width: 280px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; padding: 18px; display: flex; flex-direction: column; gap: 15px;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <div style="font-size: 18px; font-weight: 800; letter-spacing: -0.025em;">{{ n.nome }}</div>
+                <div style="font-size: 12.5px; color: #9AA0AA;">{{ n.produtosRotulo }} · {{ n.canaisRotulo }}</div>
+              </div>
+              <div style="text-align: right; display: flex; flex-direction: column; gap: 1px;">
+                <div style="font-size: 17px; font-weight: 800; letter-spacing: -0.03em; color: var(--ac, #F16A0D);">{{ n.aprov }}</div>
+                <div style="font-size: 11px; color: #9AA0AA;">taxa de aprovação</div>
+              </div>
+            </div>
+            <div style="height: 1px; background: #EDEEF1;"></div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">limiares</div>
+              <sc-for list="{{ n.limiares }}" as="l" hint-placeholder-count="3">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px;">
+                  <div style="display: flex; flex-direction: column; gap: 1px;">
+                    <span style="font-size: 13px; color: #4B5563;">{{ l.rotulo }}</span>
+                    <span style="font-size: 11px; color: #A3A8B0;">{{ l.global }}</span>
+                  </div>
+                  <span style="font-size: 14px; font-weight: {{ l.peso }}; color: {{ l.cor }};">{{ l.valor }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: auto;">
+              <div onClick="{{ n.ajustar }}" style="flex: 1; text-align: center; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 600; background: #FFFFFF; border: 1px solid #E1E3E8; color: #4B5563;" style-hover="background: #F5F6F8;">Ajustar limiares</div>
+              <div onClick="{{ n.verProdutos }}" style="flex: 1; text-align: center; padding: 9px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 600; background: #FFFFFF; border: 1px solid #E1E3E8; color: #4B5563;" style-hover="background: #F5F6F8;">Ver produtos</div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 300px; min-width: 280px; border-radius: 14px; background: #FFF9EC; border: 1px dashed #EBD6AE; padding: 18px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 18px; font-weight: 800; letter-spacing: -0.025em; color: #B4740A;">sem nicho</div>
+          <div style="font-size: 12.5px; color: #9A7A3A;">3 produtos · 0 canais</div>
+          <div style="font-size: 13px; color: #8A6A2E; line-height: 1.6; text-wrap: pretty;">Vinte por cento de desconto em ração é oferta excelente; vinte por cento em eletrônico é terça-feira comum. Produto sem nicho não herda limiar nenhum porque não chega a canal nenhum.</div>
+          <div style="margin-top: auto; padding: 9px 14px; align-self: flex-start; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: var(--ac, #F16A0D); color: #FFFFFF;" style-hover="filter: brightness(1.07);">Classificar os 3</div>
+        </div>
+      </section>
+    </sc-if>
+    <sc-if value="{{ ehCanais }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Canais" style="padding: 16px 24px 40px; display: flex; flex-direction: column; gap: 12px;">
+        <sc-for list="{{ canais }}" as="c" hint-placeholder-count="5">
+          <div onClick="{{ c.abrir }}" style="display: flex; align-items: center; gap: 18px; padding: 16px 18px; border-radius: 13px; background: #FFFFFF; border: 1px solid #E9EAEE; cursor: pointer;" style-hover="border-color: #D7DAE0; background: #FAFAFB;">
+            <div style="width: 44px; height: 44px; flex: none; border-radius: 50%; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+              <image-slot id="{{ c.slotId }}" shape="circle" placeholder="logo"></image-slot>
+            </div>
+            <div style="flex: 1.6; min-width: 0; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 9px; flex-wrap: wrap;">
+                <span style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.02em;">{{ c.nome }}</span>
+                <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: {{ c.platBg }}; color: {{ c.platFg }};">{{ c.plat }}</span>
+                <span style="font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: {{ c.estBg }}; color: {{ c.estCor }};">{{ c.estRotulo }}</span>
+              </div>
+              <div style="font-size: 12.5px; color: #9AA0AA;">nichos: {{ c.nichosFmt }} · operado por {{ c.operador }}</div>
+            </div>
+            <div style="flex: none; width: 92px; display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 15px; font-weight: 700;">{{ c.audienciaFmt }}</span>
+              <span style="font-size: 11px; color: #9AA0AA;">membros</span>
+            </div>
+            <div style="flex: none; width: 72px; display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 14px; font-weight: 700;">{{ c.tetoFmt }}</span>
+              <span style="font-size: 11px; color: #9AA0AA;">teto</span>
+            </div>
+            <div style="flex: none; width: 108px; display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 13px; font-weight: 700; color: {{ c.ultimaCor }};">{{ c.ultima }}</span>
+              <span style="font-size: 11px; color: #9AA0AA;">última publicação</span>
+            </div>
+            <div style="flex: none; font-size: 12.5px; font-weight: 700; color: var(--ac, #F16A0D);">Abrir →</div>
+          </div>
+        </sc-for>
+        <div style="padding: 6px 2px; font-size: 12.5px; color: #A3A8B0; max-width: 80ch; text-wrap: pretty;">Canal desativado para de receber publicação imediatamente, mas o histórico continua existindo — é ele que sustenta a prestação de contas ao parceiro depois.</div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehParceiros }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Parceiros" style="padding: 16px 24px 40px; display: flex; gap: 14px; flex-wrap: wrap;">
+        <sc-for list="{{ parceiros }}" as="p" hint-placeholder-count="2">
+          <div style="flex: 1 1 340px; min-width: 300px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; padding: 18px; display: flex; flex-direction: column; gap: 15px;">
+            <div style="display: flex; align-items: flex-start; gap: 13px;">
+              <div style="width: 52px; height: 52px; flex: none; border-radius: 50%; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                <image-slot id="{{ p.slotId }}" shape="circle" placeholder="logo"></image-slot>
+              </div>
+              <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+                <div style="font-size: 17px; font-weight: 800; letter-spacing: -0.025em;">{{ p.nome }}</div>
+                <div style="font-size: 12.5px; color: #9AA0AA;">{{ p.arranjo }} · {{ p.parte }}</div>
+              </div>
+              <div style="font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; background: #F5F6F8; color: #6B7280; white-space: nowrap;">{{ p.canaisN }} canais</div>
+            </div>
+            <div style="font-size: 12.5px; color: #6B7280;">{{ p.canaisFmt }}</div>
+            <div style="height: 1px; background: #EDEEF1;"></div>
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1; padding: 12px 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 11px; color: #9AA0AA;">gerado</span>
+                <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.03em;">{{ p.geradoFmt }}</span>
+              </div>
+              <div style="flex: 1; padding: 12px 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                <span style="font-size: 11px; color: #9AA0AA;">já repassado</span>
+                <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.03em;">{{ p.repassadoFmt }}</span>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 7px; padding: 12px 13px; border-radius: 11px; background: {{ p.concBg }};">
+              <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                <span style="font-size: 12.5px; font-weight: 600; color: {{ p.concCor }};">concentração da receita</span>
+                <span style="font-size: 14px; font-weight: 800; color: {{ p.concCor }};">{{ p.concFmt }}</span>
+              </div>
+              <div style="height: 5px; border-radius: 3px; background: #EDEEF1; overflow: hidden;">
+                <div style="height: 5px; border-radius: 3px; background: {{ p.concCor }}; width: {{ p.concPct }};"></div>
+              </div>
+              <sc-if value="{{ p.concAviso }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size: 12px; color: #8A6A2E; line-height: 1.5;">Parceiro que passa de 40% dita o split. Precisa ser visível antes de virar fato consumado.</div>
+              </sc-if>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <div onClick="{{ p.abrir }}" style="flex: 1; text-align: center; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #FFFFFF; background: var(--ac, #F16A0D);" style-hover="filter: brightness(1.07);">Abrir e editar</div>
+              <div onClick="{{ p.abrir }}" style="flex: 1; text-align: center; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">Extrato</div>
+            </div>
+            <div style="font-size: 11.5px; color: #A3A8B0;">A chave de pagamento nunca aparece para outro parceiro — nem em listagem, nem por acidente.</div>
+          </div>
+        </sc-for>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehTemplates }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Templates" style="padding: 16px 24px 40px; display: flex; gap: 14px; flex-wrap: wrap;">
+        <sc-for list="{{ templates }}" as="t" hint-placeholder-count="4">
+          <div onClick="{{ t.abrir }}" style="flex: 1 1 400px; min-width: 320px; border-radius: 14px; background: {{ t.bg }}; border: 1px solid {{ t.borda }}; padding: 17px; display: flex; flex-direction: column; gap: 12px; cursor: pointer;" style-hover="border-color: #D7DAE0;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div style="font-size: 15.5px; font-weight: 700; letter-spacing: -0.02em;">{{ t.nome }}</div>
+                <div style="font-size: 12px; color: #9AA0AA;">{{ t.escopo }} · {{ t.usosFmt }}</div>
+              </div>
+              <span style="font-size: 12.5px; font-weight: 700; color: var(--ac, #F16A0D); white-space: nowrap;">Prévia →</span>
+            </div>
+            <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.7; white-space: pre-wrap; color: #4B5563; background: #FFFFFF; border: 1px solid #EDEEF1; border-radius: 10px; padding: 12px 13px;">{{ t.corpo }}</div>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 100%; font-size: 12.5px; color: #A3A8B0; max-width: 92ch; text-wrap: pretty;">Toda mensagem sai com o link do redirecionador próprio, nunca o link do marketplace direto: é ele que grava o clique, carrega o subid e faz os links pararem se a parceria acabar.</div>
+      </section>
+    </sc-if>
+    <sc-if value="{{ ehConversoes }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Conversões" style="padding: 16px 24px 40px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <sc-for list="{{ somaEstados }}" as="e" hint-placeholder-count="5">
+            <div style="flex: 1 1 150px; min-width: 140px; padding: 14px 15px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E9EAEE; display: flex; flex-direction: column; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 7px;">
+                <span style="width: 7px; height: 7px; border-radius: 50%; background: {{ e.cor }};"></span>
+                <span style="font-size: 11.5px; font-weight: 700; color: {{ e.cor }};">{{ e.rotulo }}</span>
+                <span style="margin-left: auto; font-size: 11px; color: #A3A8B0;">{{ e.n }}</span>
+              </div>
+              <div style="font-size: 19px; font-weight: 800; letter-spacing: -0.03em;">{{ e.valor }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 13px 16px; border-radius: 12px; background: #FFF9EC; border: 1px solid #F0DFBB;">
+          <div style="flex: 1; min-width: 240px; font-size: 12.5px; color: #8A6A2E; line-height: 1.55;">Somar estimado com confirmado é exatamente como se perde a confiança de um parceiro — a comissão cai toda na conta do dono antes de ser repartida. Por isso os cinco estados nunca viram um número só.</div>
+        </div>
+        <div style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; overflow-y: hidden; overflow-x: auto;">
+          <div style="display: grid; grid-template-columns: 68px 92px minmax(150px, 1fr) 106px 106px 124px; align-items: center; gap: 12px; padding: 11px 16px; min-width: 700px; border-bottom: 1px solid #EDEEF1; background: #FAFAFB; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">
+            <div>Data</div><div>Subid</div><div>Canal</div><div>Pedido</div><div>Comissão</div><div>Estado</div>
+          </div>
+          <sc-for list="{{ conversoes }}" as="c" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 68px 92px minmax(150px, 1fr) 106px 106px 124px; align-items: center; gap: 12px; padding: 13px 16px; min-width: 700px; border-bottom: 1px solid #F1F2F4;">
+              <div style="font-size: 12.5px; color: #6B7280;">{{ c.data }}</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; padding: 3px 7px; border-radius: 5px; background: #F5F6F8; border: 1px solid #EDEEF1; color: #4B5563; justify-self: start;">{{ c.subid }}</div>
+              <sc-if value="{{ c.temCanal }}" hint-placeholder-val="{{ true }}">
+                <div style="font-size: 13.5px; font-weight: 600;">{{ c.canalFmt }}</div>
+              </sc-if>
+              <sc-if value="{{ c.orfa }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; align-items: center; gap: 7px;">
+                  <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: #FEF2F2; color: #C13232;">pendência</span>
+                  <span style="font-size: 12.5px; color: #C13232;">{{ c.canalFmt }}</span>
+                </div>
+              </sc-if>
+              <div style="font-size: 13px; color: #6B7280;">{{ c.pedidoFmt }}</div>
+              <div style="font-size: 14px; font-weight: 700;">{{ c.comFmt }}</div>
+              <div><span style="font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 6px; background: {{ c.estBg }}; color: {{ c.estCor }};">{{ c.estado }}</span></div>
+            </div>
+          </sc-for>
+          <div style="padding: 12px 16px; font-size: 12px; color: #9AA0AA; line-height: 1.55;">Subid que não casa com publicação nenhuma não é descartado: fica visível como pendência. É aqui que se descobre subid corrompido. A primeira comissão demora — uma venda de março só vira dinheiro na conta lá pelo fim de maio.</div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehRepasses }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Repasses" style="padding: 16px 24px 40px; display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 13px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E9EAEE;">
+          <div style="flex: 1; min-width: 240px; font-size: 12.5px; color: #6B7280; line-height: 1.55;">A base é apenas o que já entrou como <strong style="color: #14161A; font-weight: 700;">recebida</strong>. Repassar sobre estimativa significa financiar a operação com dinheiro próprio e absorver cada cancelamento sozinho.</div>
+        </div>
+        <div style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; overflow-y: hidden; overflow-x: auto;">
+          <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 116px 118px 74px 110px 132px; align-items: center; gap: 12px; padding: 11px 16px; min-width: 740px; border-bottom: 1px solid #EDEEF1; background: #FAFAFB; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">
+            <div>Parceiro</div><div>Período</div><div>Base recebida</div><div>Parte</div><div>Devido</div><div>Situação</div>
+          </div>
+          <sc-for list="{{ repasses }}" as="r" hint-placeholder-count="4">
+            <div style="display: grid; grid-template-columns: minmax(180px, 1fr) 116px 118px 74px 110px 132px; align-items: center; gap: 12px; padding: 13px 16px; min-width: 740px; border-bottom: 1px solid #F1F2F4;">
+              <div style="display: flex; align-items: center; gap: 11px; min-width: 0;">
+                <div style="width: 34px; height: 34px; flex: none; border-radius: 50%; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                  <image-slot id="{{ r.slotId }}" shape="circle" placeholder="logo"></image-slot>
+                </div>
+                <span style="font-size: 13.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ r.parceiro }}</span>
+              </div>
+              <div style="font-size: 13px; color: #6B7280;">{{ r.periodo }}</div>
+              <div style="font-size: 13px; color: #6B7280;">{{ r.baseFmt }}</div>
+              <div style="font-size: 13px; font-weight: 600;">{{ r.parte }}</div>
+              <div style="font-size: 14.5px; font-weight: 800; letter-spacing: -0.02em;">{{ r.devidoFmt }}</div>
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <span style="font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 6px; background: {{ r.estBg }}; color: {{ r.estCor }}; align-self: flex-start;">{{ r.estRotulo }}</span>
+                <span style="font-size: 11px; color: #A3A8B0;">{{ r.quando }}</span>
+              </div>
+            </div>
+          </sc-for>
+          <div style="padding: 12px 16px; font-size: 12px; color: #9AA0AA;">Repasse pago não é editado. Correção entra como novo lançamento, para que o histórico continue auditável.</div>
+        </div>
+      </section>
+    </sc-if>
+    <sc-if value="{{ ehCuradoria }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Curadoria" style="padding: 16px 24px 40px; display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start;">
+        <div style="flex: 2 1 460px; min-width: 320px; display: flex; flex-direction: column; gap: 10px;">
+          <sc-for list="{{ limiares }}" as="l" hint-placeholder-count="4">
+            <div style="padding: 16px 18px; border-radius: 13px; background: #FFFFFF; border: 1px solid #E9EAEE; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+              <div style="flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 4px;">
+                <div style="font-size: 14.5px; font-weight: 700; letter-spacing: -0.015em;">{{ l.rotulo }}</div>
+                <div style="font-size: 12.5px; color: #6B7280; line-height: 1.5; max-width: 52ch;">{{ l.porque }}</div>
+                <div style="font-size: 11.5px; color: #A3A8B0;">sobrescrito por: {{ l.sobre }}</div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 9px;">
+                <div onClick="{{ l.menos }}" style="width: 34px; height: 34px; border-radius: 9px; border: 1px solid #E1E3E8; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 17px; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">−</div>
+                <div style="min-width: 86px; text-align: center; font-size: 19px; font-weight: 800; letter-spacing: -0.03em;">{{ l.valorFmt }}</div>
+                <div onClick="{{ l.mais }}" style="width: 34px; height: 34px; border-radius: 9px; border: 1px solid #E1E3E8; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 17px; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">+</div>
+              </div>
+            </div>
+          </sc-for>
+          <div style="padding: 13px 16px; border-radius: 12px; background: #FFF9EC; border: 1px solid #F0DFBB; font-size: 12.5px; color: #8A6A2E; line-height: 1.6;">Alterar limiar não reprocessa oferta já decidida: vale da próxima detecção em diante.</div>
+        </div>
+
+        <div style="flex: 1 1 320px; min-width: 300px; padding: 18px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; display: flex; flex-direction: column; gap: 16px; position: sticky; top: 78px;">
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">taxa de aprovação</div>
+            <div style="font-size: 40px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: {{ taxaCor }};">{{ taxaFmt }}</div>
+            <div style="font-size: 12.5px; color: #6B7280;">{{ passamFmt }}</div>
+          </div>
+          <div style="display: flex; align-items: flex-end; gap: 7px; height: 108px;">
+            <sc-for list="{{ barras }}" as="b" hint-placeholder-count="7">
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end;">
+                <div style="width: 100%; border-radius: 5px 5px 0 0; background: {{ b.cor }}; height: {{ b.alt }};"></div>
+                <span style="font-size: 9.5px; color: #A3A8B0;">{{ b.rotulo }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <div style="font-size: 12.5px; color: #6B7280; line-height: 1.6; text-wrap: pretty;">{{ taxaNota }}</div>
+          <div style="height: 1px; background: #EDEEF1;"></div>
+          <div style="font-size: 12px; color: #A3A8B0; line-height: 1.6; text-wrap: pretty;">A taxa fica ao lado do controle de propósito: sem esse número ao lado, o ajuste é chute — e é assim que se afrouxa o motor até ele não filtrar mais nada.</div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehMarketplaces }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Marketplaces" style="padding: 16px 24px 40px; display: flex; gap: 14px; flex-wrap: wrap;">
+        <sc-for list="{{ marketplaces }}" as="m" hint-placeholder-count="3">
+          <div style="flex: 1 1 330px; min-width: 300px; border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; padding: 18px; display: flex; flex-direction: column; gap: 15px;">
+            <div style="display: flex; align-items: center; gap: 11px;">
+              <div style="width: 40px; height: 40px; flex: none; border-radius: 10px; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                <image-slot id="{{ m.slotId }}" shape="rounded" radius="10" placeholder="logo"></image-slot>
+              </div>
+              <div style="font-size: 17px; font-weight: 800; letter-spacing: -0.025em;">{{ m.nome }}</div>
+              <span style="font-size: 11px; font-weight: 700; padding: 2px 9px; border-radius: 6px; background: {{ m.estBg }}; color: {{ m.estCor }};">{{ m.estRotulo }}</span>
+              <span style="margin-left: auto; font-size: 12px; color: #9AA0AA;">{{ m.anuncios }} anúncios</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="font-size: 11.5px; font-weight: 700; color: #4B5563;">Identificador de afiliado</div>
+              <div style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #FAFAFB; border: 1px solid #EDEEF1;">
+                <span style="flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #4B5563;">{{ m.afiliadoFmt }}</span>
+                <span onClick="{{ m.alternarRevelar }}" style="font-size: 12px; font-weight: 700; color: var(--ac, #F16A0D); cursor: pointer;">{{ m.revelarRotulo }}</span>
+              </div>
+              <div style="font-size: 11.5px; color: #A3A8B0;">É dinheiro: se vazar, outra pessoa usa os links. Nunca aparece para papel que não seja o dono.</div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 13px; border-radius: 10px; background: #FAFAFB; border: 1px solid #EDEEF1;">
+              <span style="font-size: 12.5px; color: #6B7280;">Retenção de preço</span>
+              <span style="font-size: 13px; font-weight: 700;">{{ m.retencao }}</span>
+            </div>
+            <sc-if value="{{ m.amazon }}" hint-placeholder-val="{{ false }}">
+              <div style="padding: 11px 13px; border-radius: 10px; background: #FFF9EC; border: 1px solid #F0DFBB; font-size: 12px; color: #8A6A2E; line-height: 1.55;">Configurado por loja, não por regra fixa — é o que faz a Amazon ser tratada diferente sem espalhar exceção pelo sistema todo.</div>
+            </sc-if>
+
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">comissão por categoria</div>
+              <sc-for list="{{ m.categorias }}" as="c" hint-placeholder-count="3">
+                <div style="display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid #F1F2F4;">
+                  <span style="flex: 1; font-size: 13px; color: #4B5563;">{{ c.nome }}</span>
+                  <span style="font-size: 11px; color: #A3A8B0;">{{ c.vig }}</span>
+                  <span style="font-size: 14px; font-weight: 700;">{{ c.pct }}</span>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="margin-top: auto; display: flex; gap: 8px;">
+              <div style="flex: 1; text-align: center; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 700; color: #FFFFFF; background: var(--ac, #F16A0D);" style-hover="filter: brightness(1.07);">Editar tabela</div>
+              <div onClick="{{ m.alternarLoja }}" style="flex: 1; text-align: center; padding: 10px; border-radius: 9px; cursor: pointer; font-size: 12.5px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">{{ m.botaoRotulo }}</div>
+            </div>
+          </div>
+        </sc-for>
+        <div style="flex: 1 1 330px; min-width: 300px; border-radius: 14px; border: 1px dashed #DDE0E6; padding: 18px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 10px;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; border: 1px dashed #DDE0E6; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #B6BBC3;">+</div>
+          <div style="font-size: 15px; font-weight: 700; color: #6B7280;">Adicionar loja</div>
+          <div style="font-size: 12.5px; color: #9AA0AA; line-height: 1.6;">Enquanto a loja não estiver aqui, o cadastro por link recusa qualquer endereço dela — com explicação, nunca em silêncio.</div>
+        </div>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{ ehUsuarios }}" hint-placeholder-val="{{ false }}">
+      <section data-screen-label="Usuários" style="padding: 16px 24px 40px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 13px 16px; border-radius: 12px; background: #FFFFFF; border: 1px solid #E9EAEE;">
+          <div style="flex: 1; min-width: 240px; font-size: 12.5px; color: #6B7280; line-height: 1.55;">Uma tela de “criar conta” aberta seria porta para dentro do sistema que controla o dinheiro. Toda conta nasce de convite, e o convite expira.</div>
+        </div>
+        <div style="border-radius: 14px; background: #FFFFFF; border: 1px solid #E9EAEE; overflow: hidden;">
+          <sc-for list="{{ usuarios }}" as="u" hint-placeholder-count="5">
+            <div style="display: flex; align-items: center; gap: 16px; padding: 15px 18px; border-bottom: 1px solid #F1F2F4; flex-wrap: wrap;">
+              <div style="flex: 1.4; min-width: 180px; display: flex; flex-direction: column; gap: 2px;">
+                <div style="font-size: 14px; font-weight: 700;">{{ u.nome }}</div>
+                <div style="font-size: 12px; color: #9AA0AA;">{{ u.email }}</div>
+              </div>
+              <div style="flex: none; width: 100px;"><span style="font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 6px; background: {{ u.papelBg }}; color: {{ u.papelCor }};">{{ u.papel }}</span></div>
+              <div style="flex: 1; min-width: 160px; font-size: 12.5px; color: #6B7280;">{{ u.escopo }}</div>
+              <div style="flex: none; width: 120px; font-size: 12px; color: #A3A8B0;">{{ u.desde }}</div>
+              <sc-if value="{{ u.ativo }}" hint-placeholder-val="{{ true }}">
+                <div style="flex: none; display: flex; gap: 7px;">
+                  <div style="padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">Trocar papel</div>
+                  <sc-if value="{{ u.podeRevogar }}" hint-placeholder-val="{{ true }}">
+                    <div onClick="{{ u.revogar }}" style="padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: #C13232; border: 1px solid #F0D5D5;" style-hover="background: #FEF7F7;">Revogar</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+              <sc-if value="{{ u.revogado }}" hint-placeholder-val="{{ false }}">
+                <div style="flex: none; display: flex; align-items: center; gap: 10px;">
+                  <span style="font-size: 12px; font-weight: 700; color: #C13232;">acesso revogado agora</span>
+                  <span onClick="{{ u.restaurar }}" style="font-size: 12px; font-weight: 700; color: var(--ac, #F16A0D); cursor: pointer;">desfazer</span>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+          <div style="padding: 12px 18px; font-size: 12px; color: #9AA0AA; line-height: 1.55;">Revogar tem efeito imediato, inclusive em sessão já aberta. Acesso revogado que continua funcionando até a sessão expirar não é revogação.</div>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{ diag }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ fecharDiag }}" style="position: fixed; inset: 0; background: rgba(20,22,26,0.38); display: flex; align-items: center; justify-content: center; padding: 40px 24px; z-index: 40;">
+      <div onClick="{{ pararClique }}" style="width: 640px; max-width: 100%; max-height: 100%; overflow-y: auto; background: #FFFFFF; border-radius: 16px; box-shadow: 0 30px 70px rgba(20,22,26,0.28);">
+        <div style="padding: 20px 24px 17px; border-bottom: 1px solid #EDEEF1; display: flex; align-items: flex-start; gap: 16px; background: linear-gradient(160deg, #FFF6EE, #FFFFFF 70%);">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ac, #F16A0D);">diagnóstico de curadoria</div>
+            <div style="font-size: 19px; font-weight: 800; line-height: 1.3; letter-spacing: -0.025em;">{{ diag.produto }}</div>
+            <div style="font-size: 12.5px; color: #9AA0AA;">{{ diag.subtitulo }}</div>
+          </div>
+          <div onClick="{{ fecharDiag }}" style="cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E9EAEE; background: #FFFFFF; font-size: 15px; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">×</div>
+        </div>
+        <div>
+          <sc-for list="{{ diag.comportas }}" as="c" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 22px 1fr 220px; align-items: baseline; gap: 14px; padding: 12px 24px; border-bottom: 1px solid #F1F2F4;">
+              <div style="font-size: 13px; font-weight: 700; color: {{ c.cor }};">{{ c.marca }}</div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <div style="font-size: 13.5px; font-weight: 600;">{{ c.nome }}</div>
+                <div style="font-size: 11px; color: #A3A8B0;">{{ c.origem }}</div>
+              </div>
+              <div style="text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #6B7280;">{{ c.valores }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="padding: 17px 24px 22px; display: flex; flex-direction: column; gap: 8px; background: #FAFAFB; border-top: 1px solid #EDEEF1;">
+          <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">cálculo da nota</div>
+          <sc-for list="{{ diag.calculo }}" as="l" hint-placeholder-count="4">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #6B7280;">
+              <span>{{ l.formula }}</span>
+              <span style="color: #14161A; font-weight: 500;">{{ l.resultado }}</span>
+            </div>
+          </sc-for>
+          <div style="margin-top: 5px; font-size: 12px; color: #A3A8B0; line-height: 1.55; text-wrap: pretty;">Estes motivos vêm da mesma implementação que decide de verdade, no banco. Nenhuma tela recalcula a regra por conta própria.</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ drawer }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ fecharPainel }}" style="position: fixed; inset: 0; background: rgba(20,22,26,0.34); display: flex; justify-content: flex-end; z-index: 45;">
+      <div onClick="{{ pararClique }}" style="width: 560px; max-width: 100%; height: 100%; background: #FFFFFF; border-left: 1px solid #E9EAEE; box-shadow: -20px 0 60px rgba(20,22,26,0.18); display: flex; flex-direction: column;">
+        <div style="flex: none; padding: 20px 22px 16px; border-bottom: 1px solid #EDEEF1; display: flex; align-items: flex-start; gap: 16px;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+            <div style="font-size: 19px; font-weight: 800; letter-spacing: -0.025em;">{{ drawer.titulo }}</div>
+            <div style="font-size: 12.5px; color: #9AA0AA;">{{ drawer.sub }}</div>
+          </div>
+          <div onClick="{{ fecharPainel }}" style="cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E9EAEE; font-size: 15px; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">×</div>
+        </div>
+
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 24px; display: flex; flex-direction: column; gap: 14px;">
+
+          <sc-if value="{{ drawer.ehLista }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius: 12px; border: 1px solid #E9EAEE; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 1fr 110px 76px; gap: 12px; padding: 10px 14px; background: #FAFAFB; border-bottom: 1px solid #EDEEF1; font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">
+                <sc-for list="{{ drawer.cols }}" as="c" hint-placeholder-count="3">
+                  <div>{{ c }}</div>
+                </sc-for>
+              </div>
+              <sc-for list="{{ drawer.linhas }}" as="l" hint-placeholder-count="6">
+                <div style="display: grid; grid-template-columns: 1fr 110px 76px; gap: 12px; padding: 11px 14px; border-bottom: 1px solid #F1F2F4; align-items: center;">
+                  <div style="font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ l.a }}</div>
+                  <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #6B7280;">{{ l.b }}</div>
+                  <div style="font-size: 12.5px; font-weight: 700; color: #C13232;">{{ l.c }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ drawer.ehLog }}" hint-placeholder-val="{{ false }}">
+            <div style="border-radius: 12px; border: 1px solid #E9EAEE; background: #FAFAFB; padding: 6px 0;">
+              <sc-for list="{{ drawer.linhas }}" as="l" hint-placeholder-count="6">
+                <div style="display: flex; align-items: baseline; gap: 12px; padding: 8px 14px;">
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #A3A8B0; flex: none;">{{ l.a }}</span>
+                  <span style="width: 6px; height: 6px; border-radius: 50%; flex: none; background: {{ l.cor }};"></span>
+                  <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: {{ l.cor }};">{{ l.b }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ drawer.ehPassos }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <sc-for list="{{ drawer.linhas }}" as="l" hint-placeholder-count="3">
+                <div style="display: flex; gap: 13px; padding: 14px 15px; border-radius: 12px; border: 1px solid #E9EAEE;">
+                  <div style="width: 26px; height: 26px; flex: none; border-radius: 50%; background: #FFF1E6; color: #D2590A; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center;">{{ l.a }}</div>
+                  <div style="flex: 1; font-size: 13.5px; color: #4B5563; line-height: 1.6; text-wrap: pretty;">{{ l.b }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ drawer.ehClassificar }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <sc-for list="{{ drawer.linhas }}" as="l" hint-placeholder-count="3">
+                <div style="padding: 14px 15px; border-radius: 12px; border: 1px solid #E9EAEE; display: flex; flex-direction: column; gap: 10px;">
+                  <div style="display: flex; flex-direction: column; gap: 2px;">
+                    <div style="font-size: 14px; font-weight: 700; letter-spacing: -0.015em;">{{ l.a }}</div>
+                    <div style="font-size: 11.5px; color: #9AA0AA;">{{ l.b }}</div>
+                  </div>
+                  <div style="display: flex; gap: 7px; flex-wrap: wrap;">
+                    <sc-for list="{{ l.nichos }}" as="n" hint-placeholder-count="3">
+                      <div onClick="{{ n.usar }}" style="padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 600; background: {{ n.bg }}; color: {{ n.fg }}; border: 1px solid {{ n.borda }};" style-hover="filter: brightness(0.97);">{{ n.nome }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <div style="font-size: 13px; color: #6B7280; line-height: 1.6; text-wrap: pretty; padding: 13px 15px; border-radius: 12px; background: #FAFAFB; border: 1px solid #EDEEF1;">{{ drawer.nota }}</div>
+        </div>
+
+        <div style="flex: none; padding: 14px 22px; border-top: 1px solid #EDEEF1; display: flex; gap: 9px; justify-content: flex-end;">
+          <div onClick="{{ fecharPainel }}" style="padding: 11px 16px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">Fechar</div>
+          <div onClick="{{ drawer.resolver }}" style="padding: 11px 18px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 700; color: #FFFFFF; background: var(--ac, #F16A0D);" style-hover="filter: brightness(1.07);">{{ drawer.acao }}</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ ehPOutro }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ fecharPainel }}" style="position: fixed; inset: 0; background: rgba(20,22,26,0.34); display: flex; justify-content: flex-end; z-index: 45;">
+      <div onClick="{{ pararClique }}" style="width: 540px; max-width: 100%; height: 100%; background: #FFFFFF; border-left: 1px solid #E9EAEE; box-shadow: -20px 0 60px rgba(20,22,26,0.18); display: flex; flex-direction: column;">
+        <div style="flex: none; padding: 20px 22px 16px; border-bottom: 1px solid #EDEEF1; display: flex; align-items: flex-start; gap: 16px;">
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px;">
+            <div style="font-size: 19px; font-weight: 800; letter-spacing: -0.025em; line-height: 1.25;">{{ painelTitulo }}</div>
+            <div style="font-size: 12.5px; color: #9AA0AA;">{{ painelSub }}</div>
+          </div>
+          <div onClick="{{ fecharPainel }}" style="cursor: pointer; width: 28px; height: 28px; flex: none; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E9EAEE; font-size: 15px; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">×</div>
+        </div>
+
+        <div style="flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 26px; display: flex; flex-direction: column; gap: 16px;">
+
+          <sc-if value="{{ ehPProduto }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="flex: none; height: 200px; border-radius: 14px; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                <image-slot id="{{ prod.slotId }}" shape="rect" placeholder="foto do produto"></image-slot>
+              </div>
+              <div style="display: flex; align-items: center; gap: 9px; flex-wrap: wrap;">
+                <span style="font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: {{ prod.nichoBg }}; color: {{ prod.nichoFg }};">{{ prod.nichoRotulo }}</span>
+                <span style="font-size: 12.5px; color: #9AA0AA;">{{ prod.diasFmt }} · menor observado {{ prod.menorFmt }}</span>
+              </div>
+              <sc-if value="{{ prod.semNicho }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 12px 14px; border-radius: 11px; background: #FFF9EC; border: 1px solid #F0DFBB; font-size: 12.5px; color: #8A6A2E; line-height: 1.55;">Sem nicho este produto não é roteado para canal nenhum: nunca vira oferta e some do fluxo em silêncio.</div>
+              </sc-if>
+
+              <div style="display: flex; flex-direction: column; gap: 9px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">anúncios deste produto</div>
+                <sc-for list="{{ prod.anuncios }}" as="a" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 11px; border: 1px solid #E9EAEE;">
+                    <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-size: 13.5px; font-weight: 700;">{{ a.loja }}</span>
+                      <span style="font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: #A3A8B0;">{{ a.codigo }}</span>
+                    </div>
+                    <div style="text-align: right; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-size: 14px; font-weight: 700;">{{ a.preco }}</span>
+                      <span style="font-size: 11.5px; color: {{ a.cor }};">{{ a.serie }}</span>
+                    </div>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ prod.semAnuncio }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding: 14px; border-radius: 11px; border: 1px dashed #DDE0E6; font-size: 12.5px; color: #9AA0AA;">Nenhum anúncio coletando ainda. Adicione uma loja para começar a série.</div>
+                </sc-if>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 9px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">ofertas que já gerou</div>
+                <sc-for list="{{ prod.ofertas }}" as="o" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1;">
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #A3A8B0; width: 46px;">{{ o.data }}</span>
+                    <span style="font-size: 13px; font-weight: 700;">{{ o.desconto }}</span>
+                    <span style="margin-left: auto; font-size: 12.5px; font-weight: 600; color: {{ o.cor }};">{{ o.estado }}</span>
+                  </div>
+                </sc-for>
+                <sc-if value="{{ prod.semOferta }}" hint-placeholder-val="{{ false }}">
+                  <div style="padding: 14px; border-radius: 11px; border: 1px dashed #DDE0E6; font-size: 12.5px; color: #9AA0AA; line-height: 1.55;">Nenhuma oferta ainda — a série é curta demais para o motor comparar. O histórico de rejeições, quando existir, é tão útil quanto o de aprovações: é nele que se descobre limiar apertado demais.</div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ehPAnuncio }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span style="font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; background: {{ anun.estBg }}; color: {{ anun.estCor }};">{{ anun.estRotulo }}</span>
+                <span style="font-size: 12.5px; color: #9AA0AA;">última coleta {{ anun.ultima }}</span>
+              </div>
+              <div style="display: flex; gap: 10px;">
+                <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 11px; color: #9AA0AA;">menor observado</span>
+                  <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.03em;">{{ anun.menorFmt }}</span>
+                </div>
+                <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 11px; color: #9AA0AA;">mediana 30 dias</span>
+                  <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.03em;">{{ anun.medianaFmt }}</span>
+                </div>
+                <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 11px; color: #9AA0AA;">série</span>
+                  <span style="font-size: 18px; font-weight: 800; letter-spacing: -0.03em;">{{ anun.diasFmt }}</span>
+                </div>
+              </div>
+              <sc-if value="{{ anun.temSerie }}" hint-placeholder-val="{{ true }}">
+                <svg viewBox="0 0 400 92" preserveAspectRatio="none" style="width: 100%; height: 96px; display: block; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1;">
+                  <defs>
+                    <linearGradient id="rad-fill2" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="var(--ac, #F16A0D)" stop-opacity="0.20"></stop>
+                      <stop offset="100%" stop-color="var(--ac, #F16A0D)" stop-opacity="0"></stop>
+                    </linearGradient>
+                  </defs>
+                  <polygon points="{{ anun.area }}" fill="url(#rad-fill2)"></polygon>
+                  <polyline points="{{ anun.linhaRef }}" fill="none" stroke="#CFD3DA" stroke-width="1" stroke-dasharray="4 5" vector-effect="non-scaling-stroke"></polyline>
+                  <polyline points="{{ anun.spark }}" fill="none" stroke="var(--ac, #F16A0D)" stroke-width="1.8" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
+                  <circle cx="{{ anun.pontoX }}" cy="{{ anun.pontoY }}" r="3.6" fill="#FFFFFF" stroke="var(--ac, #F16A0D)" stroke-width="2.2"></circle>
+                </svg>
+              </sc-if>
+              <sc-if value="{{ anun.amazon }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 13px 14px; border-radius: 11px; background: #F5F6F8; border: 1px solid #E9EAEE; font-size: 12.5px; color: #6B7280; line-height: 1.6;">A política de associados da Amazon limita a retenção de preço a 24 horas. Esta linha nunca vai acumular histórico — não é defeito da coleta, e por isso o espaço do gráfico não fica vazio fingindo que é.</div>
+              </sc-if>
+              <sc-if value="{{ anun.parado }}" hint-placeholder-val="{{ false }}">
+                <div style="padding: 13px 14px; border-radius: 11px; background: #FEF2F2; border: 1px solid #F6DADA; font-size: 12.5px; color: #B23A3A; line-height: 1.6;">Sem coleta desde 22/07 às 06:14. Cada dia parado é um dia que não volta: o preço de terça passada não existe em lugar nenhum para ser buscado depois.</div>
+              </sc-if>
+              <div style="display: flex; gap: 8px;">
+                <div style="flex: 1; text-align: center; padding: 11px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; color: #FFFFFF; background: var(--ac, #F16A0D);" style-hover="filter: brightness(1.07);">Forçar coleta agora</div>
+                <div style="flex: 1; text-align: center; padding: 11px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">Desativar anúncio</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ehPNicho }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: flex; gap: 10px;">
+                <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 11px; color: #9AA0AA;">taxa de aprovação</span>
+                  <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.03em; color: var(--ac, #F16A0D);">{{ nichoP.aprov }}</span>
+                </div>
+                <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 11px; color: #9AA0AA;">produtos</span>
+                  <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.03em;">{{ nichoP.produtos }}</span>
+                </div>
+                <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="font-size: 11px; color: #9AA0AA;">canais</span>
+                  <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.03em;">{{ nichoP.canais }}</span>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 9px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">limiares deste nicho</div>
+                <sc-for list="{{ nichoP.limiares }}" as="l" hint-placeholder-count="3">
+                  <div style="display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-radius: 11px; border: 1px solid #E9EAEE;">
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                      <span style="font-size: 13.5px; font-weight: 600;">{{ l.rotulo }}</span>
+                      <span style="font-size: 11.5px; color: #A3A8B0;">{{ l.global }}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid #E1E3E8; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; color: #6B7280;" style-hover="background: #F5F6F8;">−</span>
+                      <span style="min-width: 66px; text-align: center; font-size: 15px; font-weight: 700; color: {{ l.cor }};">{{ l.valor }}</span>
+                      <span style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid #E1E3E8; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; color: #6B7280;" style-hover="background: #F5F6F8;">+</span>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="padding: 13px 14px; border-radius: 11px; background: #FFF9EC; border: 1px solid #F0DFBB; font-size: 12.5px; color: #8A6A2E; line-height: 1.6;">Alterar limiar não reprocessa oferta já decidida: vale da próxima detecção em diante. Vinte por cento de desconto em ração é oferta excelente; vinte por cento em eletrônico é terça-feira comum.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ehPCanal }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div style="display: flex; align-items: center; gap: 9px; flex-wrap: wrap;">
+                <span style="font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 6px; background: {{ canalP.estBg }}; color: {{ canalP.estCor }};">{{ canalP.estRotulo }}</span>
+                <span style="font-size: 12.5px; color: #9AA0AA;">nichos aceitos: {{ canalP.nichosFmt }}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #F1F2F4;">
+                  <span style="font-size: 13px; color: #6B7280;">Teto de posts</span><span style="font-size: 13.5px; font-weight: 700;">{{ canalP.tetoFmt }}</span>
+                </div>
+                <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #F1F2F4;">
+                  <span style="font-size: 13px; color: #6B7280;">Operador</span><span style="font-size: 13.5px; font-weight: 700;">{{ canalP.operador }}</span>
+                </div>
+                <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #F1F2F4;">
+                  <span style="font-size: 13px; color: #6B7280;">Parceiro da audiência</span><span style="font-size: 13.5px; font-weight: 700;">{{ canalP.parceiro }}</span>
+                </div>
+                <div style="display: flex; align-items: baseline; justify-content: space-between; padding-bottom: 10px; border-bottom: 1px solid #F1F2F4;">
+                  <span style="font-size: 13px; color: #6B7280;">Divisão de receita</span><span style="font-size: 13.5px; font-weight: 700;">{{ canalP.split }}</span>
+                </div>
+                <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                  <span style="font-size: 13px; color: #6B7280;">Última publicação</span><span style="font-size: 13.5px; font-weight: 700;">{{ canalP.ultima }}</span>
+                </div>
+              </div>
+              <div style="padding: 13px 14px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; font-size: 12.5px; color: #6B7280; line-height: 1.6;">A divisão fica guardada em duas parcelas separadas, audiência e operação, nunca um número só: um parceiro pode trazer a audiência e operar, ou só trazer a audiência. O que sobra das duas é a parte do dono.</div>
+              <div style="display: flex; gap: 8px;">
+                <div style="flex: 1; text-align: center; padding: 11px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; color: #FFFFFF; background: var(--ac, #F16A0D);" style-hover="filter: brightness(1.07);">Editar canal</div>
+                <div style="flex: 1; text-align: center; padding: 11px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">Ver histórico</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ehPParceiro }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 17px;">
+              <div style="display: flex; align-items: center; gap: 14px;">
+                <div style="width: 68px; height: 68px; flex: none; border-radius: 50%; overflow: hidden; background: #F3F4F6; border: 1px solid #EDEEF1; color: #9AA0AA;">
+                  <image-slot id="{{ parcP.slotId }}" shape="circle" placeholder="logo"></image-slot>
+                </div>
+                <div style="flex: 1; font-size: 12.5px; color: #9AA0AA; line-height: 1.5;">Arraste a logo ou a foto do parceiro aqui. Ela aparece na lista, no repasse e no extrato.</div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 11px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">cadastro</div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <label style="font-size: 12px; font-weight: 700; color: #4B5563;">Nome</label>
+                  <input type="text" value="{{ parcP.nome }}" style="width: 100%; padding: 11px 13px; border-radius: 10px; border: 1px solid #DDE0E6; outline: none; font-family: Manrope, system-ui, sans-serif; font-size: 13.5px; color: #14161A;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <label style="font-size: 12px; font-weight: 700; color: #4B5563;">Contato</label>
+                  <input type="text" value="{{ parcP.contato }}" style="width: 100%; padding: 11px 13px; border-radius: 10px; border: 1px solid #DDE0E6; outline: none; font-family: Manrope, system-ui, sans-serif; font-size: 13.5px; color: #14161A;">
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <label style="font-size: 12px; font-weight: 700; color: #4B5563;">Chave de pagamento</label>
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 11px 13px; border-radius: 10px; border: 1px solid #DDE0E6; background: #FAFAFB;">
+                    <span style="font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #6B7280; flex: 1;">•••• •••• •••• 4471</span>
+                    <span style="font-size: 12px; font-weight: 700; color: var(--ac, #F16A0D); cursor: pointer;">mostrar</span>
+                  </div>
+                  <div style="font-size: 11.5px; color: #A3A8B0;">Nunca visível para outro parceiro — nem em listagem, nem em resposta de API.</div>
+                </div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">divisão de receita</div>
+                <div style="display: flex; gap: 10px;">
+                  <div style="flex: 1; padding: 13px; border-radius: 11px; border: 1px solid #E9EAEE; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 11px; color: #9AA0AA;">audiência</span>
+                    <span style="font-size: 19px; font-weight: 800; letter-spacing: -0.03em;">{{ parcP.audiencia }}</span>
+                  </div>
+                  <div style="flex: 1; padding: 13px; border-radius: 11px; border: 1px solid #E9EAEE; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 11px; color: #9AA0AA;">operação</span>
+                    <span style="font-size: 19px; font-weight: 800; letter-spacing: -0.03em;">{{ parcP.operacao }}</span>
+                  </div>
+                </div>
+                <div style="font-size: 12px; color: #A3A8B0; line-height: 1.55;">Duas parcelas separadas, nunca um número só: um parceiro pode trazer a audiência e operar, ou só trazer a audiência. O que sobra das duas é a parte do dono.</div>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 9px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">canais deste parceiro</div>
+                <sc-for list="{{ parcP.canaisLista }}" as="c" hint-placeholder-count="2">
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-radius: 11px; border: 1px solid #E9EAEE;">
+                    <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--ac, #F16A0D);"></span>
+                    <span style="flex: 1; font-size: 13.5px; font-weight: 600;">{{ c.nome }}</span>
+                    <span style="font-size: 12.5px; font-weight: 700; color: var(--ac, #F16A0D); cursor: pointer;">abrir →</span>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 9px;">
+                <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">extrato</div>
+                <div style="display: flex; gap: 10px;">
+                  <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 11px; color: #9AA0AA;">gerado</span>
+                    <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.03em;">{{ parcP.geradoFmt }}</span>
+                  </div>
+                  <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FAFAFB; border: 1px solid #EDEEF1; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 11px; color: #9AA0AA;">repassado</span>
+                    <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.03em;">{{ parcP.repassadoFmt }}</span>
+                  </div>
+                  <div style="flex: 1; padding: 13px; border-radius: 11px; background: #FFF8F2; border: 1px solid #FBE0C9; display: flex; flex-direction: column; gap: 2px;">
+                    <span style="font-size: 11px; color: #B08157;">a pagar</span>
+                    <span style="font-size: 17px; font-weight: 800; letter-spacing: -0.03em; color: #B4740A;">{{ parcP.devidoFmt }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <sc-if value="{{ parcP.concAviso }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 7px; padding: 13px 14px; border-radius: 11px; background: #FFF9EC; border: 1px solid #F0DFBB;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                    <span style="font-size: 12.5px; font-weight: 700; color: #8A6A2E;">concentra {{ parcP.concFmt }} da receita total</span>
+                  </div>
+                  <div style="height: 5px; border-radius: 3px; background: #F0E4CB; overflow: hidden;">
+                    <div style="height: 5px; border-radius: 3px; background: #B4740A; width: {{ parcP.concPct }};"></div>
+                  </div>
+                  <div style="font-size: 12px; color: #8A6A2E; line-height: 1.55;">Parceiro que passa de 40% dita o split. Isso precisa ser visível antes de virar fato consumado.</div>
+                </div>
+              </sc-if>
+
+              <div style="display: flex; gap: 8px;">
+                <div style="flex: 1.4; text-align: center; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; color: #FFFFFF; background: var(--ac, #F16A0D);" style-hover="filter: brightness(1.07);">Salvar alterações</div>
+                <div style="flex: 1; text-align: center; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">Desativar</div>
+              </div>
+              <div style="font-size: 11.5px; color: #A3A8B0; line-height: 1.55;">Parceiro com canal vinculado não é apagado, é desativado: apagar quebraria o histórico de repasses que sustenta a prestação de contas.</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ ehPTemplate }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">o template</div>
+              <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.75; white-space: pre-wrap; color: #4B5563; background: #FAFAFB; border: 1px solid #EDEEF1; border-radius: 11px; padding: 13px 14px;">{{ tmplP.corpo }}</div>
+              <div style="font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #9AA0AA;">prévia com uma oferta real</div>
+              <div style="font-size: 13px; line-height: 1.7; white-space: pre-wrap; color: #14161A; background: #FFFFFF; border: 1px solid #E9EAEE; border-radius: 11px; padding: 14px;">Tapete higiênico SuperSecão 80×60 — 60 un
+R$ 89,90 no Mercado Livre
+Menor preço nos 96 dias em que acompanhamos (estava R$ 129,90)
+radar.link/a/7KQ2M</div>
+              <div style="padding: 14px; border-radius: 11px; background: #FFF9EC; border: 1px solid #F0DFBB; display: flex; flex-direction: column; gap: 7px;">
+                <div style="font-size: 12.5px; font-weight: 700; color: #8A6A2E;">A mesma oferta com menos de 14 dias de série</div>
+                <div style="font-size: 13px; line-height: 1.7; white-space: pre-wrap; color: #6B5330;">Tapete higiênico SuperSecão 80×60 — 60 un
+R$ 89,90 no Mercado Livre
+Preço acompanhado desde 15/07; menor valor observado nesse período
+radar.link/a/7KQ2M</div>
+                <div style="font-size: 12px; color: #8A6A2E; line-height: 1.55;">As duas redações aparecem lado a lado para que a diferença seja escolhida conscientemente — e não descoberta em produção.</div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+
+        <div style="flex: none; padding: 14px 22px; border-top: 1px solid #EDEEF1; display: flex; justify-content: flex-end;">
+          <div onClick="{{ fecharPainel }}" style="padding: 11px 18px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">Fechar</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ modalAberto }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ fecharModal }}" style="position: fixed; inset: 0; background: rgba(20,22,26,0.38); display: flex; align-items: center; justify-content: center; padding: 40px 24px; z-index: 50;">
+      <div onClick="{{ pararClique }}" style="width: 540px; max-width: 100%; background: #FFFFFF; border-radius: 16px; box-shadow: 0 30px 70px rgba(20,22,26,0.28); display: flex; flex-direction: column;">
+        <div style="padding: 20px 24px 16px; border-bottom: 1px solid #EDEEF1; display: flex; align-items: flex-start; gap: 16px;">
+          <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+            <div style="font-size: 19px; font-weight: 800; letter-spacing: -0.025em;">Cadastrar por link</div>
+            <div style="font-size: 12.5px; color: #9AA0AA;">O sistema lê a loja e o código do anúncio sem fazer requisição ao site.</div>
+          </div>
+          <div onClick="{{ fecharModal }}" style="cursor: pointer; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid #E9EAEE; font-size: 15px; color: #6B7280;" style-hover="background: #F5F6F8; color: #14161A;">×</div>
+        </div>
+
+        <div style="padding: 18px 24px 20px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 7px;">
+            <label style="font-size: 12px; font-weight: 700; color: #4B5563;">Endereço do anúncio</label>
+            <input type="text" placeholder="https://www.mercadolivre.com.br/…" value="{{ linkValor }}" onChange="{{ digitarLink }}" style="width: 100%; padding: 12px 13px; border-radius: 10px; border: 1px solid #DDE0E6; background: #FFFFFF; outline: none; font-family: Manrope, system-ui, sans-serif; font-size: 13.5px; color: #14161A;">
+          </div>
+
+          <sc-if value="{{ link.ok }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 14px; padding: 13px 15px; border-radius: 11px; background: #EDF9F2; border: 1px solid #C9E9D8;">
+              <span style="width: 22px; height: 22px; flex: none; border-radius: 50%; background: #1B8A4E; color: #FFFFFF; font-size: 12px; display: flex; align-items: center; justify-content: center;">✓</span>
+              <div style="flex: 1; display: flex; flex-direction: column; gap: 2px;">
+                <div style="font-size: 13.5px; font-weight: 700; color: #14161A;">{{ link.loja }}</div>
+                <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #4B7A5F;">código {{ link.codigo }}</div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ link.aviso }}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 12px 15px; border-radius: 11px; background: #FFF9EC; border: 1px solid #F0DFBB; font-size: 12.5px; color: #8A6A2E; line-height: 1.55;">{{ link.aviso }}</div>
+          </sc-if>
+          <sc-if value="{{ link.dup }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 13px 15px; border-radius: 11px; background: #FFF9EC; border: 1px solid #F0DFBB;">
+              <div style="flex: 1; font-size: 13px; color: #8A6A2E; line-height: 1.5;">Este anúncio já está no radar desde 21/04, com 96 dias de série.</div>
+              <div style="padding: 8px 13px; border-radius: 8px; cursor: pointer; font-size: 12.5px; font-weight: 700; background: #FFFFFF; border: 1px solid #E7D4AC; color: #8A6A2E; white-space: nowrap;" style-hover="background: #FFF4DF;">Abrir o existente</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ link.erro }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 3px; padding: 13px 15px; border-radius: 11px; background: #FEF2F2; border: 1px solid #F6DADA;">
+              <div style="font-size: 13.5px; font-weight: 700; color: #C13232;">{{ link.erro }}</div>
+              <div style="font-size: 12.5px; color: #6B7280; line-height: 1.5;">{{ link.dica }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ link.vazio }}" hint-placeholder-val="{{ true }}">
+            <div style="font-size: 12.5px; color: #9AA0AA; line-height: 1.6;">Mercado Livre, Shopee e Amazon. Link encurtado é recusado — precisa ser resolvido antes.</div>
+          </sc-if>
+
+          <div style="display: flex; flex-direction: column; gap: 8px;">
+            <label style="font-size: 12px; font-weight: 700; color: #4B5563;">Nicho <span style="font-weight: 500; color: #9AA0AA;">— obrigatório: produto sem nicho não chega a canal nenhum</span></label>
+            <div style="display: flex; gap: 7px; flex-wrap: wrap;">
+              <sc-for list="{{ nichosModal }}" as="n" hint-placeholder-count="3">
+                <div onClick="{{ n.usar }}" style="padding: 8px 14px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; background: {{ n.bg }}; color: {{ n.fg }}; border: 1px solid {{ n.borda }};" style-hover="filter: brightness(0.97);">{{ n.nome }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 14px 24px; border-top: 1px solid #EDEEF1; display: flex; gap: 9px; justify-content: flex-end;">
+          <div onClick="{{ fecharModal }}" style="padding: 11px 16px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; color: #4B5563; border: 1px solid #E1E3E8;" style-hover="background: #F5F6F8;">Cancelar</div>
+          <div onClick="{{ confirmar }}" style="padding: 11px 20px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 700; color: #FFFFFF; background: {{ btnCadastrar }};" style-hover="filter: brightness(1.07);">Colocar no radar</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;accent&quot;: {&quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#F16A0D&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;options&quot;: [&quot;#F16A0D&quot;, &quot;#EA580C&quot;, &quot;#F59E0B&quot;, &quot;#E11D48&quot;], &quot;section&quot;: &quot;Aparência&quot;}, &quot;ordemPadrao&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;nota&quot;, &quot;options&quot;: [&quot;nota&quot;, &quot;comissao&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Curadoria&quot;}, &quot;diasSerieMinima&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 7, &quot;min&quot;: 7, &quot;max&quot;: 60, &quot;unit&quot;: &quot;dias&quot;, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Curadoria&quot;}, &quot;visaoOperador&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Fila de envio&quot;}}">
+const BRL = n => 'R$ ' + n.toFixed(2).replace('.', ',');
+const AC = '#F16A0D', AMBAR = '#B4740A', VERM = '#C13232', VERDE = '#22A45D';
+const LOJAS = { 'Mercado Livre': ['#8A7A00', '#FBF7D6'], 'Shopee': ['#C1441F', '#FDEDE7'], 'Amazon': ['#9A6210', '#FBF1E1'] };
+
+const O = [
+  { id: 1, produto: 'Tapete higiênico SuperSecão 80×60 — 60 un', loja: 'Mercado Livre', nicho: 'pet',
+    preco: 89.9, ref: 129.9, dias: 96, desde: '21/04', nota: 84, comissao: 8.09, ultimoPost: 'há 41 dias', repetido: false,
+    parcelas: [['desconto', 42, 50], ['comissão', 24, 30], ['vendedor', 18, 20]],
+    canais: [['Pet Achados', 'whatsapp'], ['Cachorro & Cia', 'whatsapp'], ['Ofertas Pet BR', 'telegram']],
+    comportas: [['Série mínima para avaliar', '96 dias observados', 'mínimo 7', 1, 'global'],
+      ['Desconto contra a mediana de 30 dias', '30,8%', 'mínimo 18%', 1, 'nicho pet'],
+      ['É o menor preço em 90 dias', 'sim, R$ 89,90', 'anterior R$ 94,50', 1, 'global'],
+      ['Comissão estimada em reais', 'R$ 8,09', 'mínimo R$ 3,00', 1, 'global'],
+      ['Reputação do vendedor', '4,8 · Platinum', 'mínimo 4,2', 1, 'global'],
+      ['Repetição do mesmo produto', 'último post há 41 dias', 'mínimo 30 dias', 1, 'global'],
+      ['Lastro para afirmar mínimo histórico', '96 dias', 'exige 14', 1, 'restrição de projeto']],
+    calculo: [['desconto: 30,8% ÷ 40% × 50, teto 50', '42'], ['comissão: R$ 8,09 ÷ R$ 10 × 30, teto 30', '24'], ['vendedor: 4,8 ÷ 5 × 20', '18'], ['total', '84']] },
+  { id: 2, produto: 'Ração Golden Fórmula Adulto Frango 15 kg', loja: 'Shopee', nicho: 'pet',
+    preco: 179.9, ref: 219.0, dias: 61, desde: '27/05', nota: 71, comissao: 10.79, ultimoPost: 'nunca', repetido: false,
+    parcelas: [['desconto', 22, 50], ['comissão', 30, 30], ['vendedor', 19, 20]],
+    canais: [['Pet Achados', 'whatsapp'], ['Cachorro & Cia', 'whatsapp'], ['Ofertas Pet BR', 'telegram']],
+    comportas: [['Série mínima para avaliar', '61 dias observados', 'mínimo 7', 1, 'global'],
+      ['Desconto contra a mediana de 30 dias', '17,9%', 'mínimo 18%', 0, 'nicho pet'],
+      ['Exceção: menor preço absoluto da série', 'sim, R$ 179,90', 'libera a anterior', 1, 'global'],
+      ['Comissão estimada em reais', 'R$ 10,79', 'mínimo R$ 3,00', 1, 'global'],
+      ['Reputação do vendedor', '4,9 · loja oficial', 'mínimo 4,2', 1, 'global'],
+      ['Lastro para afirmar mínimo histórico', '61 dias', 'exige 14', 1, 'restrição de projeto']],
+    calculo: [['desconto: 17,9% ÷ 40% × 50', '22'], ['comissão: R$ 10,79 ÷ R$ 10 × 30, teto 30', '30'], ['vendedor: 4,9 ÷ 5 × 20', '19'], ['total', '71']] },
+  { id: 3, produto: 'Fone JBL Tune 520BT sem fio', loja: 'Mercado Livre', nicho: 'eletrônico',
+    preco: 219.0, ref: 289.0, dias: 12, desde: '15/07', nota: 66, comissao: 8.76, ultimoPost: 'nunca', repetido: false,
+    parcelas: [['desconto', 30, 50], ['comissão', 26, 30], ['vendedor', 10, 20]],
+    canais: [['Eletro Barato', 'whatsapp'], ['Achados Tech', 'telegram']],
+    comportas: [['Série mínima para avaliar', '12 dias observados', 'mínimo 7', 1, 'global'],
+      ['Desconto contra a mediana de 30 dias', '24,2%', 'mínimo 22%', 1, 'nicho eletrônico'],
+      ['Comissão estimada em reais', 'R$ 8,76', 'mínimo R$ 3,00', 1, 'global'],
+      ['Reputação do vendedor', '4,4 · sem selo', 'mínimo 4,2', 1, 'global'],
+      ['Lastro para afirmar mínimo histórico', '12 dias', 'exige 14 — bloqueado', 0, 'restrição de projeto']],
+    calculo: [['desconto: 24,2% ÷ 40% × 50', '30'], ['comissão: R$ 8,76 ÷ R$ 10 × 30', '26'], ['vendedor: 4,4 ÷ 5 × 20, penalidade sem selo', '10'], ['total', '66']] },
+  { id: 4, produto: 'Air Fryer Mondial Family 4 L', loja: 'Shopee', nicho: 'eletrônico',
+    preco: 289.9, ref: 349.9, dias: 143, desde: '06/03', nota: 63, comissao: 14.5, ultimoPost: 'há 12 dias', repetido: true,
+    parcelas: [['desconto', 21, 50], ['comissão', 30, 30], ['vendedor', 12, 20]],
+    canais: [['Eletro Barato', 'whatsapp'], ['Achados Tech', 'telegram']],
+    comportas: [['Série mínima para avaliar', '143 dias observados', 'mínimo 7', 1, 'global'],
+      ['Desconto contra a mediana de 30 dias', '17,1%', 'mínimo 22%', 0, 'nicho eletrônico'],
+      ['Exceção: menor preço em 60 dias', 'sim', 'libera a anterior', 1, 'global'],
+      ['Comissão estimada em reais', 'R$ 14,50', 'mínimo R$ 3,00', 1, 'global'],
+      ['Repetição do mesmo produto', 'último post há 12 dias', 'mínimo 30 dias', 0, 'global']],
+    calculo: [['desconto: 17,1% ÷ 40% × 50', '21'], ['comissão: R$ 14,50 ÷ R$ 10 × 30, teto 30', '30'], ['vendedor: 4,3 ÷ 5 × 20, penalidade repetição', '12'], ['total', '63']] },
+  { id: 5, produto: 'Café Melitta Tradicional 500 g', loja: 'Shopee', nicho: 'alimentação',
+    preco: 18.9, ref: 24.5, dias: 78, desde: '10/05', nota: 58, comissao: 1.32, ultimoPost: 'nunca', repetido: false,
+    parcelas: [['desconto', 28, 50], ['comissão', 12, 30], ['vendedor', 18, 20]],
+    canais: [['Mercado da Semana', 'telegram']],
+    comportas: [['Série mínima para avaliar', '78 dias observados', 'mínimo 7', 1, 'global'],
+      ['Desconto contra a mediana de 30 dias', '22,9%', 'mínimo 15%', 1, 'nicho alimentação'],
+      ['Comissão estimada em reais', 'R$ 1,32', 'mínimo R$ 3,00 — abaixo', 0, 'global'],
+      ['Exceção: item de recompra frequente', 'sim', 'libera a anterior', 1, 'nicho alimentação'],
+      ['Reputação do vendedor', '4,7 · loja oficial', 'mínimo 4,2', 1, 'global']],
+    calculo: [['desconto: 22,9% ÷ 40% × 50', '28'], ['comissão: R$ 1,32 ÷ R$ 10 × 30', '12'], ['vendedor: 4,7 ÷ 5 × 20', '18'], ['total', '58']] }
+];
+
+const MOTIVOS = ['Preço ainda alto', 'Comissão não paga o post', 'Vendedor ruim', 'Produto repetido', 'Fora do nicho', 'Anúncio suspeito'];
+
+const ALERTAS = [
+  { id: 'anuncios', sev: 'critico', area: 'Coleta', quando: 'há 5 dias', titulo: 'Shopee parou de responder — 7 anúncios sem preço', detalhe: 'Última resposta em 22/07 às 06:14. Nada na tela mudou desde então: a coleta simplesmente não voltou.', impacto: '7 séries com buraco de 5 dias · não recuperável', metrica: '7', metricaRotulo: 'anúncios', acao: 'Ver os anúncios' },
+  { id: 'execucao', sev: 'critico', area: 'Rotina', quando: 'ontem, 06:12', titulo: 'A rotina diária de ontem falhou pela metade', detalhe: 'Tempo esgotado na Shopee. 41 dos 340 anúncios ficaram sem coleta. A execução de hoje, às 06:08, rodou inteira.', impacto: '41 anúncios sem preço de 26/07', metrica: '41', metricaRotulo: 'sem preço', acao: 'Ver a execução' },
+  { id: 'agendador', sev: 'atencao', area: 'Infraestrutura', quando: 'em 11 dias', titulo: 'O agendador vai ser desligado por inatividade', detalhe: 'O GitHub Actions desativa workflow agendado após 60 dias sem commit, sem avisar. A coleta pararia calada e só se descobriria semanas depois.', impacto: 'coleta pararia em 07/08', metrica: '11', metricaRotulo: 'dias', acao: 'Como resolver' },
+  { id: 'classificar', sev: 'atencao', area: 'Catálogo', quando: 'desde 26/06', titulo: '3 produtos não chegam a canal nenhum', detalhe: 'Produto sem nicho não é roteado: nunca vira oferta, nunca vira publicação, e some do fluxo em silêncio.', impacto: '3 produtos fora do radar', metrica: '3', metricaRotulo: 'produtos', acao: 'Classificar' },
+  { id: 'canal', sev: 'aviso', area: 'Canais', quando: 'há 9 dias', titulo: 'Eletro Barato sem publicação há 9 dias', detalhe: 'Nenhuma oferta de eletrônico passou no limiar de 22% desde 18/07. Canal parado esfria a audiência e o parceiro pergunta.', impacto: 'audiência de 1.240 esfriando', metrica: '9', metricaRotulo: 'dias', acao: 'Ver o canal' }
+];
+const SEV = { critico: ['Crítico', VERM, '#FEF2F2', '#F6DADA'], atencao: ['Atenção', AMBAR, '#FFF9EC', '#F5E4C3'], aviso: ['Aviso', '#6B7280', '#F7F8FA', '#E9EAEE'] };
+
+const PUBS = [
+  { canal: 'Pet Achados', plataforma: 'WhatsApp', ponto: '#1FA855', teto: '2 de 6 posts hoje', pubs: [
+    { slotId: 'pub-1', subid: '7KQ2M', com: 8.09, plat: 'wa', conferido: 'preço reconferido há 2 min',
+      produto: 'Tapete higiênico SuperSecão 80×60 — 60 un', loja: 'Mercado Livre', preco: 89.9, ref: 129.9, desconto: '−31%', prova: 'menor preço em 96 dias de série',
+      mensagem: 'Tapete higiênico SuperSecão 80×60 — 60 un\nR$ 89,90 no Mercado Livre\nMenor preço nos 96 dias em que acompanhamos (estava R$ 129,90)\nradar.link/a/7KQ2M' },
+    { slotId: 'pub-2', subid: 'M4T8P', com: 10.79, plat: 'wa', conferido: 'preço reconferido há 2 min',
+      produto: 'Ração Golden Fórmula Adulto Frango 15 kg', loja: 'Shopee', preco: 179.9, ref: 219.0, desconto: '−18%', prova: 'menor preço em 61 dias de série',
+      mensagem: 'Ração Golden Fórmula Adulto Frango 15 kg\nR$ 179,90 na Shopee\nMenor preço nos 61 dias em que acompanhamos\nradar.link/a/M4T8P' } ] },
+  { canal: 'Eletro Barato', plataforma: 'WhatsApp', ponto: '#1FA855', teto: '0 de 4 posts hoje', pubs: [
+    { slotId: 'pub-3', subid: 'QW91Z', com: 8.76, plat: 'wa', bloqueado: true, conferido: 'entrou na fila às 06:20',
+      produto: 'Fone JBL Tune 520BT sem fio', loja: 'Mercado Livre', preco: 219.0, ref: 289.0, desconto: '−24%', prova: 'acompanhado desde 15/07',
+      mensagem: 'Fone JBL Tune 520BT sem fio\nR$ 219,00 no Mercado Livre\nPreço acompanhado desde 15/07; menor valor observado nesse período\nradar.link/a/QW91Z',
+      aviso: 'Entrou na fila a R$ 219,00 e agora está R$ 268,00 (+22,4%). Publicar preço morto queima o canal na mesma proporção que publicar preço falso.' } ] },
+  { canal: 'Ofertas Pet BR', plataforma: 'Telegram', ponto: '#2AABEE', teto: '1 de 8 posts hoje', pubs: [
+    { slotId: 'pub-4', subid: '8HD3R', com: 8.09, plat: 'tg', conferido: 'preço reconferido há 2 min',
+      produto: 'Tapete higiênico SuperSecão 80×60 — 60 un', loja: 'Mercado Livre', preco: 89.9, ref: 129.9, desconto: '−31%', prova: 'menor preço em 96 dias de série',
+      mensagem: 'Tapete higiênico SuperSecão 80×60 — 60 un\nR$ 89,90 no Mercado Livre\nMenor preço nos 96 dias em que acompanhamos (estava R$ 129,90)\nradar.link/a/8HD3R' } ] }
+];
+
+const PRODUTOS = [
+  ['Tapete higiênico SuperSecão 80×60 — 60 un', 'pet', 'Higiene animal', 3, 89.9, 96],
+  ['Ração Golden Fórmula Adulto Frango 15 kg', 'pet', 'Alimentação animal', 2, 179.9, 61],
+  ['Coleira antipulgas Seresto Cães', 'pet', 'Saúde animal', 3, 154.0, 121],
+  ['Fone JBL Tune 520BT sem fio', 'eletrônico', 'Áudio', 2, 219.0, 12],
+  ['Air Fryer Mondial Family 4 L', 'eletrônico', 'Cozinha', 2, 289.9, 143],
+  ['Café Melitta Tradicional 500 g', 'alimentação', 'Mercearia', 2, 18.9, 78],
+  ['Azeite Gallo Extra Virgem 500 ml', 'alimentação', 'Mercearia', 3, 27.9, 54],
+  ['Smart TV TCL 50" 4K', '—', 'Não classificado', 1, 1899.0, 9],
+  ['Escova elétrica Oral-B Vitality', '—', 'Não classificado', 2, 129.9, 22],
+  ['Whey Protein Growth 1 kg', '—', 'Não classificado', 2, 89.0, 31]
+].map((p, i) => ({ id: i + 1, nome: p[0], nicho: p[1], categoria: p[2], lojas: p[3], menor: p[4], dias: p[5] }));
+
+const ANUNCIOS = [
+  ['Tapete higiênico SuperSecão 80×60', 'Mercado Livre', 'MLB2841009122', 96, 89.9, 118.5, 'há 2 h', 'ok'],
+  ['Tapete higiênico SuperSecão 80×60', 'Shopee', '22841009122', 74, 92.4, 121.0, 'há 5 dias', 'parado'],
+  ['Tapete higiênico SuperSecão 80×60', 'Amazon', 'B08XYZ12QK', 0, 94.9, 0, 'há 2 h', 'amazon'],
+  ['Ração Golden Fórmula Adulto 15 kg', 'Shopee', '19920411873', 61, 179.9, 208.0, 'há 5 dias', 'parado'],
+  ['Coleira antipulgas Seresto Cães', 'Mercado Livre', 'MLB1902884471', 121, 154.0, 186.9, 'há 2 h', 'ok'],
+  ['Fone JBL Tune 520BT sem fio', 'Mercado Livre', 'MLB3390218844', 12, 219.0, 268.0, 'há 2 h', 'ok'],
+  ['Air Fryer Mondial Family 4 L', 'Shopee', '21188390255', 143, 289.9, 331.5, 'há 5 dias', 'parado'],
+  ['Café Melitta Tradicional 500 g', 'Shopee', '20044188392', 78, 18.9, 23.4, 'há 2 h', 'ok']
+].map((a, i) => ({ id: i + 1, produto: a[0], loja: a[1], codigo: a[2], dias: a[3], menor: a[4], mediana: a[5], ultima: a[6], estado: a[7] }));
+
+const NICHOS = [
+  { nome: 'pet', produtos: 142, canais: 3, limiares: [['desconto mínimo', '18%', '20%'], ['comissão mínima', 'R$ 3,00', 'padrão'], ['nota mínima', '55', 'padrão']], aprov: '31%' },
+  { nome: 'alimentação', produtos: 78, canais: 1, limiares: [['desconto mínimo', '15%', '20%'], ['comissão mínima', 'R$ 1,00', 'R$ 3,00'], ['nota mínima', '50', '55']], aprov: '19%' },
+  { nome: 'eletrônico', produtos: 96, canais: 2, limiares: [['desconto mínimo', '22%', '20%'], ['comissão mínima', 'padrão', 'R$ 3,00'], ['nota mínima', 'padrão', '55']], aprov: '8%' }
+];
+
+const CANAIS = [
+  { id: 1, nome: 'Pet Achados', plat: 'WhatsApp', nichos: ['pet'], audiencia: 2180, operador: 'Marco (dono)', parceiro: 'próprio', teto: 6, ultima: 'hoje 06:44', ativo: true, split: '100% do dono' },
+  { id: 2, nome: 'Cachorro & Cia', plat: 'WhatsApp', nichos: ['pet'], audiencia: 1640, operador: 'Bia Moretti', parceiro: 'Bia Moretti', teto: 5, ultima: 'hoje 07:02', ativo: true, split: '35% audiência + 15% operação' },
+  { id: 3, nome: 'Ofertas Pet BR', plat: 'Telegram', nichos: ['pet', 'alimentação'], audiencia: 4320, operador: 'robô', parceiro: 'Bia Moretti', teto: 8, ultima: 'hoje 06:45', ativo: true, split: '35% audiência' },
+  { id: 4, nome: 'Eletro Barato', plat: 'WhatsApp', nichos: ['eletrônico'], audiencia: 1240, operador: 'Rafa Lima', parceiro: 'Rafa Lima', teto: 4, ultima: 'há 9 dias', ativo: true, split: '30% audiência + 15% operação' },
+  { id: 5, nome: 'Mercado da Semana', plat: 'Telegram', nichos: ['alimentação'], audiencia: 890, operador: 'robô', parceiro: 'próprio', teto: 6, ultima: 'ontem 18:10', ativo: false, split: '100% do dono' }
+];
+
+const PARCEIROS = [
+  { nome: 'Bia Moretti', arranjo: 'audiência + operação', canais: ['Cachorro & Cia', 'Ofertas Pet BR'], parte: '35% + 15%', gerado: 412.8, repassado: 180.0, concentracao: 68, contato: 'bia@exemplo.com' },
+  { nome: 'Rafa Lima', arranjo: 'só audiência', canais: ['Eletro Barato'], parte: '30%', gerado: 96.4, repassado: 0, concentracao: 16, contato: 'rafa@exemplo.com' }
+];
+
+const TEMPLATES = [
+  { nome: 'Padrão global', escopo: 'todos os canais', usos: 4, honesto: false,
+    corpo: '{produto}\nR$ {preco} {loja_prep} {loja}\nMenor preço nos {dias} dias em que acompanhamos (estava R$ {referencia})\n{link}' },
+  { nome: 'Sem lastro histórico', escopo: 'automático abaixo de 14 dias', usos: 4, honesto: true,
+    corpo: '{produto}\nR$ {preco} {loja_prep} {loja}\nPreço acompanhado desde {desde}; menor valor observado nesse período\n{link}' },
+  { nome: 'Pet Achados', escopo: 'canal específico', usos: 1, honesto: false,
+    corpo: '{produto}\nDe R$ {referencia} por R$ {preco}\n{desconto} abaixo da nossa média de 30 dias\n{link}' },
+  { nome: 'Telegram longo', escopo: 'Ofertas Pet BR, Mercado da Semana', usos: 2, honesto: false,
+    corpo: '{produto}\n\nR$ {preco} {loja_prep} {loja}\nMenor preço nos {dias} dias em que acompanhamos.\nReferência da nossa série: R$ {referencia}\n\n{link}' }
+];
+
+const CONVERSOES = [
+  { data: '12/07', subid: '7KQ2M', canal: 'Pet Achados', pedido: 128.9, com: 11.6, estado: 'confirmada' },
+  { data: '11/07', subid: '8HD3R', canal: 'Ofertas Pet BR', pedido: 89.9, com: 8.09, estado: 'registrada' },
+  { data: '09/07', subid: 'M4T8P', canal: 'Cachorro & Cia', pedido: 179.9, com: 10.79, estado: 'recebida' },
+  { data: '08/07', subid: 'QW91Z', canal: 'Eletro Barato', pedido: 219.0, com: 8.76, estado: 'estimada' },
+  { data: '02/07', subid: '7KQ2M', canal: 'Pet Achados', pedido: 258.0, com: 23.22, estado: 'repassada' },
+  { data: '30/06', subid: 'ZZ00X', canal: null, pedido: 64.0, com: 5.12, estado: 'registrada' }
+];
+const ESTADOS = { estimada: ['#8A9099', '#F5F6F8'], registrada: ['#1B76B8', '#EAF4FD'], confirmada: ['#7A4FBF', '#F3EEFC'], recebida: ['#1B8A4E', '#EDF9F2'], repassada: ['#B4740A', '#FFF9EC'] };
+
+const REPASSES = [
+  { parceiro: 'Bia Moretti', periodo: 'junho/2026', base: 86.4, parte: '50%', devido: 43.2, pago: true, quando: 'pago em 05/07' },
+  { parceiro: 'Rafa Lima', periodo: 'junho/2026', base: 24.0, parte: '30%', devido: 7.2, pago: true, quando: 'pago em 05/07' },
+  { parceiro: 'Bia Moretti', periodo: 'julho/2026', base: 10.79, parte: '50%', devido: 5.4, pago: false, quando: 'fecha em 31/07' },
+  { parceiro: 'Rafa Lima', periodo: 'julho/2026', base: 0, parte: '30%', devido: 0, pago: false, quando: 'fecha em 31/07' }
+];
+
+const LIMIARES = [
+  { k: 'desconto', rotulo: 'Desconto mínimo', un: '%', step: 1, min: 5, max: 60, sobre: 'pet 18% · alimentação 15% · eletrônico 22%',
+    porque: 'Medido contra a mediana dos últimos 30 dias da nossa série, nunca contra o “de R$” da loja.' },
+  { k: 'comissao', rotulo: 'Comissão mínima', un: 'R$', step: 1, min: 0, max: 30, sobre: 'alimentação R$ 1,00',
+    porque: 'Desconto de 60% num produto de doze reais não paga o post.' },
+  { k: 'nota', rotulo: 'Nota mínima', un: '', step: 5, min: 0, max: 100, sobre: 'alimentação 50',
+    porque: 'A nota soma desconto, comissão e qualidade do vendedor, com as parcelas gravadas separadas.' },
+  { k: 'serie', rotulo: 'Série mínima para avaliar', un: 'dias', step: 1, min: 3, max: 60, sobre: 'nenhum nicho sobrescreve',
+    porque: 'Abaixo de 14 dias a oferta pode existir, mas a mensagem não pode afirmar mínimo histórico.' }
+];
+
+const MARKETPLACES = [
+  { nome: 'Mercado Livre', afiliado: 'MLB-AFF-4471', retencao: 'sem limite', anuncios: 180, ativo: true,
+    categorias: [['Pet e casa', '9%', 'vigente até 31/08'], ['Eletrônicos', '4%', 'vigente até 31/08'], ['Alimentos', '7%', 'vigente até 31/08']] },
+  { nome: 'Shopee', afiliado: 'SHP-9920-BR', retencao: 'sem limite', anuncios: 119, ativo: true,
+    categorias: [['Pet e casa', '6%', 'campanha até 15/08'], ['Eletrônicos', '5%', 'campanha até 15/08'], ['Alimentos', '7%', 'campanha até 15/08']] },
+  { nome: 'Amazon', afiliado: 'radar-20', retencao: '24 horas', anuncios: 41, ativo: true,
+    categorias: [['Pet e casa', '6%', 'tabela fixa'], ['Eletrônicos', '3%', 'tabela fixa'], ['Alimentos', '5%', 'tabela fixa']] }
+];
+
+const USUARIOS = [
+  { nome: 'Marco', email: 'marco@radar.app', papel: 'dono', escopo: 'todas as telas', desde: 'desde 12/03', eu: true },
+  { nome: 'Bia Moretti', email: 'bia@exemplo.com', papel: 'operador', escopo: 'Cachorro & Cia', desde: 'desde 02/05' },
+  { nome: 'Rafa Lima', email: 'rafa@exemplo.com', papel: 'operador', escopo: 'Eletro Barato', desde: 'desde 18/06' },
+  { nome: 'Bia Moretti', email: 'bia@exemplo.com', papel: 'parceiro', escopo: 'somente leitura do resultado', desde: 'desde 02/05' },
+  { nome: 'Joana Prado', email: 'joana@exemplo.com', papel: 'parceiro', escopo: 'convite enviado em 24/07', desde: 'expira em 4 dias', pendente: true }
+];
+const PAPEIS = { dono: ['#B4740A', '#FFF9EC'], operador: ['#1B76B8', '#EAF4FD'], parceiro: ['#7A4FBF', '#F3EEFC'] };
+
+const DRAWERS = {
+  anuncios: { titulo: 'Anúncios sem coleta', sub: 'Shopee · última resposta em 22/07 às 06:14', tipo: 'lista',
+    cols: ['Anúncio', 'Última coleta', 'Buraco'],
+    linhas: [['Tapete higiênico SuperSecão 80×60', '22/07 06:14', '5 dias'], ['Ração Golden Fórmula 15 kg', '22/07 06:14', '5 dias'],
+      ['Air Fryer Mondial Family 4 L', '22/07 06:14', '5 dias'], ['Coleira antipulgas Seresto', '22/07 06:14', '5 dias'],
+      ['Areia sanitária Pipicat 4 kg', '22/07 06:14', '5 dias'], ['Cafeteira Dolce Gusto Mini', '22/07 06:14', '5 dias'],
+      ['Mouse Logitech M170', '22/07 06:14', '5 dias']],
+    nota: 'Esses cinco dias não voltam: o preço de terça passada não existe em lugar nenhum para ser coletado depois.',
+    acao: 'Forçar coleta agora' },
+  execucao: { titulo: 'Execução de 26/07, 06:12', sub: 'rotina diária · falhou em 4 min 51 s', tipo: 'log',
+    linhas: [['06:12:03', 'início · 340 anúncios na fila', 'ok'], ['06:12:44', 'Mercado Livre · 180/180 coletados', 'ok'],
+      ['06:14:10', 'Shopee · 0/119 — host sem resposta', 'erro'], ['06:16:54', 'Amazon · 41/41 coletados', 'ok'],
+      ['06:16:54', 'tempo esgotado · 41 anúncios sem preço', 'erro'], ['06:16:55', 'fim · execução marcada como falha', 'erro']],
+    nota: 'A execução de hoje (27/07, 06:08) rodou inteira. O buraco de ontem permanece na série.',
+    acao: 'Rodar de novo agora' },
+  agendador: { titulo: 'Agendador prestes a ser desligado', sub: 'GitHub Actions · 11 dias restantes', tipo: 'passos',
+    linhas: [['1', 'O GitHub desativa workflow agendado após 60 dias sem commit no repositório — sem avisar.'],
+      ['2', 'Quando isso acontece a coleta simplesmente para, e o sistema não tem como saber: nenhum erro é gerado.'],
+      ['3', 'Basta qualquer commit para zerar a contagem. O contador desta tela existe para nunca depender de lembrar disso.']],
+    nota: 'Último commit: 28/05. Desativação prevista para 07/08.', acao: 'Marcar como resolvido' },
+  classificar: { titulo: 'Produtos sem nicho', sub: '3 produtos fora de qualquer roteamento', tipo: 'classificar',
+    linhas: [['Smart TV TCL 50" 4K', 'cadastrado em 18/07'], ['Escova elétrica Oral-B Vitality', 'cadastrado em 05/07'], ['Whey Protein Growth 1 kg', 'cadastrado em 26/06']],
+    nota: 'Sem nicho o produto nunca vira oferta: não há canal para onde mandá-lo, e ele some do fluxo em silêncio.', acao: 'Salvar classificação' },
+  canal: { titulo: 'Eletro Barato', sub: 'WhatsApp · 1.240 membros · operado por Rafa', tipo: 'lista',
+    cols: ['Publicação', 'Quando', 'Cliques'],
+    linhas: [['Monitor AOC 24" 165 Hz', '18/07 07:12', '84'], ['SSD Kingston 1 TB', '15/07 06:58', '61'],
+      ['Teclado Redragon Kumara', '12/07 07:04', '39'], ['Webcam Logitech C920', '09/07 06:51', '52']],
+    nota: 'Nenhuma oferta de eletrônico passou no limiar de 22% desde 18/07. O canal não está quebrado — o nicho é que está caro.',
+    acao: 'Rever o limiar do nicho' }
+};
+
+class Component extends DCLogic {
+  state = { tela: 'aprovacao', selId: 1, motivo: false, diag: false, ordem: null, log: [], desligados: {}, operador: null, enviadas: [], msgAberta: null,
+    painel: null, modal: false, link: '', linkNicho: '', filtroSev: 'todos', filtroNicho: 'todos', busca: '', dispositivo: 'celular', resolvidos: [], classif: {},
+    lim: { desconto: 20, comissao: 3, nota: 55, serie: 7 }, revelar: null, lojasOff: [], revogados: [] };
+
+  get ac() { return this.props.accent || AC; }
+  get ordem() { return this.state.ordem || this.props.ordemPadrao || 'nota'; }
+  get minimo() { return this.props.diasSerieMinima ?? 14; }
+  get operador() { return this.state.operador === null ? (this.props.visaoOperador ?? false) : this.state.operador; }
+
+  get fila() {
+    const d = new Set(this.state.log.map(l => l.id));
+    const l = O.filter(o => !d.has(o.id));
+    return l.slice().sort((a, b) => this.ordem === 'nota' ? b.nota - a.nota : b.comissao - a.comissao);
+  }
+
+  decidir(id, tipo, motivo) {
+    const resto = this.fila.filter(o => o.id !== id);
+    this.setState({ log: [...this.state.log, { id, tipo, motivo }], motivo: false, selId: resto.length ? resto[0].id : null, painel: resto.length ? this.state.painel : null });
+  }
+
+  serie(o) {
+    const n = Math.min(o.dias, 60), pts = [];
+    let seed = Math.round(o.ref * 137) % 233280;
+    for (let i = 0; i < n; i++) { seed = (seed * 9301 + 49297) % 233280; pts.push(o.ref * (0.93 + (seed / 233280) * 0.14)); }
+    pts[n - 2] = o.ref; pts[n - 1] = o.preco;
+    const min = Math.min(...pts, o.preco) * 0.985, max = Math.max(...pts) * 1.015;
+    const x = i => (i / (n - 1)) * 398 + 1, y = v => 82 - ((v - min) / (max - min)) * 68;
+    const linha = pts.map((v, i) => x(i).toFixed(1) + ',' + y(v).toFixed(1)).join(' ');
+    return { linha, area: '1,92 ' + linha + ' 399,92', ref: '1,' + y(o.ref).toFixed(1) + ' 399,' + y(o.ref).toFixed(1),
+      px: x(n - 1).toFixed(1), py: y(o.preco).toFixed(1) };
+  }
+
+  renderVals() {
+    const st = this.state, tela = st.tela, ac = this.ac, fila = this.fila, op = this.operador;
+
+    const nav = [
+      { titulo: 'Hoje', itens: [['aprovacao', 'Fila de aprovação', String(fila.length)], ['envio', 'Fila de envio', '4'], ['atencao', 'Precisa de atenção', '5']] },
+      { titulo: 'Catálogo', itens: [['produtos', 'Produtos', '340'], ['anuncios', 'Anúncios', '512'], ['nichos', 'Nichos', '3']] },
+      { titulo: 'Canais', itens: [['canais', 'Canais', '5'], ['parceiros', 'Parceiros', '2'], ['templates', 'Templates', '4']] },
+      { titulo: 'Dinheiro', itens: [['conversoes', 'Conversões', '6'], ['repasses', 'Repasses', '4']] },
+      { titulo: 'Ajustes', itens: [['curadoria', 'Curadoria', ''], ['marketplaces', 'Marketplaces', '3'], ['usuarios', 'Usuários', '5']] }
+    ].map(g => ({ titulo: g.titulo, itens: g.itens.map(([k, rotulo, contagem]) => {
+      const ativo = k === tela, real = k !== 'x';
+      return { rotulo, contagem, ativo, inativo: !ativo, peso: ativo ? '700' : '500',
+        bg: ativo ? ac : 'transparent', fg: ativo ? '#FFFFFF' : (real ? '#4B5563' : '#A3A8B0'),
+        ponto: ativo ? 'rgba(255,255,255,0.85)' : (real ? '#D7DAE0' : '#EDEEF1'),
+        tagBg: ativo ? 'rgba(255,255,255,0.22)' : '#F3F4F6', tagFg: ativo ? '#FFFFFF' : '#8A9099',
+        onClick: real ? () => this.setState({ tela: k, motivo: false }) : undefined };
+    }) }));
+
+    const linha = o => {
+      const desc = Math.round((1 - o.preco / o.ref) * 100), loja = LOJAS[o.loja] || ['#4B5563', '#F3F4F6'], s = o.id === st.selId;
+      return { ...o, preco: BRL(o.preco), ref: BRL(o.ref), desconto: '−' + desc + '%', comissao: BRL(o.comissao),
+        serieRotulo: o.dias + ' dias de série', slotId: 'prod-' + o.id, slotDet: 'det-' + o.id, slotLabel: 'foto',
+        lojaFg: loja[0], lojaBg: loja[1], semLastro: o.dias < this.minimo,
+        dash: (o.nota / 100 * 100.5).toFixed(1) + ' 100.5',
+        notaCor: o.nota >= 75 ? ac : (o.nota >= 65 ? '#E0A32E' : '#B6BBC3'),
+        nCanais: o.canais.length, bg: s ? '#FFF9F4' : '#FFFFFF',
+        marca: s ? 'inset 3px 0 0 ' + ac : 'none',
+        selecionar: () => this.setState({ selId: o.id, motivo: false, painel: { tipo: 'oferta' } }) };
+    };
+
+    const b = fila.find(o => o.id === st.selId);
+    let sel = null;
+    if (b) {
+      const s = this.serie(b), dl = st.desligados[b.id] || {}, ativos = b.canais.filter(([n]) => !dl[n]).length;
+      sel = { ...linha(b), spark: s.linha, area: s.area, linhaRef: s.ref, pontoX: s.px, pontoY: s.py,
+        redacao: b.dias < this.minimo
+          ? 'Menos de ' + this.minimo + ' dias de série: a mensagem não pode afirmar mínimo histórico. Redação liberada: “preço acompanhado desde ' + b.desde + '; menor valor observado nesse período”.'
+          : 'Menor preço nos ' + b.dias + ' dias observados. A comparação é contra a nossa série — o “de R$” exibido pela loja é inflado e não entra em lugar nenhum.',
+        parcelas: b.parcelas.map(([rotulo, v, max]) => ({ rotulo, valor: v + '/' + max, pct: (v / max * 100) + '%' })),
+        canais: b.canais.map(([nome, plataforma]) => {
+          const on = !dl[nome];
+          return { nome, plataforma, bg: on ? '#FFF4EA' : '#FFFFFF', fg: on ? '#14161A' : '#A3A8B0',
+            borda: on ? '#FBD9BD' : '#E9EAEE', ponto: on ? ac : '#D7DAE0',
+            alternar: () => this.setState({ desligados: { ...st.desligados, [b.id]: { ...dl, [nome]: on } } }) };
+        }),
+        canaisNota: ativos === b.canais.length
+          ? 'Aprovar gera uma publicação por canal elegível de uma vez — o nicho é quem roteia.'
+          : 'Aprovação parcial: ' + ativos + ' de ' + b.canais.length + ' canais elegíveis.' };
+    }
+
+    const total = st.log.length, ultimo = st.log[total - 1];
+    const somaCom = fila.reduce((a, o) => a + o.comissao, 0);
+
+    const visiveis = op ? PUBS.filter(g => g.canal !== 'Ofertas Pet BR') : PUBS;
+    const todas = visiveis.reduce((a, g) => a.concat(g.pubs), []);
+    const feitas = st.enviadas.length, totalP = todas.length, faltam = totalP - feitas;
+    const grupos = visiveis.map(g => {
+      const abertas = g.pubs.filter(p => st.enviadas.indexOf(p.subid) < 0);
+      return { ...g, vazio: abertas.length === 0, contagem: abertas.length + (abertas.length === 1 ? ' publicação' : ' publicações'),
+        pubs: abertas.map(p => {
+          const cor = p.plat === 'wa' ? '#1FA855' : '#2AABEE', aberta = st.msgAberta === p.subid;
+          return { ...p, comissao: BRL(p.com), mostrarComissao: !op, bloqueado: !!p.bloqueado, liberado: !p.bloqueado,
+            precoFmt: BRL(p.preco), refFmt: BRL(p.ref), msgSeta: aberta ? '▲' : '▼',
+            botao: p.plat === 'wa' ? 'Abrir no WhatsApp' : 'Publicar no Telegram',
+            botaoDesk: p.plat === 'wa' ? 'Abrir no WhatsApp Web' : 'Publicar no Telegram',
+            botaoBg: cor, botaoBorda: cor,
+            msgRotulo: aberta ? 'Ocultar a mensagem' : 'Ver a mensagem que vai sair',
+            msgAberta: aberta,
+            verMsg: () => this.setState({ msgAberta: aberta ? null : p.subid }),
+            enviar: () => this.setState({ enviadas: st.enviadas.concat([p.subid]), msgAberta: null }) };
+        }) };
+    }).filter(g => !g.vazio);
+
+    const progresso = visiveis.map(g => {
+      const n = g.pubs.length, f = g.pubs.filter(p => st.enviadas.indexOf(p.subid) >= 0).length;
+      return { canal: g.canal, plataforma: g.plataforma, ponto: g.ponto, rotulo: f + '/' + n,
+        pct: (f / n * 100) + '%', cor: f === n ? '#22A45D' : ac };
+    });
+
+    const busca = st.busca.trim().toLowerCase();
+    const produtos = PRODUTOS
+      .filter(p => (st.filtroNicho === 'todos' || p.nicho === st.filtroNicho) && (!busca || p.nome.toLowerCase().indexOf(busca) >= 0))
+      .map(p => ({ ...p, menorFmt: BRL(p.menor), nichoRotulo: p.nicho === '—' ? 'sem nicho' : p.nicho,
+        semNicho: p.nicho === '—', slotId: 'cat-' + p.id, lojasRotulo: p.lojas + (p.lojas === 1 ? ' loja' : ' lojas'),
+        abrir: () => this.setState({ painel: { tipo: 'produto', id: p.id } }),
+        diasFmt: p.dias + ' dias', serieCor: p.dias < 14 ? AMBAR : '#6B7280',
+        nichoBg: p.nicho === '—' ? '#FFF9EC' : '#F3F4F6', nichoFg: p.nicho === '—' ? AMBAR : '#4B5563' }));
+    const filtrosNicho = ['todos', 'pet', 'alimentação', 'eletrônico', '—'].map(n => ({
+      rotulo: n === 'todos' ? 'Todos' : (n === '—' ? 'Sem nicho' : n), 
+      bg: st.filtroNicho === n ? ac : '#FFFFFF', fg: st.filtroNicho === n ? '#FFFFFF' : '#4B5563',
+      borda: st.filtroNicho === n ? ac : '#E1E3E8', usar: () => this.setState({ filtroNicho: n }) }));
+
+    const anuncios = ANUNCIOS.map(a => {
+      const e = a.estado === 'parado' ? ['sem coleta há 5 dias', VERM, '#FEF2F2']
+        : (a.estado === 'amazon' ? ['sem série · retenção 24 h', '#6B7280', '#F5F6F8'] : ['coletando', '#1B8A4E', '#EDF9F2']);
+      return { ...a, menorFmt: BRL(a.menor), medianaFmt: a.mediana ? BRL(a.mediana) : '—',
+        abrir: () => this.setState({ painel: { tipo: 'anuncio', id: a.id } }),
+        diasFmt: a.dias ? a.dias + ' dias' : '—', estRotulo: e[0], estCor: e[1], estBg: e[2],
+        ultimaCor: a.estado === 'parado' ? VERM : '#6B7280' };
+    });
+
+    const nichos = NICHOS.map(n => ({ ...n, produtosRotulo: n.produtos + ' produtos', canaisRotulo: n.canais + (n.canais === 1 ? ' canal' : ' canais'),
+      ajustar: () => this.setState({ painel: { tipo: 'nicho', id: n.nome } }),
+      verProdutos: () => this.setState({ tela: 'produtos', filtroNicho: n.nome, busca: '' }),
+      limiares: n.limiares.map(l => ({ rotulo: l[0], valor: l[1], global: 'global: ' + l[2],
+        cor: l[1] === 'padrão' ? '#9AA0AA' : '#14161A', peso: l[1] === 'padrão' ? '500' : '700' })) }));
+
+    const ordemSev = { critico: 0, atencao: 1, aviso: 2 };
+    const abertos = ALERTAS.filter(a => st.resolvidos.indexOf(a.id) < 0);
+    const alertas = abertos.filter(a => st.filtroSev === 'todos' || a.sev === st.filtroSev)
+      .sort((a, b) => ordemSev[a.sev] - ordemSev[b.sev])
+      .map(a => { const s = SEV[a.sev];
+        return { ...a, sevRotulo: s[0], cor: s[1], bg: s[2], borda: s[3], abrir: () => this.setState({ painel: { tipo: 'alerta', id: a.id } }) }; });
+    const filtrosSev = [['todos', 'Tudo'], ['critico', 'Crítico'], ['atencao', 'Atenção'], ['aviso', 'Aviso']].map(([k, r]) => {
+      const n = k === 'todos' ? abertos.length : abertos.filter(a => a.sev === k).length;
+      const on = st.filtroSev === k;
+      return { rotulo: r, n: String(n), bg: on ? '#14161A' : '#FFFFFF', fg: on ? '#FFFFFF' : '#4B5563',
+        borda: on ? '#14161A' : '#E1E3E8', tagBg: on ? 'rgba(255,255,255,0.2)' : '#F3F4F6', tagFg: on ? '#FFFFFF' : '#8A9099',
+        usar: () => this.setState({ filtroSev: k }) };
+    });
+
+    const pn = st.painel, ptipo = pn ? pn.tipo : null;
+    const fecharPainel = () => this.setState({ painel: null, motivo: false });
+
+    const pB = ptipo === 'produto' ? PRODUTOS.find(p => p.id === pn.id) : null;
+    const prod = pB ? { ...pB, slotId: 'cat-' + pB.id, menorFmt: BRL(pB.menor),
+      nichoRotulo: pB.nicho === '—' ? 'sem nicho' : pB.nicho, semNicho: pB.nicho === '—',
+      nichoBg: pB.nicho === '—' ? '#FFF9EC' : '#F3F4F6', nichoFg: pB.nicho === '—' ? AMBAR : '#4B5563',
+      diasFmt: pB.dias + ' dias de série', lojasRotulo: pB.lojas + (pB.lojas === 1 ? ' loja' : ' lojas'),
+      anuncios: ANUNCIOS.filter(a => a.produto.slice(0, 15) === pB.nome.slice(0, 15)).map(a => ({
+        loja: a.loja, codigo: a.codigo, preco: BRL(a.menor),
+        serie: a.estado === 'amazon' ? 'sem série · retenção 24 h' : a.dias + ' dias',
+        cor: a.estado === 'parado' ? VERM : (a.estado === 'amazon' ? '#9AA0AA' : '#1B8A4E'),
+        estado: a.estado === 'parado' ? 'sem coleta há 5 dias' : (a.estado === 'amazon' ? 'ativo' : 'coletando') })),
+      semAnuncio: ANUNCIOS.filter(a => a.produto.slice(0, 15) === pB.nome.slice(0, 15)).length === 0,
+      ofertas: pB.dias > 30 ? [
+        { data: '27/07', desconto: '−31%', estado: 'na fila de aprovação', cor: ac },
+        { data: '12/06', desconto: '−22%', estado: 'aprovada · 3 canais', cor: '#1B8A4E' },
+        { data: '02/06', desconto: '−17%', estado: 'rejeitada · preço ainda alto', cor: VERM }
+      ] : [],
+      semOferta: pB.dias <= 30 } : null;
+
+    const aB = ptipo === 'anuncio' ? ANUNCIOS.find(a => a.id === pn.id) : null;
+    let anun = null;
+    if (aB) {
+      const s = aB.dias ? this.serie({ ref: aB.mediana || aB.menor * 1.2, preco: aB.menor, dias: aB.dias }) : null;
+      anun = { ...aB, menorFmt: BRL(aB.menor), medianaFmt: aB.mediana ? BRL(aB.mediana) : '—',
+        diasFmt: aB.dias ? aB.dias + ' dias' : 'sem série',
+        temSerie: !!s, spark: s ? s.linha : '', area: s ? s.area : '', linhaRef: s ? s.ref : '',
+        pontoX: s ? s.px : 0, pontoY: s ? s.py : 0,
+        parado: aB.estado === 'parado', amazon: aB.estado === 'amazon',
+        estRotulo: aB.estado === 'parado' ? 'sem coleta há 5 dias' : (aB.estado === 'amazon' ? 'sem série · retenção 24 h' : 'coletando'),
+        estCor: aB.estado === 'parado' ? VERM : (aB.estado === 'amazon' ? '#6B7280' : '#1B8A4E'),
+        estBg: aB.estado === 'parado' ? '#FEF2F2' : (aB.estado === 'amazon' ? '#F5F6F8' : '#EDF9F2') };
+    }
+
+    const nB = ptipo === 'nicho' ? NICHOS.find(n => n.nome === pn.id) : null;
+    const nichoP = nB ? { ...nB, produtosRotulo: nB.produtos + ' produtos', canaisRotulo: nB.canais + (nB.canais === 1 ? ' canal' : ' canais'),
+      limiares: nB.limiares.map(l => ({ rotulo: l[0], valor: l[1], global: 'global: ' + l[2],
+        herda: l[1] === 'padrão', cor: l[1] === 'padrão' ? '#9AA0AA' : '#14161A' })) } : null;
+
+    const cB = ptipo === 'canal' ? CANAIS.find(c => c.id === pn.id) : null;
+    const canalP = cB ? { ...cB, audienciaFmt: cB.audiencia.toLocaleString('pt-BR') + ' membros',
+      nichosFmt: cB.nichos.join(', '), tetoFmt: cB.teto + ' posts por dia',
+      estRotulo: cB.ativo ? 'ativo' : 'desativado', estCor: cB.ativo ? '#1B8A4E' : '#9AA0AA',
+      estBg: cB.ativo ? '#EDF9F2' : '#F5F6F8' } : null;
+
+    const paB = ptipo === 'parceiro' ? PARCEIROS[pn.id] : null;
+    const parcP = paB ? { ...paB, geradoFmt: BRL(paB.gerado), repassadoFmt: BRL(paB.repassado),
+      devidoFmt: BRL(Math.max(0, paB.gerado * 0.5 - paB.repassado)),
+      slotId: 'pa-' + paB.nome.split(' ')[0].toLowerCase(),
+      concFmt: paB.concentracao + '%', concPct: paB.concentracao + '%',
+      concCor: paB.concentracao > 40 ? AMBAR : '#6B7280', concAviso: paB.concentracao > 40,
+      audiencia: paB.arranjo.indexOf('audiência') >= 0 ? '35%' : '—',
+      operacao: paB.arranjo.indexOf('operação') >= 0 ? '15%' : '—',
+      canaisLista: paB.canais.map(c => ({ nome: c })) } : null;
+
+    const tB = ptipo === 'template' ? TEMPLATES[pn.id] : null;
+    const tmplP = tB ? { ...tB } : null;
+
+    const painelTitulos = { alerta: '', oferta: 'Detalhe da oferta', produto: prod ? prod.nome : '',
+      anuncio: aB ? aB.produto : '', nicho: nB ? 'Nicho ' + nB.nome : '', canal: cB ? cB.nome : '', template: tB ? tB.nome : '', parceiro: paB ? paB.nome : '' };
+    const painelSubs = { alerta: '', oferta: sel ? sel.loja + ' · detectada hoje às 06:08' : '',
+      produto: prod ? prod.categoria + ' · ' + prod.lojasRotulo : '',
+      anuncio: aB ? aB.loja + ' · ' + aB.codigo : '',
+      nicho: nB ? nB.produtos + ' produtos · ' + nB.canais + ' canais · aprovação ' + nB.aprov : '',
+      canal: cB ? cB.plat + ' · ' + cB.audiencia.toLocaleString('pt-BR') + ' membros' : '',
+      template: tB ? tB.escopo + ' · ' + tB.usos + ' canais' : '', parceiro: paB ? paB.arranjo + ' · ' + paB.canais.length + ' canais' : '' };
+
+    const dw = ptipo === 'alerta' ? DRAWERS[pn.id] : null;
+    const drawer = dw ? { titulo: dw.titulo, sub: dw.sub, nota: dw.nota, acao: dw.acao,
+      ehLista: dw.tipo === 'lista', ehLog: dw.tipo === 'log', ehPassos: dw.tipo === 'passos', ehClassificar: dw.tipo === 'classificar',
+      cols: dw.cols || [], 
+      linhas: dw.linhas.map((l, i) => ({ a: l[0], b: l[1], c: l[2] || '',
+        cor: l[2] === 'erro' ? VERM : (l[2] === 'ok' ? '#1B8A4E' : '#6B7280'),
+        nichos: ['pet', 'alimentação', 'eletrônico'].map(n => {
+          const on = st.classif[i] === n;
+          return { nome: n, bg: on ? ac : '#FFFFFF', fg: on ? '#FFFFFF' : '#4B5563', borda: on ? ac : '#E1E3E8',
+            usar: () => this.setState({ classif: { ...st.classif, [i]: n } }) };
+        }) })),
+      resolver: () => this.setState({ painel: null, resolvidos: st.resolvidos.concat([pn.id]) }) } : null;
+
+    const raw = st.link.trim(), low = raw.toLowerCase();
+    let link = { vazio: !raw };
+    if (raw) {
+      if (/bit\.ly|amzn\.to|shope\.ee|encurtador|tinyurl/.test(low))
+        link = { erro: 'Link encurtado', dica: 'O sistema não resolve redirecionamento — abra o link e cole o endereço final do anúncio.' };
+      else if (/mercadolivre|mlb-?\d/.test(low))
+        link = { ok: true, loja: 'Mercado Livre', codigo: (low.match(/mlb-?(\d{5,})/) || [0, '2841009122'])[1] };
+      else if (/shopee/.test(low))
+        link = { ok: true, loja: 'Shopee', codigo: (low.match(/i\.(\d+)\.(\d+)/) || [0, 0, '19920411873'])[2] };
+      else if (/amazon\.com\.br|\/dp\//.test(low))
+        link = { ok: true, loja: 'Amazon', codigo: (low.match(/\/dp\/([a-z0-9]{10})/) || [0, 'B08XYZ12QK'])[1].toUpperCase(), aviso: 'A Amazon não permite guardar preço por mais de 24 h: este anúncio nunca vai acumular série histórica.' };
+      else if (/^https?:\/\//.test(low))
+        link = { erro: 'Loja não reconhecida', dica: 'O sistema trabalha com Mercado Livre, Shopee e Amazon. Ative outra loja em Ajustes → Marketplaces.' };
+      else link = { erro: 'Isso não parece um endereço', dica: 'Cole o endereço completo do anúncio, começando com https://' };
+    }
+    if (link.ok && link.codigo === '2841009122') { link.dup = true; link.ok = false; }
+
+    const canais = CANAIS.map(c => ({ ...c, audienciaFmt: c.audiencia.toLocaleString('pt-BR'),
+      nichosFmt: c.nichos.join(', '), tetoFmt: c.teto + '/dia',
+      platBg: c.plat === 'WhatsApp' ? '#EDF9F2' : '#EAF4FD', platFg: c.plat === 'WhatsApp' ? '#1B8A4E' : '#1B76B8',
+      estRotulo: c.ativo ? 'ativo' : 'desativado', estCor: c.ativo ? '#1B8A4E' : '#9AA0AA',
+      estBg: c.ativo ? '#EDF9F2' : '#F5F6F8',
+      ultimaCor: c.ultima.indexOf('dias') >= 0 ? VERM : '#6B7280',
+      abrir: () => this.setState({ painel: { tipo: 'canal', id: c.id } }), slotId: 'ca-' + c.id }));
+
+    const parceiros = PARCEIROS.map((p, i) => ({ ...p, geradoFmt: BRL(p.gerado), repassadoFmt: BRL(p.repassado),
+      slotId: 'pa-' + p.nome.split(' ')[0].toLowerCase(),
+      abrir: () => this.setState({ painel: { tipo: 'parceiro', id: i } }),
+      canaisFmt: p.canais.join(' · '), concFmt: p.concentracao + '%', concPct: p.concentracao + '%',
+      concCor: p.concentracao > 40 ? AMBAR : '#6B7280', concBg: p.concentracao > 40 ? '#FFF9EC' : '#F5F6F8',
+      concAviso: p.concentracao > 40, canaisN: p.canais.length }));
+
+    const templates = TEMPLATES.map((t, i) => ({ ...t, usosFmt: t.usos + (t.usos === 1 ? ' canal' : ' canais'),
+      bg: t.honesto ? '#FFF9EC' : '#FFFFFF', borda: t.honesto ? '#F0DFBB' : '#E9EAEE',
+      abrir: () => this.setState({ painel: { tipo: 'template', id: i } }) }));
+
+    const conversoes = CONVERSOES.map((c, i) => {
+      const e = ESTADOS[c.estado];
+      return { ...c, pedidoFmt: BRL(c.pedido), comFmt: BRL(c.com), estCor: e[0], estBg: e[1],
+        canalFmt: c.canal || 'não casou com publicação nenhuma', orfa: !c.canal, temCanal: !!c.canal };
+    });
+    const somaEstados = ['estimada', 'registrada', 'confirmada', 'recebida', 'repassada'].map(k => {
+      const e = ESTADOS[k], v = CONVERSOES.filter(c => c.estado === k).reduce((a, c) => a + c.com, 0);
+      return { rotulo: k, valor: BRL(v), cor: e[0], bg: e[1], n: String(CONVERSOES.filter(c => c.estado === k).length) };
+    });
+
+    const repasses = REPASSES.map(r => ({ ...r, baseFmt: BRL(r.base), devidoFmt: BRL(r.devido),
+      estRotulo: r.pago ? 'pago' : 'em aberto', estCor: r.pago ? '#1B8A4E' : '#B4740A',
+      estBg: r.pago ? '#EDF9F2' : '#FFF9EC', slotId: 'pa-' + r.parceiro.split(' ')[0].toLowerCase() }));
+
+    const L = st.lim;
+    const passa = o => Math.round((1 - o.preco / o.ref) * 100) >= L.desconto && o.comissao >= L.comissao && o.nota >= L.nota && o.dias >= L.serie;
+    const nPassa = O.filter(passa).length, taxa = Math.round(nPassa / O.length * 100);
+    const limiares = LIMIARES.map(l => {
+      const v = L[l.k];
+      return { ...l, valorFmt: l.un === 'R$' ? BRL(v) : (l.un === '%' ? v + '%' : v + (l.un ? ' ' + l.un : '')),
+        menos: () => this.setState({ lim: { ...L, [l.k]: Math.max(l.min, v - l.step) } }),
+        mais: () => this.setState({ lim: { ...L, [l.k]: Math.min(l.max, v + l.step) } }) };
+    });
+    const barras = [62, 48, 71, 55, 40, 33, taxa].map((n, i) => ({
+      alt: Math.max(6, n) + '%', cor: i === 6 ? ac : '#E1E3E8',
+      rotulo: i === 6 ? 'hoje' : ['21', '22', '23', '24', '25', '26'][i] + '/07' }));
+    const taxaCor = taxa === 0 ? VERM : (taxa > 70 ? AMBAR : '#1B8A4E');
+    const taxaNota = taxa === 0 ? 'Zero aprovação com catálogo grande significa parâmetro apertado demais.'
+      : (taxa > 70 ? 'Aprovação alta demais significa que a curadoria virou carimbo.' : 'Faixa saudável para uma curadoria que ainda diz não.');
+
+    const marketplaces = MARKETPLACES.map((m, i) => {
+      const off = st.lojasOff.indexOf(i) >= 0, rev = st.revelar === i;
+      return { ...m, ativo: !off, slotId: 'mk-' + i, estRotulo: off ? 'desativada' : 'ativa',
+        estCor: off ? '#9AA0AA' : '#1B8A4E', estBg: off ? '#F5F6F8' : '#EDF9F2',
+        afiliadoFmt: rev ? m.afiliado : '••••••••••••',
+        revelarRotulo: rev ? 'ocultar' : 'mostrar',
+        alternarRevelar: () => this.setState({ revelar: rev ? null : i }),
+        alternarLoja: () => this.setState({ lojasOff: off ? st.lojasOff.filter(x => x !== i) : st.lojasOff.concat([i]) }),
+        botaoRotulo: off ? 'Ativar loja' : 'Desativar loja',
+        amazon: m.retencao === '24 horas',
+        categorias: m.categorias.map(c => ({ nome: c[0], pct: c[1], vig: c[2] })) };
+    });
+
+    const usuarios = USUARIOS.map((u, i) => {
+      const p = PAPEIS[u.papel];
+      return { ...u, papelCor: p[0], papelBg: p[1], revogado: st.revogados.indexOf(i) >= 0,
+        ativo: st.revogados.indexOf(i) < 0, podeRevogar: !u.eu,
+        revogar: () => this.setState({ revogados: st.revogados.concat([i]) }),
+        restaurar: () => this.setState({ revogados: st.revogados.filter(x => x !== i) }) };
+    });
+
+    const grupoAtual = (nav.find(g => g.itens.some(i => i.ativo)) || { titulo: 'Hoje' }).titulo;
+
+    const acoes = {
+      aprovacao: ['Cadastrar por link', () => this.setState({ modal: true })],
+      produtos: ['Cadastrar por link', () => this.setState({ modal: true })],
+      atencao: ['Verificar agora', () => {}],
+      anuncios: ['Forçar coleta geral', () => {}],
+      nichos: ['Novo nicho', () => {}],
+      canais: ['Novo canal', () => {}],
+      parceiros: ['Novo parceiro', () => {}],
+      templates: ['Novo template', () => {}],
+      conversoes: ['Importar relatório', () => {}],
+      repasses: ['Fechar julho/2026', () => {}],
+      curadoria: ['Restaurar padrões', () => this.setState({ lim: { desconto: 20, comissao: 3, nota: 55, serie: 7 } })],
+      marketplaces: ['Adicionar loja', () => {}],
+      usuarios: ['Convidar pessoa', () => {}]
+    };
+    const acao = acoes[tela];
+
+    const titulos = {
+      curadoria: ['Curadoria', 'Com que rigor o sistema aprova. Os limiares vivem em dados e não em código exatamente para poderem ser ajustados sem publicar uma nova versão.'],
+      marketplaces: ['Marketplaces', 'Com quais lojas o sistema trabalha, e quanto cada categoria paga. Percentual de comissão nunca é fixado em código: ele muda a cada campanha sazonal.'],
+      usuarios: ['Usuários', 'Quem tem acesso, e a quê. Não existe cadastro público — conta nasce de convite do dono.'],
+      conversoes: ['Conversões', 'Quais vendas realmente aconteceram, e vindas de qual canal. Os cinco estados nunca se misturam num número só — somar estimado com confirmado é como se perde a confiança de um parceiro.'],
+      repasses: ['Repasses', 'Quanto se deve a cada parceiro, e quando. O cálculo considera apenas comissão no estado recebida: repassar sobre estimativa é financiar a operação com dinheiro próprio.'],
+      canais: ['Canais', 'Para onde as ofertas vão. Cada canal tem seus nichos, seu teto de posts, seu operador e seu arranjo de receita.'],
+      parceiros: ['Parceiros', 'Quem traz a audiência. A comissão gerada pelo canal do parceiro é dividida — e a divisão fica guardada em duas parcelas, audiência e operação, nunca um número só.'],
+      templates: ['Templates', 'Como a mensagem publicada é escrita. Sem inteligência artificial: texto gerado é texto que ninguém conferiu antes de ir para milhares de pessoas.'],
+      aprovacao: ['Fila de aprovação', fila.length ? fila.length + ' ofertas detectadas hoje. Aprovar é um ato: a oferta vira publicação em todos os canais elegíveis de uma vez.' : 'Nada para decidir agora.'],
+      envio: ['Fila de envio', 'O Telegram o robô publica sozinho, de qualquer lugar. O WhatsApp abre com o texto pronto — no desktop, pelo WhatsApp Web; no celular, pelo aplicativo. Em ambos, quem aperta enviar é uma pessoa.'],
+      atencao: ['Precisa de atenção', 'As falhas deste sistema são silenciosas: a coleta para e nada acontece na tela. Última verificação há 4 minutos.'],
+      produtos: ['Produtos', 'A identidade da coisa. Um produto pode estar anunciado em várias lojas — cada loja é um anúncio, com preço e série próprios.'],
+      anuncios: ['Anúncios', 'Visão achatada, por anúncio. Existe para uma finalidade só: encontrar depressa o que parou de coletar.'],
+      nichos: ['Nichos', 'O eixo que liga produto a canal. Produto tem um nicho; canal aceita vários. Os limiares herdam do global — só se configura o que foge do padrão.']
+    };
+
+    return {
+      ac, nav, titulo: titulos[tela][0], subtitulo: titulos[tela][1],
+      ehAprovacao: tela === 'aprovacao', ehAtencao: tela === 'atencao', ehEnvio: tela === 'envio',
+      ehProdutos: tela === 'produtos', ehAnuncios: tela === 'anuncios', ehNichos: tela === 'nichos',
+      ehCanais: tela === 'canais', ehParceiros: tela === 'parceiros', ehTemplates: tela === 'templates',
+      ehConversoes: tela === 'conversoes', ehRepasses: tela === 'repasses',
+      ehCuradoria: tela === 'curadoria', ehMarketplaces: tela === 'marketplaces', ehUsuarios: tela === 'usuarios',
+      conversoes, somaEstados, repasses, limiares, marketplaces, usuarios, barras,
+      temAcao: !!acao, acaoRotulo: acao ? acao[0] : '', acaoClick: acao ? acao[1] : undefined, grupoAtual,
+      taxaFmt: taxa + '%', taxaCor, taxaNota, passamFmt: nPassa + ' de ' + O.length + ' ofertas de hoje passariam',
+      canais, parceiros, templates,
+      painelAberto: !!pn, painelTitulo: painelTitulos[ptipo] || '', painelSub: painelSubs[ptipo] || '',
+      fecharPainel, prod, anun, nichoP, canalP, tmplP, parcP,
+      ehPParceiro: ptipo === 'parceiro',
+      ehPAlerta: ptipo === 'alerta', ehPOferta: ptipo === 'oferta', ehPProduto: ptipo === 'produto',
+      ehPAnuncio: ptipo === 'anuncio', ehPNicho: ptipo === 'nicho', ehPCanal: ptipo === 'canal', ehPTemplate: ptipo === 'template',
+      ehPOutro: ['produto', 'anuncio', 'nicho', 'canal', 'template', 'parceiro'].indexOf(ptipo) >= 0,
+      mostrarKpis: tela === 'aprovacao' || tela === 'envio' || tela === 'atencao',
+      produtos, filtrosNicho, anuncios, nichos, filtrosSev, drawer, link,
+      buscaValor: st.busca, buscar: e => this.setState({ busca: e.target.value }),
+      modalAberto: st.modal, linkValor: st.link,
+      digitarLink: e => this.setState({ link: e.target.value }),
+      abrirModal: () => this.setState({ modal: true }), fecharModal: () => this.setState({ modal: false, link: '' }),
+      nichosModal: ['pet', 'alimentação', 'eletrônico'].map(n => ({ nome: n,
+        bg: st.linkNicho === n ? ac : '#FFFFFF', fg: st.linkNicho === n ? '#FFFFFF' : '#4B5563',
+        borda: st.linkNicho === n ? ac : '#E1E3E8', usar: () => this.setState({ linkNicho: n }) })),
+      btnCadastrar: (link.ok && st.linkNicho) ? ac : '#D7DAE0',
+      confirmar: () => this.setState({ modal: false, link: '', linkNicho: '' }),
+      ehCelular: st.dispositivo === 'celular', ehDesktop: st.dispositivo === 'desktop',
+      dispCel: st.dispositivo === 'celular' ? '#F3F4F6' : 'transparent', dispCelFg: st.dispositivo === 'celular' ? '#14161A' : '#9AA0AA',
+      dispDesk: st.dispositivo === 'desktop' ? '#F3F4F6' : 'transparent', dispDeskFg: st.dispositivo === 'desktop' ? '#14161A' : '#9AA0AA',
+      verCelular: () => this.setState({ dispositivo: 'celular' }), verDesktop: () => this.setState({ dispositivo: 'desktop' }),
+      temFila: tela === 'aprovacao' && fila.length > 0, filaVazia: tela === 'aprovacao' && fila.length === 0,
+      fila: fila.map(linha), sel, motivoAberto: st.motivo, alertas, grupos,
+      motivos: sel ? MOTIVOS.map(rotulo => ({ rotulo, escolher: () => this.decidir(sel.id, 'rejeitada', rotulo) })) : [],
+      resumo: [
+        { rotulo: 'Anúncios coletados', valor: '299/340', cor: '#14161A' },
+        { rotulo: 'Com série suficiente', valor: '312', cor: '#14161A' },
+        { rotulo: 'Falhas hoje', valor: '2', cor: VERM }
+      ],
+      kpis: [
+        { rotulo: 'Ofertas na fila', valor: String(fila.length), nota: '+2 vs. ontem', cor: VERDE },
+        { rotulo: 'Comissão estimada', valor: BRL(somaCom).replace('R$ ', 'R$ '), nota: 'se tudo for aprovado', cor: '#9AA0AA' },
+        { rotulo: 'Publicações na fila', valor: '4', nota: '1 bloqueada por preço', cor: VERM },
+        { rotulo: 'Anúncios monitorados', valor: '340', nota: '5 sem coleta há 5 dias', cor: AMBAR },
+        { rotulo: 'Decididas hoje', valor: String(total), nota: total ? 'última: ' + (ultimo.motivo || ultimo.tipo) : 'nenhuma ainda', cor: '#9AA0AA' }
+      ],
+      mostrarOrdem: tela === 'aprovacao' && fila.length > 0,
+      ordNotaBg: this.ordem === 'nota' ? '#F3F4F6' : 'transparent', ordNotaFg: this.ordem === 'nota' ? '#14161A' : '#9AA0AA',
+      ordComBg: this.ordem === 'comissao' ? '#F3F4F6' : 'transparent', ordComFg: this.ordem === 'comissao' ? '#14161A' : '#9AA0AA',
+      ordenarNota: () => this.setState({ ordem: 'nota' }), ordenarComissao: () => this.setState({ ordem: 'comissao' }),
+      rotuloAprovar: sel && sel.canaisNota.startsWith('Aprovação parcial') ? 'Aprovar para os marcados' : 'Aprovar',
+      aprovar: () => sel && this.decidir(sel.id, 'aprovada'),
+      alternarMotivo: () => this.setState({ motivo: !st.motivo }),
+      adiar: () => sel && this.decidir(sel.id, 'adiada'),
+      temLog: total > 0,
+      logRotulo: ultimo ? total + (total === 1 ? ' decidida hoje' : ' decididas hoje') + ' · ' + (ultimo.motivo ? 'rejeitada — ' + ultimo.motivo.toLowerCase() : ultimo.tipo) : '',
+      desfazer: () => this.setState({ log: st.log.slice(0, -1) }),
+      reporFila: () => this.setState({ log: [], selId: 1 }),
+      funil: [
+        { n: '340', rotulo: 'anúncios monitorados', cor: '#14161A', pct: '100%' },
+        { n: '299', rotulo: 'coletados hoje sem falha', cor: '#14161A', pct: '88%' },
+        { n: '12', rotulo: 'com série suficiente para avaliar', cor: '#14161A', pct: '18%' },
+        { n: '0', rotulo: 'abaixo do limiar de desconto do nicho', cor: VERM, pct: '2%' }
+      ],
+      diag: st.diag && b ? { produto: b.produto, subtitulo: b.loja + ' · nicho ' + b.nicho + ' · avaliado hoje às 06:08',
+        comportas: b.comportas.map(([nome, obs, limiar, ok, origem]) => ({ nome, origem: 'limiar ' + origem,
+          valores: obs + '  ·  ' + limiar, marca: ok ? '✓' : '✕', cor: ok ? VERDE : VERM })),
+        calculo: b.calculo.map(([formula, resultado]) => ({ formula, resultado })) } : null,
+      abrirDiag: () => this.setState({ diag: true }), fecharDiag: () => this.setState({ diag: false }),
+      pararClique: e => e.stopPropagation(),
+      envioTitulo: op ? 'Minha fila' : 'Fila de envio',
+      envioSub: op ? 'canais sob sua responsabilidade' : 'todos os canais · 06:41',
+      rotuloPapel: op ? 'operador' : 'dono',
+      alternarOperador: () => this.setState({ operador: !op, enviadas: [], msgAberta: null }),
+      progresso, totalP, feitas, faltam, tudoFeito: faltam === 0,
+      pctFeitas: (feitas / totalP * 100) + '%',
+      faltamRotulo: faltam === 0 ? 'Tudo publicado' : (faltam === 1 ? 'Falta 1 publicação' : 'Faltam ' + faltam + ' publicações'),
+      contadorRotulo: feitas + ' de ' + totalP + ' enviadas',
+      reporEnvio: () => this.setState({ enviadas: [], msgAberta: null }),
+      envioRodape: op ? 'Fila vazia é sucesso, não erro: dá para fechar o aplicativo em paz.'
+        : 'O operador vê esta mesma tela restrita aos canais dele, sem nota, sem comissão e sem split. Não é sigilo: é foco.'
+    };
+  }
+}
+
+</script>
+</body>
+</html>

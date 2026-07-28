@@ -199,6 +199,14 @@ Três tamanhos, quatro variantes. O protótipo tinha cerca de cinquenta combina�
 
 A variante **marca** é o botão de publicar: verde do WhatsApp, azul do Telegram. Só existe na fila de publicação, e a cor vem da plataforma do canal.
 
+### Uma forma só, em código
+
+Desde 28/07 os botões vivem em `app/componentes/Botao.tsx`, e nenhuma tela escreve classe de botão à mão. A primeira versão das telas de decisão repetiu, de outro jeito, o erro que o protótipo tinha: laranja para aprovar, **vermelho cheio** para rejeitar, **verde cheio** para WhatsApp. Três botões cheios lado a lado dizem "as três coisas são igualmente importantes", que é o contrário do que a tela quer dizer.
+
+Agora: **primária** laranja com sombra, uma por bloco; **secundária** branca com borda; **fantasma** sem caixa; **perigo** branca com borda e texto vermelhos, nunca preenchida — vermelho cheio ao lado de laranja cheio faz o olho escolher errado com pressa.
+
+A exceção é o botão de publicar, que usa a cor da plataforma: o operador de manhã não lê o rótulo, reconhece o verde. Cor de terceiro continua fora do sistema, vindo como dado.
+
 ### Regras que não são estilo
 
 **Elemento clicável é `<button>`.** O protótipo tem 75 elementos com `cursor: pointer` e nenhuma tag `<button>` — natural num protótipo, inaceitável no código: sem foco de teclado, sem papel semântico, sem leitor de tela.
@@ -226,7 +234,11 @@ O protótipo tem uma casca, e ela é a maior parte do que faz o produto parecer 
 1. **A busca aparece desabilitada**, dizendo que chega na Fase 2. Campo que aceita texto e não busca nada é pior que campo nenhum: a pessoa digita, não acontece nada, e conclui que o catálogo está vazio.
 2. **O estado da rotina é o de verdade.** O protótipo mostra "Rotina 06:08" sempre em verde. Aqui, sem execução registrada, a faixa diz "rotina ainda não rodou", e com o banco fora do ar diz isso também — ausência de alerta só tranquiliza se der para distinguir "nada quebrado" de "a verificação não rodou".
 
-E uma diferença de fluxo, que vem de `docs/plano.md`: na fila de aprovação, **as ações ficam na linha**. No protótipo a decisão morava no painel lateral, o que custa cerca de 60 rolagens em 30 ofertas. O painel continua fazendo sentido para "esta aqui eu quero olhar".
+E uma diferença de fluxo, que vem de `docs/plano.md`: na fila de aprovação, **as ações ficam na linha**. No protótipo a decisão morava no painel lateral, o que custa cerca de 60 rolagens em 30 ofertas.
+
+O painel do protótipo existe, e é o caso de exceção — "esta aqui eu quero olhar". Ele é **rota**, `/aprovar?oferta=o3`, e não estado de componente: sobrevive a recarregar, o botão voltar do navegador fecha, e o endereço pode ser mandado para outra pessoa. Só ele tem a série desenhada, a redação honesta que a mensagem vai usar, e a escolha de canal por canal — que é justamente a exceção do fluxo.
+
+O protótipo está no repositório, em `referencia-claude-deisgn/`. Abra antes de mexer em interface.
 
 ---
 

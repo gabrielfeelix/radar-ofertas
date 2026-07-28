@@ -82,11 +82,11 @@ pnpm dev                # painel em http://localhost:3000
 | `docs/telas.md` | Especificação funcional das telas |
 | `SETUP.md` | Guia original de criação do repositório. Histórico |
 
-**O protótipo não está neste repositório.** Ele vive no projeto de design do Claude, em
-`claude.ai/design/p/8a12d079-d3de-4ed0-b8b4-f5f427a1c97e` ("Fila de aprovação e sistema"),
-como `Radar de Ofertas.dc.html` — é dele que saíram todos os números de `docs/design.md`,
-e é lá que estão as capturas das telas e a versão de `telas.md` que originou a
-especificação. Quem for mexer em interface abre o protótipo antes.
+**O protótipo está em `referencia-claude-deisgn/`**, como saiu da ferramenta: `Radar de
+Ofertas.dc.html`, com as quatorze telas desenhadas. É dele que saíram os números de
+`docs/design.md` e a casca do painel. Quem for mexer em interface abre ele antes — basta
+abrir o arquivo no navegador. A versão viva fica em
+`claude.ai/design/p/8a12d079-d3de-4ed0-b8b4-f5f427a1c97e`.
 
 ---
 

@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 
 import { registraEnvio } from "@/app/acoes/publicacao";
+import { BotaoDePlataforma } from "@/app/componentes/Botao";
 
 /**
  * Publicar no WhatsApp.
@@ -42,13 +43,14 @@ export function BotaoWhatsApp({
   }
 
   return (
-    <button
+    <BotaoDePlataforma
       type="button"
+      plataforma="whatsapp"
       onClick={publicar}
       disabled={desabilitado || enviando}
-      className="w-full rounded-md bg-whatsapp px-5 py-4 text-base font-bold text-white disabled:opacity-40 sm:w-auto"
     >
+      <span className="size-2 rounded-circulo bg-white/85" aria-hidden />
       {enviando ? "Registrando…" : "Publicar no WhatsApp"}
-    </button>
+    </BotaoDePlataforma>
   );
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { alternaFonteAtiva, defineNichoDaFonte } from "@/app/acoes/fontes";
+import { Botao } from "@/app/componentes/Botao";
 import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioFonte } from "@/app/componentes/FormularioFonte";
 import { enderecoPublico } from "@/lib/canais";
@@ -146,12 +147,9 @@ export default async function Fontes() {
                             </option>
                           ))}
                         </select>
-                        <button
-                          type="submit"
-                          className="rounded-md border border-borda px-3 py-2 text-sm font-semibold text-texto-medio"
-                        >
+                        <Botao type="submit" variante="secundaria" tamanho="sm">
                           trocar
-                        </button>
+                        </Botao>
                       </form>
                       {!fonte.nicho_id && (
                         <p className="mt-1 text-xs text-atencao">
@@ -181,12 +179,9 @@ export default async function Fontes() {
                       <form action={alternaFonteAtiva}>
                         <input type="hidden" name="fonte_id" value={fonte.fonte_id} />
                         <input type="hidden" name="ativo" value={fonte.ativo ? "false" : "true"} />
-                        <button
-                          type="submit"
-                          className="rounded-md border border-borda px-3 py-2 text-sm font-semibold text-texto-medio hover:bg-superficie-alt"
-                        >
+                        <Botao type="submit" variante="secundaria" tamanho="sm">
                           {fonte.ativo ? "desligar" : "ligar"}
-                        </button>
+                        </Botao>
                       </form>
                     </td>
                   </tr>

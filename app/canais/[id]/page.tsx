@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { alternaCanal } from "@/app/acoes/canais";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
+import { Botao } from "@/app/componentes/Botao";
 import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import { buscaCanal, nomeDoNicho, parteDoDono, publicacoesDaFila } from "@/lib/simulacao/loja";
@@ -41,12 +42,9 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
           <form action={alternaCanal}>
             <input type="hidden" name="canal_id" value={canal.id} />
             <input type="hidden" name="ativo" value={canal.ativo ? "false" : "true"} />
-            <button
-              type="submit"
-              className="rounded-md border border-borda bg-superficie px-4 py-3 text-base font-semibold text-texto-medio"
-            >
+            <Botao type="submit" variante="secundaria">
               {canal.ativo ? "Desligar canal" : "Ligar canal"}
-            </button>
+            </Botao>
           </form>
         }
       />

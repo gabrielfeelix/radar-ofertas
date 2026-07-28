@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { cadastraAnuncio, type ResultadoCadastro } from "@/app/acoes/cadastra-anuncio";
 import { leLinkDeProduto } from "@/lib/marketplaces";
+import { Botao } from "@/app/componentes/Botao";
 
 /**
  * Formulário de cadastro de anúncio.
@@ -171,13 +172,9 @@ function Campos({
       </div>
 
       <div>
-        <button
-          type="submit"
-          disabled={enviando || leitura?.ok === false}
-          className="rounded bg-neutral-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-40"
-        >
+        <Botao type="submit" variante="primaria" tamanho="lg" disabled={enviando || leitura?.ok === false}>
           {enviando ? "Salvando…" : "Cadastrar anúncio"}
-        </button>
+        </Botao>
       </div>
     </form>
   );

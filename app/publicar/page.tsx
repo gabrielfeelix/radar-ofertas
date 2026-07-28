@@ -7,6 +7,7 @@ import {
   registraEnvioAutoDeclarado,
 } from "@/app/acoes/publicacao";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
+import { Botao, BotaoDePlataforma } from "@/app/componentes/Botao";
 import { BotaoWhatsApp } from "@/app/componentes/BotaoWhatsApp";
 import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
 import { formataReais } from "@/lib/dinheiro";
@@ -73,7 +74,7 @@ export default async function Publicar() {
           </p>
           <Link
             href="/aprovar"
-            className="mt-5 inline-block rounded-md border border-borda px-5 py-4 text-base font-semibold text-texto-medio"
+            className="mt-5 inline-block rounded-md border border-borda-forte bg-superficie px-5 py-4 text-md font-bold text-texto-medio"
           >
             Ver a fila de aprovação
           </Link>
@@ -97,12 +98,10 @@ export default async function Publicar() {
               </p>
             </div>
             <form action={publicaLoteTelegram}>
-              <button
-                type="submit"
-                className="w-full rounded-md bg-telegram px-5 py-4 text-base font-bold text-white sm:w-auto"
-              >
+              <BotaoDePlataforma type="submit" plataforma="telegram">
+                <span className="size-2 rounded-circulo bg-white/85" aria-hidden />
                 Publicar todas
-              </button>
+              </BotaoDePlataforma>
             </form>
           </div>
 
@@ -168,12 +167,9 @@ export default async function Publicar() {
                 </span>
                 <form action={desfazEnvioDaPublicacao}>
                   <input type="hidden" name="publicacao_id" value={publicacao.id} />
-                  <button
-                    type="submit"
-                    className="rounded-md px-3 py-2 text-sm font-semibold text-marca-texto hover:bg-superficie"
-                  >
+                  <Botao type="submit" variante="fantasma" tamanho="sm">
                     desfazer
-                  </button>
+                  </Botao>
                 </form>
               </li>
             ))}
@@ -226,21 +222,15 @@ function CartaoDeEnvio({ publicacao }: { publicacao: PublicacaoSimulada }) {
           <div className="mt-2 flex flex-wrap gap-3">
             <form action={registraEnvioAutoDeclarado}>
               <input type="hidden" name="publicacao_id" value={publicacao.id} />
-              <button
-                type="submit"
-                className="rounded-md border border-borda px-4 py-3 text-sm font-semibold text-texto-medio"
-              >
+              <Botao type="submit" variante="fantasma" tamanho="sm">
                 Já enviei por fora
-              </button>
+              </Botao>
             </form>
             <form action={cancelaEnvio}>
               <input type="hidden" name="publicacao_id" value={publicacao.id} />
-              <button
-                type="submit"
-                className="rounded-md border border-perigo-borda px-4 py-3 text-sm font-semibold text-perigo"
-              >
+              <Botao type="submit" variante="perigo" tamanho="sm">
                 Cancelar publicação
-              </button>
+              </Botao>
             </form>
           </div>
         </details>

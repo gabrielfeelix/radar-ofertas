@@ -6,6 +6,7 @@ import { cadastraFonte, type ResultadoFonte } from "@/app/acoes/fontes";
 import { leIdentificadorDeCanal } from "@/lib/canais";
 
 import type { NichoOpcao } from "./FormularioAnuncio";
+import { Botao } from "@/app/componentes/Botao";
 
 /**
  * Cadastro de canal de colheita.
@@ -120,13 +121,9 @@ function Campos({
       </div>
 
       <div>
-        <button
-          type="submit"
-          disabled={enviando || leitura?.ok === false}
-          className="rounded-md bg-marca px-5 py-4 text-base font-bold text-white shadow-marca hover:bg-marca-hover disabled:opacity-40"
-        >
+        <Botao type="submit" variante="primaria" tamanho="lg" disabled={enviando || leitura?.ok === false}>
           {enviando ? "Salvando…" : "Adicionar canal"}
-        </button>
+        </Botao>
       </div>
     </form>
   );

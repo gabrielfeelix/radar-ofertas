@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { salvaCanal, type ResultadoCanal } from "@/app/acoes/canais";
 import { NICHOS, type CanalSimulado } from "@/lib/simulacao/loja";
+import { Botao } from "@/app/componentes/Botao";
 
 /**
  * Formulário de canal — o mesmo para criar e para editar.
@@ -202,13 +203,9 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
       </fieldset>
 
       <div className="flex items-center gap-4">
-        <button
-          type="submit"
-          disabled={salvando || dono < 0}
-          className="rounded-md bg-marca px-5 py-4 text-base font-bold text-white shadow-marca hover:bg-marca-hover disabled:opacity-40"
-        >
+        <Botao type="submit" variante="primaria" tamanho="lg" disabled={salvando || dono < 0}>
           {salvando ? "Salvando…" : canal ? "Salvar canal" : "Criar canal"}
-        </button>
+        </Botao>
 
         {resultado?.ok === true && (
           <span className="text-base text-sucesso">

@@ -7,11 +7,14 @@ import {
   rejeitaOferta,
 } from "@/app/acoes/curadoria";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
+import { Botao } from "@/app/componentes/Botao";
 import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
+import { PainelDaOferta } from "@/app/componentes/PainelDaOferta";
 import { formataReais } from "@/lib/dinheiro";
 import {
   MOTIVOS_DE_REJEICAO,
   NOME_DA_LOJA,
+  buscaOferta,
   canaisElegiveis,
   nomeDoNicho,
   ofertasDaFila,
@@ -42,9 +45,9 @@ type Ordem = "nota" | "comissao";
 export default async function Aprovar({
   searchParams,
 }: {
-  searchParams: Promise<{ ordem?: string }>;
+  searchParams: Promise<{ ordem?: string; oferta?: string }>;
 }) {
-  const { ordem: ordemBruta } = await searchParams;
+  const { ordem: ordemBruta, oferta: ofertaAberta } = await searchParams;
   const ordem: Ordem = ordemBruta === "comissao" ? "comissao" : "nota";
 
   const fila = [...ofertasDaFila()].sort((a, b) =>
@@ -57,6 +60,10 @@ export default async function Aprovar({
   const publicacoes = publicacoesSeAprovarTudo();
   const vagas = vagasDeHoje();
   const estouro = publicacoes - vagas;
+
+  // O painel é rota, não estado: sobrevive a recarregar, o botão
+  // voltar fecha, e o endereço pode ser mandado para outra pessoa.
+  const detalhe = ofertaAberta ? buscaOferta(ofertaAberta) : undefined;
 
   return (
     <>
@@ -143,13 +150,27 @@ export default async function Aprovar({
           </section>
         )}
       </main>
+
+      {detalhe && detalhe.status === "nova" && <PainelDaOferta oferta={detalhe} />}
     </>
   );
 }
 
 function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: CanalSimulado[] }) {
   return (
-    <article className="grid grid-cols-1 gap-4 border-b border-borda-sutil px-5 py-4 last:border-0 lg:grid-cols-[minmax(150px,1fr)_112px_84px_56px_96px_auto] lg:items-center">
+    <article className="relative grid grid-cols-1 gap-4 border-b border-borda-sutil px-5 py-4 last:border-0 hover:bg-superficie-alt lg:grid-cols-[minmax(150px,1fr)_112px_84px_56px_96px_auto] lg:items-center">
+      {/*
+        A linha inteira abre o detalhe. É uma camada por cima, e não
+        um <a> em volta de tudo, porque botão dentro de link é HTML
+        inválido e quebra o teclado: o foco entra no link e nunca
+        chega no "Aprovar".
+      */}
+      <Link
+        href={`/aprovar?oferta=${oferta.id}`}
+        aria-label={`Abrir o detalhe de ${oferta.produto}`}
+        className="absolute inset-0"
+      />
+
       {/* Produto: identidade, loja, nicho, série e os avisos que mudam a decisão. */}
       <div className="flex min-w-0 items-center gap-4">
         {/*
@@ -165,14 +186,7 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
         </span>
 
         <div className="flex min-w-0 flex-col gap-1">
-          <a
-            href={oferta.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="truncate text-base font-semibold tracking-titulo hover:text-marca-texto"
-          >
-            {oferta.produto}
-          </a>
+          <p className="truncate text-base font-semibold tracking-titulo">{oferta.produto}</p>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-sm bg-preenchimento px-2 py-1 text-xs font-bold text-texto-medio">
               {NOME_DA_LOJA[oferta.loja]}
@@ -224,16 +238,17 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
         {formataReais(oferta.comissaoEstimadaCentavos)}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+      {/*
+        As ações ficam acima da camada de clique da linha (`relative
+        z-10`), senão abrir o detalhe engoliria o "Aprovar" — que é o
+        toque mais frequente da tela.
+      */}
+      <div className="relative z-10 flex flex-wrap items-center gap-2 lg:justify-end">
         <form action={aprovaOferta}>
           <input type="hidden" name="oferta_id" value={oferta.id} />
-          <button
-            type="submit"
-            disabled={canais.length === 0}
-            className="rounded-md bg-marca px-4 py-3 text-sm font-bold text-white shadow-marca hover:bg-marca-hover disabled:opacity-40"
-          >
+          <Botao type="submit" variante="primaria" tamanho="sm" disabled={canais.length === 0}>
             Aprovar
-          </button>
+          </Botao>
         </form>
 
         {/*
@@ -242,7 +257,7 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
           produz curadoria que vira carimbo.
         */}
         <details className="relative">
-          <summary className="cursor-pointer list-none rounded-md border border-perigo-borda px-4 py-3 text-sm font-semibold text-perigo">
+          <summary className="inline-flex cursor-pointer list-none items-center rounded-md border border-borda-forte bg-superficie px-3 py-2 text-sm font-semibold text-texto-medio hover:bg-fundo">
             Rejeitar
           </summary>
           <div className="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-borda bg-superficie p-3 shadow-modal">
@@ -266,26 +281,12 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
 
         <form action={adiaOferta}>
           <input type="hidden" name="oferta_id" value={oferta.id} />
-          <button
-            type="submit"
-            className="rounded-md px-3 py-3 text-sm font-semibold text-texto-fraco hover:bg-superficie-alt"
-          >
+          <Botao type="submit" variante="fantasma" tamanho="sm">
             Adiar
-          </button>
+          </Botao>
         </form>
-
-        <details className="relative">
-          <summary
-            className="cursor-pointer list-none rounded-md border border-borda px-3 py-3 text-sm font-bold text-marca-texto"
-            title="Por que esta oferta apareceu"
-          >
-            ?
-          </summary>
-          <div className="absolute right-0 z-20 mt-2 w-96 max-w-[80vw] rounded-lg border border-borda bg-superficie p-4 shadow-modal">
-            <Diagnostico oferta={oferta} />
-          </div>
-        </details>
       </div>
+
     </article>
   );
 }
@@ -322,81 +323,6 @@ function AnelDaNota({ oferta }: { oferta: OfertaSimulada }) {
   );
 }
 
-/**
- * Diagnóstico da curadoria.
- *
- * Os motivos vêm da mesma implementação que decide de verdade — hoje
- * da simulação, amanhã de `avalia_anuncios`. Reescrever a explicação
- * em outro lugar produziria uma tela que explica uma coisa enquanto o
- * sistema faz outra, e a tela seria acreditada.
- */
-function Diagnostico({ oferta }: { oferta: OfertaSimulada }) {
-  return (
-    <div>
-      <p className="mb-3 text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">
-        por que apareceu
-      </p>
-      <table className="w-full text-left text-sm">
-        <tbody>
-          {oferta.comportas.map((comporta) => (
-            <tr key={comporta.nome} className="border-b border-borda-sutil last:border-0">
-              <td className="py-2">
-                <span className={comporta.passou ? "text-sucesso" : "text-perigo"}>
-                  {comporta.passou ? "passou" : "barrou"}
-                </span>{" "}
-                <span className="text-texto-medio">{comporta.nome}</span>
-              </td>
-              <td className="py-2 text-right font-mono tabular-nums">{comporta.observado}</td>
-              <td className="py-2 text-right font-mono text-texto-fraco tabular-nums">
-                {comporta.limiar}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div className="mt-3 flex flex-col gap-2">
-        <ParcelaDaNota rotulo="desconto" valor={oferta.parcelas.desconto} maximo={50} />
-        <ParcelaDaNota rotulo="comissão" valor={oferta.parcelas.comissao} maximo={30} />
-        <ParcelaDaNota rotulo="vendedor" valor={oferta.parcelas.vendedor} maximo={20} />
-      </div>
-
-      <p className="mt-3 text-xs text-texto-fraco">
-        {oferta.podeAfirmarMinimo
-          ? `Menor preço em ${oferta.referenciaJanelaDias} dias, sobre ${oferta.diasDeSerie} dias de série.`
-          : `Só temos série desde ${formataDia(oferta.observadoDesde)} — a mensagem não pode falar em mínimo histórico.`}{" "}
-        Fadiga não tira ponto porque já é comporta: repetição não é oferta pior, é oferta que não
-        deve sair.
-      </p>
-    </div>
-  );
-}
-
-function ParcelaDaNota({
-  rotulo,
-  valor,
-  maximo,
-}: {
-  rotulo: string;
-  valor: number;
-  maximo: number;
-}) {
-  return (
-    <span className="grid grid-cols-[72px_1fr_42px] items-center gap-3">
-      <span className="text-sm text-texto-fraco">{rotulo}</span>
-      <span className="h-2 rounded-xs bg-preenchimento" aria-hidden>
-        <span
-          className="block h-2 rounded-xs bg-marca"
-          style={{ width: `${Math.round((valor / maximo) * 100)}%` }}
-        />
-      </span>
-      <span className="text-right font-mono text-xs font-semibold tabular-nums text-texto-fraco">
-        {valor}/{maximo}
-      </span>
-    </span>
-  );
-}
-
 function LinhaDecidida({ oferta }: { oferta: OfertaSimulada }) {
   const rotulo =
     oferta.status === "aprovada"
@@ -421,12 +347,9 @@ function LinhaDecidida({ oferta }: { oferta: OfertaSimulada }) {
       <span className="text-sm text-texto-fraco">{rotulo}</span>
       <form action={desfazDecisaoDaOferta}>
         <input type="hidden" name="oferta_id" value={oferta.id} />
-        <button
-          type="submit"
-          className="rounded-md px-3 py-2 text-sm font-semibold text-marca-texto hover:bg-superficie"
-        >
+        <Botao type="submit" variante="fantasma" tamanho="sm">
           desfazer
-        </button>
+        </Botao>
       </form>
     </div>
   );
@@ -494,7 +417,7 @@ function FilaVazia({ decididas }: { decididas: number }) {
       {decididas > 0 && (
         <Link
           href="/publicar"
-          className="self-start rounded-md bg-marca px-5 py-4 text-base font-bold text-white shadow-marca hover:bg-marca-hover"
+          className="self-start rounded-md bg-marca px-5 py-4 text-md font-bold text-white shadow-marca hover:bg-marca-hover"
         >
           Ir para a fila de publicação
         </Link>

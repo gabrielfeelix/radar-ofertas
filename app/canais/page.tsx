@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { alternaCanal } from "@/app/acoes/canais";
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
+import { Botao } from "@/app/componentes/Botao";
 import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import {
@@ -168,12 +169,9 @@ function CartaoDeCanal({ canal }: { canal: CanalSimulado }) {
           <form action={alternaCanal}>
             <input type="hidden" name="canal_id" value={canal.id} />
             <input type="hidden" name="ativo" value={canal.ativo ? "false" : "true"} />
-            <button
-              type="submit"
-              className="rounded-md border border-borda px-3 py-2 text-sm font-semibold text-texto-medio hover:bg-superficie-alt"
-            >
+            <Botao type="submit" variante="secundaria" tamanho="sm">
               {canal.ativo ? "desligar" : "ligar"}
-            </button>
+            </Botao>
           </form>
         </div>
       </div>
