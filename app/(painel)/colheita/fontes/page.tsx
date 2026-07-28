@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { alternaFonteAtiva, defineNichoDaFonte } from "@/app/acoes/fontes";
+import { alternaFonteAtiva, defineNichoDaFonte, MISTO } from "@/app/acoes/fontes";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioFonte } from "@/app/componentes/FormularioFonte";
@@ -140,27 +140,33 @@ export default async function Fontes() {
                         <input type="hidden" name="fonte_id" value={fonte.fonte_id} />
                         <select
                           name="nicho_id"
-                          defaultValue={fonte.nicho_id ?? ""}
-                          className={`rounded-md border bg-superficie px-3 py-2 text-sm ${
-                            fonte.nicho_id ? "border-borda-forte" : "border-atencao-borda bg-atencao-fundo"
-                          }`}
+                          defaultValue={fonte.nicho_id ?? MISTO}
+                          className="rounded-md border border-borda-forte bg-superficie px-3 py-2 text-sm"
                         >
-                          <option value="" disabled>
-                            sem nicho
-                          </option>
                           {nichos.map((n) => (
                             <option key={n.id} value={n.id}>
                               {n.nome}
                             </option>
                           ))}
+                          <option value={MISTO}>Misto — triar à mão</option>
                         </select>
                         <Botao type="submit" variante="secundaria" tamanho="sm">
                           trocar
                         </Botao>
                       </form>
+                      {/*
+                        Misto não é alerta: é uma escolha legítima, e
+                        pintar de âmbar ensinaria a marcar qualquer
+                        nicho para o aviso sumir — que é exatamente
+                        como placa de vídeo virou "pet".
+                      */}
                       {!fonte.nicho_id && (
-                        <p className="mt-1 text-xs text-atencao">
-                          Sem nicho, o produto colhido não chega a canal nenhum.
+                        <p className="mt-1 text-xs text-texto-fraco">
+                          Os produtos daqui caem em{" "}
+                          <Link href="/produtos/sem-nicho" className="font-semibold text-marca-texto">
+                            Sem classificação
+                          </Link>
+                          .
                         </p>
                       )}
                     </td>

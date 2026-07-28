@@ -102,6 +102,18 @@ async function montaNavegacao(): Promise<{
       titulo: "Catálogo",
       itens: [
         { href: "/produtos", rotulo: "Produtos", contagem: banco?.anuncios, ponto: "#1B76B8" },
+        // Só aparece quando há o que triar: item de menu que fica ali
+        // marcando zero vira mobília, e mobília se aprende a ignorar.
+        ...(banco?.semNicho
+          ? [
+              {
+                href: "/produtos/sem-nicho",
+                rotulo: "Sem classificação",
+                contagem: banco.semNicho,
+                ponto: "#B4740A",
+              },
+            ]
+          : []),
         { href: "/colheita/fontes", rotulo: "Fontes", contagem: banco?.fontesAtivas, ponto: "#7A4FBF" },
         {
           href: "/colheita/mencoes",
@@ -154,6 +166,7 @@ async function montaNavegacao(): Promise<{
  */
 async function leDoBanco(): Promise<{
   anuncios: number;
+  semNicho: number;
   fontesAtivas: number;
   mencoes: number;
   mencoesComProblema: number;
@@ -162,8 +175,9 @@ async function leDoBanco(): Promise<{
   try {
     const db = supabaseServidor();
 
-    const [anuncios, fontes, mencoes, problemas, execucao] = await Promise.all([
+    const [anuncios, semNicho, fontes, mencoes, problemas, execucao] = await Promise.all([
       db.from("anuncio").select("id", { count: "exact", head: true }),
+      db.from("produto").select("id", { count: "exact", head: true }).is("nicho_id", null),
       db.from("fonte_descoberta").select("id", { count: "exact", head: true }).eq("ativo", true),
       db.from("mencao").select("id", { count: "exact", head: true }),
       db
@@ -184,6 +198,7 @@ async function leDoBanco(): Promise<{
 
     return {
       anuncios: anuncios.count ?? 0,
+      semNicho: semNicho.count ?? 0,
       fontesAtivas: fontes.count ?? 0,
       mencoes: mencoes.count ?? 0,
       mencoesComProblema: problemas.count ?? 0,

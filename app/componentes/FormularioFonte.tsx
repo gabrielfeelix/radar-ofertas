@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import { AcoesDoFormulario,
   Campo, classeDeCampo, classeDeCampoLiteral } from "@/app/componentes/Campo";
 
-import { cadastraFonte, type ResultadoFonte } from "@/app/acoes/fontes";
+import { cadastraFonte, MISTO, type ResultadoFonte } from "@/app/acoes/fontes";
 import { leIdentificadorDeCanal } from "@/lib/canais";
 
 import type { NichoOpcao } from "./FormularioAnuncio";
@@ -102,23 +102,27 @@ function Campos({
           )}
         </Campo>
 
+        {/*
+          "Misto" existe, e é escolha — não o campo em branco.
+          Canal de um assunto só entrega produto já roteável. Canal
+          genérico de ofertas, marcado com um nicho qualquer para o
+          formulário deixar salvar, entrega produto roteado ERRADO, que
+          é pior: sem nicho o produto para na triagem, com nicho errado
+          ele é publicado no canal errado sem ninguém perceber.
+        */}
         <Campo
           rotulo="Nicho"
-          dica="Todo produto colhido daqui herda este nicho. Sem ele, a colheita produz catálogo que não chega a canal nenhum."
+          dica="Todo produto colhido daqui herda este nicho — é o que roteia. Canal genérico de ofertas é misto, e aí os produtos caem em Sem classificação para triagem à mão."
           erro={erroDe("nicho")}
         >
-          <select
-            name="nicho_id"
-            required
-            defaultValue={nichos.length === 1 ? nichos[0].id : ""}
-            className={classeDeCampo}
-          >
+          <select name="nicho_id" required defaultValue="" className={classeDeCampo}>
             <option value="">escolha…</option>
             {nichos.map((n) => (
               <option key={n.id} value={n.id}>
                 {n.nome}
               </option>
             ))}
+            <option value={MISTO}>Misto — triar à mão</option>
           </select>
         </Campo>
 

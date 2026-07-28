@@ -11,6 +11,21 @@
  */
 
 /**
+ * A fronteira de isolamento (D-021).
+ *
+ * Hoje existe uma linha só e a interface não menciona a palavra. Ela
+ * está tipada porque o cadastro de fonte misto precisa saber a qual
+ * operação a linha pertence, e nesse caso não há nicho de onde tirar.
+ */
+export type OperacaoLinha = {
+  id: string;
+  nome: string;
+  fuso: string;
+  criado_em: string;
+  atualizado_em: string;
+};
+
+/**
  * Quem tem acesso.
  *
  * `papeis` é lista e não valor único: a mesma pessoa pode trazer a
@@ -336,6 +351,7 @@ type Tabela<Linha, Obrigatorios extends keyof Linha> = {
 export type Banco = {
   public: {
     Tables: {
+      operacao: Tabela<OperacaoLinha, "nome">;
       usuario: Tabela<UsuarioLinha, "id" | "operacao_id" | "nome" | "email" | "papeis">;
       marketplace: Tabela<MarketplaceLinha, "operacao_id" | "slug" | "nome">;
       nicho: Tabela<NichoLinha, "operacao_id" | "nome" | "slug">;

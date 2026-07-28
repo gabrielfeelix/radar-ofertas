@@ -474,3 +474,29 @@ A porta existe: middleware, sessão em cookie, `/entrar` com e-mail e senha, pap
 **Conta nasce por script**, `pnpm usuario:cria`, enquanto a tela de convite não existe (Fase 3). Ele cria as duas metades — a identidade em `auth.users` e o acesso em `public.usuario` — e desfaz a primeira se a segunda falhar. Identidade sem linha em `usuario` não entra em lugar nenhum, e é isso que mantém "sem convite não há entrada" verdadeiro mesmo se alguém criar conta pela API por fora.
 
 ---
+
+## D-028 · Fonte de colheita pode ser misto, e a triagem ganha tela
+**Data:** 2026-07-28
+
+O cadastro de fonte exigia um nicho de verdade. Agora aceita **misto**, que é uma escolha explícita — não o campo em branco. E os produtos de fonte mista caem em **Sem classificação**, `/produtos/sem-nicho`, que classifica em lote.
+
+**Motivo:** a regra antiga tinha um argumento correto para canal de um assunto só — o produto herda o nicho da fonte e já nasce roteável, sem trabalho manual por item. O argumento se inverte para canal genérico de ofertas, que é a maioria dos que valem a leitura.
+
+Foi o que aconteceu: as três fontes cadastradas ficaram como "pet", e placa de vídeo RTX 5060 Ti entrou no catálogo com o nicho de ração. A tela não permitia outra coisa.
+
+**A diferença entre os dois erros é o ponto inteiro:**
+
+| | o que acontece |
+|---|---|
+| sem nicho | falha **visível** — o produto para na triagem e nada errado é publicado |
+| nicho errado | falha **silenciosa** — a oferta é roteada, aprovada e publicada no canal errado, e o grupo de pet recebe uma placa de vídeo |
+
+Forçar a escolha produzia o segundo. Um aviso âmbar ao lado de "sem nicho" piorava: ensinava a marcar qualquer nicho para o aviso sumir.
+
+**Não precisou de migration.** `fonte_descoberta.nicho_id` e `produto.nicho_id` já eram nulos, e já existia o índice `produto_sem_nicho_idx`. O modelo de dados sempre previu a triagem; só a interface não deixava chegar nela.
+
+**Classificar é em lote, e isso não é conforto.** É o único trabalho manual por item do sistema. Um canal genérico entrega dezenas de produtos por dia — de um em um, ninguém faz na segunda semana, e o catálogo para de crescer sem ninguém ter decidido isso.
+
+**Os 6 produtos hoje marcados como "pet" continuam marcados.** Corrigir dado existente é decisão do dono, não efeito colateral de mudança de tela.
+
+---

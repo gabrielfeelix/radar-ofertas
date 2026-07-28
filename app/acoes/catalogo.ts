@@ -54,3 +54,29 @@ export async function alternaAnuncioAtivo(form: FormData): Promise<void> {
   revalidatePath("/produtos");
   revalidatePath("/atencao");
 }
+
+/**
+ * Triagem de nicho em lote.
+ *
+ * Existe porque canal misto agora é escolha legítima (ver
+ * `app/acoes/fontes.ts`), e escolha legítima precisa de um lugar para
+ * cair. Sem esta ação, "misto" seria só uma forma educada de encher o
+ * catálogo de produto que nunca chega a canal nenhum.
+ *
+ * **Em lote e não um por um** porque a triagem é o único trabalho
+ * manual por item do sistema. Um canal genérico entrega dezenas de
+ * produtos por dia; classificar de um em um, com um clique e uma
+ * espera de rede cada, é o tipo de tarefa que ninguém faz na segunda
+ * semana — e aí o catálogo para de crescer sem ninguém decidir isso.
+ */
+export async function classificaProdutos(form: FormData): Promise<void> {
+  const nichoId = String(form.get("nicho_id") ?? "").trim();
+  const ids = form.getAll("produto_id").map(String).filter((id) => id !== "");
+
+  if (nichoId === "" || ids.length === 0) return;
+
+  await supabaseServidor().from("produto").update({ nicho_id: nichoId }).in("id", ids);
+
+  revalidatePath("/produtos/sem-nicho");
+  revalidatePath("/produtos");
+}
