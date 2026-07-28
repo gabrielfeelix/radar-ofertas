@@ -131,44 +131,57 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 ## 9. Estado atual
 
-Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou.
+Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
 
 **Fase 0 em andamento** (contas de afiliado e prova de subid: trabalho manual do dono), com a base da Fase 1 construída em paralelo. As duas não conflitam — o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
+### Como este projeto trabalha hoje
+
+**Interface primeiro, backend plugado depois (D-026, decisão do dono em 28/07).** O que falta para as telas de decisão terem dado real não é código: é credencial de marketplace, domínio e canal com audiência — nada disso sob controle de quem escreve o sistema. Então as telas são construídas sobre uma **operação simulada** em `lib/simulacao/loja.ts`, vão à mão de testadores nesse estado, e o backend entra ação por ação depois. Leia a D-026 antes de propor voltar à ordem antiga.
+
+A tela nunca fala com a simulação: ela chama uma ação em `app/acoes/`, que hoje mexe na memória e amanhã escreve no banco. A assinatura não muda.
+
+**Antes de construir tela nova, revise as que existem.** A revisão de 28/07 achou seis defeitos, e cinco eram de **costura entre telas** — aprovar mexe na capacidade que Canais mostra, publicar consome o teto que Aprovar usa para avisar, preço mudado devolve para quem decide. Tela revisada sozinha parece correta. Está em `docs/decisoes.md`, em "Revisão · O que a passada pelas telas achou".
+
 ### Pronto e verificado
 
-**Banco** — 12 migrations em `supabase/migrations/`, reescritas do zero em 27/07 (exceção deliberada e aprovada, com o banco vazio). `operacao_id` em toda tabela, papel como lista, nicho como entidade, limiar herdando por nicho, contador de reprovação por comporta e registro de execução das rotinas.
+**Banco** — 12 migrations em `supabase/migrations/`, reescritas do zero em 27/07 (exceção deliberada, com o banco vazio). `operacao_id` em toda tabela, papel como lista, nicho como entidade, limiar herdando por nicho, contador de reprovação por comporta e registro de execução das rotinas.
 
-**Motor de curadoria** — `avalia_anuncios` é *a regra*, numa implementação só. 13 cenários verificados. 3.000 anúncios com 600 mil pontos em 1,4 s.
+**Motor de curadoria** — `avalia_anuncios` é *a regra*, numa implementação só. 13 cenários verificados. 3.000 anúncios com 600 mil pontos em 1,4 s. Nenhuma tela recalcula regra.
 
-**Coletor diário** — fontes plugáveis por marketplace (`supabase/functions/coleta-diaria`). Roda hoje; sem credencial, pula a loja e informa.
+**Coletor diário** — `supabase/functions/coleta-diaria`, fontes plugáveis por marketplace. Roda hoje; sem credencial, pula a loja e informa.
 
-**Colheita** — lê canais públicos do Telegram (`supabase/functions/colheita-canais`). Rodada contra canal real: 20 posts, 37 links, 18 anúncios novos em 8 s.
+**Colheita** — `supabase/functions/colheita-canais`. Rodada contra três canais reais: 60 posts, 35 links, 6 anúncios novos, 29 descartes.
 
-**Painel** — três telas: cadastro por link colado com acompanhamento da série (`/`), rendimento por canal (`/colheita/fontes`) e menções com problema (`/colheita/mencoes`). As duas de colheita foram construídas e verificadas contra três canais reais do Telegram: 60 posts, 35 links, 6 anúncios novos, 29 descartes — e os 29 aparecem na tela com o motivo de cada um.
+**Onze telas**, em `app/`:
+
+| Área | Telas | Dado |
+|---|---|---|
+| Hoje | `/aprovar` (+ painel `?oferta=`), `/publicar`, `/atencao`, `/arranque` | simulado; atenção e arranque leem o banco também |
+| Catálogo | `/produtos` (grão produto e anúncio, busca), `/produtos/[id]`, `/colheita/fontes`, `/colheita/mencoes` | **real** |
+| Distribuição | `/canais`, `/canais/[id]` | simulado |
+| Ajustes | `/ajustes/curadoria`, `/ajustes/nichos`, `/ajustes/marketplaces` | **real** |
+
+A raiz `/` leva para `/aprovar`: a casa do dono é o trabalho, não a consulta.
+
+**Casca e design** — barra lateral, barra superior e cabeçalho de página seguem o protótipo (`referencia-claude-deisgn/Radar de Ofertas.dc.html`, no repositório). Manrope e JetBrains Mono, tokens em `app/globals.css`, botão único em `app/componentes/Botao.tsx` — nenhuma tela escreve classe de botão à mão. O porquê de cada escolha está em `docs/design.md`.
+
+**Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15) e a máquina de estados da simulação (27). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
 
 **Automação** — CI a cada push, rotina diária e backup semanal em `.github/workflows/`.
 
-**Design system** — tokens em `app/globals.css`, explicados em `docs/design.md`. Só cor, tipografia, espaçamento, raio e botão. Card fora de propósito.
-
-**Telas de decisão, com operação simulada (D-026)** — `/aprovar` (com painel de detalhe por oferta), `/publicar`, `/canais` (com detalhe por canal), `/atencao` e `/arranque`, sobre `lib/simulacao/`. As duas últimas misturam: coleta, catálogo e configuração vêm do banco de verdade, canais vêm da simulação — e a trilha **não conta canal simulado como canal**, porque o trabalho dela é dizer o que ainda não existe.
-
-**Dependências de temporizador de terceiro ficaram anotadas em `docs/infra.md`** — agendador do GitHub, pausa do Supabase, token do Mercado Livre, sessão do Telegram, credencial da Shopee. Decidir todas juntas quando as telas terminarem, não antes. Decidir da linha, capacidade no topo, rejeitar com motivo de lista curta, diagnóstico por comporta, Telegram em lote, desfazer no envio, bloqueio por preço mudado. A máquina de estados tem teste próprio em `testes/simulacao.mjs`.
-
-**A ordem de trabalho mudou em 28/07, por decisão do dono:** interface primeiro, backend plugado depois, ação por ação. O que falta para essas telas terem dado real não é código — é credencial, domínio e canal. Leia a D-026 antes de propor voltar à ordem antiga.
-
 ### Próxima tarefa
 
-Continuar a interface, sempre com dado simulado, nesta ordem:
+Faltam da especificação, em ordem de utilidade:
 
-1. **Produtos e produto** — catálogo com busca, série por anúncio e histórico de rejeição, incluindo o motivo de cada rejeição.
-3. **Nichos e Curadoria** — os limiares num lugar só, com a taxa de aprovação ao lado do controle que a altera.
+1. **Modelos de mensagem** — com a prévia mostrando as duas redações lado a lado, a completa e a honesta reduzida, para a diferença ser escolhida e não descoberta em produção. É a última peça antes de a mensagem publicada deixar de ser texto fixo no código.
+2. **Login** — a porta. É Fase 1 e continua sem existir; sem ela nada pode ir para a internet.
+3. **Dinheiro** (Conversões, Repasses, Parceiros, painel do parceiro) — Fase 2 e 3. **Não construa antes de existir comissão**: são telas de dado que não existe nem simulado.
 
-**Antes de construir tela nova, revise as que existem.** A revisão de 28/07 achou seis coisas, e cinco eram de costura entre telas — aprovar mexe na capacidade que Canais mostra, publicar consome o teto que Aprovar usa para avisar. Tela revisada sozinha parece correta. Está em `docs/decisoes.md`, em "Revisão · O que a passada pelas telas achou".
+Depois disso, dois blocos que não são tela:
 
-Depois, o plugue: cada ação de `app/acoes/` troca a chamada à simulação por escrita no banco, uma por vez, sem tocar na tela.
-
-Antes de escrever tela, leia `docs/plano.md`: a ordem não é a do menu, e a regra que evita cascata continua valendo para dado que o banco deveria ter — com o limite que a D-026 escreveu.
+- **Plugar o backend** nas telas de decisão, uma ação por vez.
+- **Dependências de temporizador de terceiro** — estão anotadas em `docs/infra.md`, para serem resolvidas juntas quando as telas terminarem. Agendador do GitHub, pausa do Supabase, token do Mercado Livre, sessão do Telegram, credencial da Shopee: todas o mesmo problema, algo fora do nosso controle expira e o sistema para em silêncio.
 
 ### Bloqueado, e por quem
 
@@ -183,18 +196,21 @@ Antes de escrever tela, leia `docs/plano.md`: a ordem não é a do menu, e a reg
 
 | Arquivo | Quando |
 |---|---|
-| `docs/plano.md` | Antes de escolher o que construir. Tem a ordem e o porquê |
-| `docs/decisoes.md` | Antes de propor qualquer mudança. D-001 a D-025 |
-| `docs/mercado.md` | Antes de falar de concorrência ou distribuição |
-| `docs/telas.md` | Especificação funcional das telas |
+| `docs/plano.md` | Antes de escolher o que construir. Tem a ordem, o porquê, e o limite da exceção da D-026 |
+| `docs/decisoes.md` | Antes de propor qualquer mudança. D-001 a D-026, mais a revisão das telas e as pendências |
+| `docs/telas.md` | Especificação funcional de cada tela |
+| `docs/design.md` | Tokens, a casca, o sistema de botões e onde está o protótipo |
 | `docs/dados.md` | Schema, comportas e o modelo de segurança |
-| `docs/infra.md` | O que roda onde, quanto custa, o que falta |
-| `docs/design.md` | Tokens, e o endereço do protótipo — que **não está no repositório** |
+| `docs/mercado.md` | Antes de falar de concorrência ou distribuição |
+| `docs/infra.md` | O que roda onde, quanto custa, e as dependências que expiram |
+| `referencia-claude-deisgn/` | O protótipo, com as quatorze telas desenhadas. Abra antes de mexer em interface |
 
-### Como este projeto trabalha
+### Como rodar
 
-Três trilhas em paralelo, nunca em cascata: **banco e motor** (rápido, sem interface), **design system** (componente entra quando a tela pedir), **telas** (uma por vez, ponta a ponta).
+```
+pnpm db:sobe     # banco local em Docker
+pnpm dev         # painel em http://localhost:3000
+pnpm verifica    # tipos, lint e testes — rode antes de commitar
+```
 
-A regra que sustenta isso: **nenhuma tela é construída com dado falso.** Se a tela precisa de dado que o banco não tem, ou o banco ganha o dado primeiro, ou a tela sai da fila. Foi ela que revelou, antes de qualquer interface, que três telas especificadas não tinham dado por trás.
-
-E teste com dado real sempre que der. A colheita só começou a funcionar de verdade quando foi rodada contra um canal existente: a primeira versão trazia 3 anúncios de 38 links, e o dado real expôs três bugs que nenhuma revisão teria achado.
+**Commite ao fim de cada bloco de trabalho**, com mensagem em português explicando o porquê, não o quê.
