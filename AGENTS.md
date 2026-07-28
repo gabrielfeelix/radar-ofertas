@@ -151,18 +151,21 @@ Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 **Design system** — tokens em `app/globals.css`, explicados em `docs/design.md`. Só cor, tipografia, espaçamento, raio e botão. Card fora de propósito.
 
+**Telas de decisão, com operação simulada (D-026)** — `/aprovar` e `/publicar`, sobre `lib/simulacao/`. Decidir da linha, capacidade no topo, rejeitar com motivo de lista curta, diagnóstico por comporta, Telegram em lote, desfazer no envio, bloqueio por preço mudado. A máquina de estados tem teste próprio em `testes/simulacao.mjs`.
+
+**A ordem de trabalho mudou em 28/07, por decisão do dono:** interface primeiro, backend plugado depois, ação por ação. O que falta para essas telas terem dado real não é código — é credencial, domínio e canal. Leia a D-026 antes de propor voltar à ordem antiga.
+
 ### Próxima tarefa
 
-**Canal: o mínimo.** É o item 4 de `docs/plano.md` — nicho, plataforma e teto diário — e a última coisa que falta antes das filas.
+Continuar a interface, sempre com dado simulado, nesta ordem:
 
-As filas dependem de duas coisas, por motivos **independentes**:
+1. **Canal** — nicho, plataforma, teto diário, split. Hoje os canais da simulação são constantes num arquivo; esta tela é o que permite ao testador montar a própria operação e mexer na capacidade, que é o número que muda comportamento na aprovação.
+2. **Precisa de atenção** — agrega, não lista. Só o que exige ação humana.
+3. **Trilha de arranque** — o próximo passo num sistema vazio.
 
-- **Canal → capacidade.** A tela de aprovação mostra *"30 ofertas → 87 publicações → 18 vagas hoje"*. Sem canal esse número não existe e a tela nasce cega. Aprovar sem canal também é ato silencioso: a aprovação gera uma publicação por canal que aceita o nicho, e não haveria nenhum.
-- **Colheita → volume.** A colheita enche o **catálogo**, não a fila. Sem catálogo cheio, a aprovação seria testada com três itens — o erro do protótipo, desenhado para quatro publicações e quebrado em trinta.
+Depois, o plugue: cada ação de `app/acoes/` troca a chamada à simulação por escrita no banco, uma por vez, sem tocar na tela.
 
-Canal não espera colheita: a colheita já está feita, mas mesmo se não estivesse, canal poderia ter vindo antes.
-
-Antes de escrever tela, leia `docs/plano.md`: a ordem não é a do menu, e a regra que evita cascata é **nenhuma tela é construída com dado falso**.
+Antes de escrever tela, leia `docs/plano.md`: a ordem não é a do menu, e a regra que evita cascata continua valendo para dado que o banco deveria ter — com o limite que a D-026 escreveu.
 
 ### Bloqueado, e por quem
 

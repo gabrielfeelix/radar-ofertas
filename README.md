@@ -20,15 +20,16 @@ A pesquisa de mercado (`docs/mercado.md`) confirmou que isso é raro: o padrão 
 - **Coletor diário** — fontes plugáveis por marketplace, esperando credencial.
 - **Colheita de canais** — lê canais públicos do Telegram, resolve os links encurtados e cadastra no catálogo o que ainda não conhecemos. Testada contra canal real: 18 anúncios novos em 8 segundos.
 - **Painel** — três telas: cadastro de anúncio por link colado com acompanhamento da série, rendimento por canal de colheita, e menções com problema. As duas de colheita foram verificadas contra três canais reais: 60 posts, 35 links, 6 anúncios novos e 29 descartes, cada um com o motivo à vista.
+- **Telas de decisão** — aprovar e publicar, sobre uma **operação simulada** (D-026). Servem para testar o fluxo com gente de verdade antes de existir credencial, domínio e canal; o backend é plugado depois, ação por ação. A faixa "operação simulada" fica visível o tempo todo.
 - **Automação** — CI a cada push, rotina diária e backup semanal.
-- **Testes** — `pnpm testa` cobre o leitor de link e o de identificador de canal, sem precisar de banco nem rede.
+- **Testes** — `pnpm testa` cobre o leitor de link, o de identificador de canal e a máquina de estados da operação simulada. Sem banco, sem rede.
 
 ### Falta
 
 | O quê | Depende de |
 |---|---|
 | Tela de canal (nicho, plataforma, teto diário) | nada — é o próximo trabalho |
-| Telas de aprovar e publicar | canal existir |
+| Plugar o backend nas telas de decisão | série de preço real |
 | Colheita por conta de usuário (grupo fechado) | número dedicado e sessão |
 | Coleta de preço real | **credencial de marketplace** |
 | Projeto Supabase na nuvem | conta criada |

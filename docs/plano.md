@@ -18,6 +18,18 @@ Se a tela precisa de dado que o banco não tem, ou o banco ganha o dado primeiro
 
 Três telas que teriam sido construídas bonitas e vazias.
 
+### A exceção, aberta em 28/07 (D-026)
+
+A regra continua valendo para **dado que o banco deveria ter e não tem** — foi assim que as três telas acima caíram da fila.
+
+Ela **não** vale para dado que depende de coisa que ninguém controla aqui: credencial de marketplace, domínio, canal com audiência real. Esperar isso para só então descobrir se aprovar e publicar funcionam na mão de uma pessoa custaria semanas de espera para aprender algo que uma simulação ensina hoje.
+
+Então as telas de decisão são construídas **com operação simulada**, em `lib/simulacao/`, e são o que vai à mão de testadores. Três condições, que são o que separa isso de dado falso:
+
+1. **A simulação é um módulo só, e a tela nunca a chama direto** — ela chama uma ação, que hoje mexe na simulação e amanhã escreve no banco.
+2. **A tela nunca recalcula regra**, nem quando a regra é de mentira. Nota, motivos e comportas chegam prontos, como chegariam de `avalia_anuncios`.
+3. **A faixa "operação simulada" fica visível o tempo todo**, e não some depois de "entendi".
+
 ---
 
 ## As três trilhas

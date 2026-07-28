@@ -382,6 +382,29 @@ Alternativas gratuitas e comercialmente livres a avaliar: Netlify, Railway, Rend
 
 ---
 
+## D-026 · Telas primeiro, com operação simulada
+**Data:** 2026-07-28
+
+As telas de decisão — aprovar e publicar — são construídas **antes** do dado real, sobre uma operação simulada em `lib/simulacao/`, e vão à mão de testadores nesse estado. O backend é plugado depois, ação por ação.
+
+**Motivo:** o que falta para essas telas terem dado real não é trabalho de código — é credencial de marketplace, domínio registrado e canal com audiência. Nada disso está sob controle de quem escreve o sistema, e nenhum tem data. Esperar significaria descobrir só daqui a semanas se o fluxo de decidir trinta ofertas e publicar dezoito cabe na mão de uma pessoa em dez minutos — que é a pergunta mais cara do projeto, e a que mata o sistema se a resposta for não.
+
+Simulação responde essa pergunta hoje, com testador de verdade, por um custo baixo.
+
+**Isto abre exceção à regra "nenhuma tela é construída com dado falso"**, e a exceção tem limite escrito: ela vale para dado que depende de terceiro, não para dado que o banco deveria ter e não tem. Foi a regra original que derrubou três telas da fila por não terem tabela por trás, e essa parte continua de pé.
+
+**Custo, dito antes de aparecer:** dado simulado é bem-comportado. Título curto, preço redondo, canal com nome curto. O real traz título de 180 caracteres vindo de canal alheio e nome de canal com emoji. Quando plugar, algum layout aperta. É esperado, é barato, e é muito menor que o custo de descobrir tarde que o fluxo não cabe em dez minutos.
+
+**Três condições que separam isso de dado falso:**
+
+1. A simulação é um módulo só, e nenhuma tela a chama direto — a tela chama uma ação, que hoje mexe na memória e amanhã escreve no banco. A assinatura não muda.
+2. A tela nunca recalcula regra, nem quando a regra é de mentira. Nota, comportas e motivos chegam prontos, como chegariam de `avalia_anuncios` (restrição 4 de `docs/telas.md`).
+3. A faixa "operação simulada" fica visível o tempo todo. Testador que esquece que o dado é inventado tira conclusão sobre volume e capacidade a partir de número inventado — e é essa conclusão que fica no relatório.
+
+**Mudaria se:** a credencial chegar antes de as telas ficarem prontas. Aí o plugue acontece na hora, e a simulação vira material de teste.
+
+---
+
 ## Pendência · Encurtador da Shopee não resolve por requisição de servidor
 **Data:** 2026-07-28
 
