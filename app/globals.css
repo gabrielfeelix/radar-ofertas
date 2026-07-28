@@ -1,26 +1,133 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* =============================================================
+   Tokens do Radar de Ofertas
+   O porquê de cada escolha está em docs/design.md.
+   Aqui é só a execução — este arquivo é a fonte de verdade.
+   ============================================================= */
+
+@theme {
+  /* ---------- Superfície e borda ---------- */
+  --color-fundo: #f5f6f8;
+  --color-superficie: #ffffff;
+  --color-superficie-alt: #fafafb;
+  --color-preenchimento: #f3f4f6;
+  --color-borda-sutil: #edeef1;
+  --color-borda: #e9eaee;
+  --color-borda-forte: #dde0e6;
+
+  /* ---------- Texto ----------
+     Três níveis, todos acima de 4,5:1 sobre branco.
+     `apagado` fica abaixo do mínimo legível de propósito:
+     é para ícone decorativo e estado desabilitado, NUNCA texto. */
+  --color-texto: #14161a; /* 18,1:1 */
+  --color-texto-medio: #4b5563; /*  7,6:1 */
+  --color-texto-fraco: #6b7280; /*  4,8:1 */
+  --color-texto-apagado: #9aa0aa; /*  2,6:1 — não use em texto */
+
+  /* ---------- Marca ---------- */
+  --color-marca: #f16a0d;
+  --color-marca-hover: #c9540a;
+  --color-marca-texto: #d2590a;
+  --color-marca-fundo: #fff1e6;
+  --color-marca-borda: #fbe0c9;
+
+  /* ---------- Estados ---------- */
+  --color-sucesso: #1b8a4e;
+  --color-sucesso-fundo: #edf9f2;
+  --color-sucesso-borda: #bfe6d2;
+
+  --color-perigo: #c13232;
+  --color-perigo-fundo: #fef2f2;
+  --color-perigo-borda: #f3d9d9;
+
+  --color-atencao: #b4740a;
+  --color-atencao-fundo: #fff9ec;
+  --color-atencao-borda: #f0dfbb;
+
+  --color-info: #1b76b8;
+  --color-info-fundo: #eaf4fd;
+  --color-info-borda: #cfe4f7;
+
+  /* ---------- Plataformas ----------
+     Cor de terceiro. Não se consolida: pertence a outra pessoa.
+     A cor de cada marketplace vive no banco, não aqui. */
+  --color-whatsapp: #1fa855;
+  --color-telegram: #2aabee;
+
+  /* ---------- Tipografia ---------- */
+  --font-sans: var(--font-geist-sans), Manrope, system-ui, sans-serif;
+  /* Dinheiro em coluna precisa de largura fixa: sem isso, ler uma
+     tabela de preços vira exercício de foco. */
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", monospace;
+
+  --text-xs: 0.6875rem; /* 11px */
+  --text-sm: 0.75rem; /* 12px */
+  --text-base: 0.8125rem; /* 13px */
+  --text-md: 0.9375rem; /* 15px */
+  --text-lg: 1.0625rem; /* 17px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 1.5rem; /* 24px */
+
+  --leading-titulo: 1.2;
+  --leading-padrao: 1.45;
+  --leading-longo: 1.6;
+
+  --tracking-titulo: -0.03em;
+  --tracking-eyebrow: 0.08em;
+
+  /* ---------- Espaçamento ----------
+     Grade de 4. O protótipo tinha 718 valores com só 34% na grade,
+     e os campeões de uso eram os fora dela (14, 13, 10, 9, 11). */
+  --spacing-1: 0.125rem; /*  2px */
+  --spacing-2: 0.25rem; /*  4px */
+  --spacing-3: 0.5rem; /*  8px */
+  --spacing-4: 0.75rem; /* 12px */
+  --spacing-5: 1rem; /* 16px */
+  --spacing-6: 1.5rem; /* 24px */
+  --spacing-7: 2rem; /* 32px */
+  --spacing-8: 2.5rem; /* 40px */
+
+  /* ---------- Raio ---------- */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pilula: 999px;
+
+  /* ---------- Sombra ----------
+     Só elevação real. Nada de sombra em elemento que não flutua. */
+  --shadow-marca: 0 1px 2px rgba(241, 106, 13, 0.35);
+  --shadow-gaveta: -20px 0 60px rgba(20, 22, 26, 0.18);
+  --shadow-modal: 0 30px 70px rgba(20, 22, 26, 0.28);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* =============================================================
+   Base
+   ============================================================= */
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-padrao);
+  -webkit-font-smoothing: antialiased;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Alvo de toque: 44px é o mínimo para uma ferramenta usada em pé,
+   com uma mão. Vale para tudo que é clicável, não só para botão. */
+@media (pointer: coarse) {
+  button,
+  a[role="button"],
+  [role="button"] {
+    min-height: 44px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Foco visível sempre. O protótipo não tem uma tag <button>:
+   75 elementos clicáveis são div e span, sem foco de teclado. */
+:focus-visible {
+  outline: 2px solid var(--color-marca);
+  outline-offset: 2px;
 }

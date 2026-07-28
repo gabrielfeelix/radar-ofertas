@@ -75,6 +75,9 @@ pnpm dev                # painel em http://localhost:3000
 | `docs/ambiente.md` | Montar o projeto numa máquina nova |
 | `docs/roadmap.md` | As fases e o critério de conclusão de cada uma |
 | `docs/decisoes.md` | Decisões tomadas e o motivo. **Consulte antes de propor mudança** |
+| `docs/plano.md` | A ordem de execução e a regra que evita cascata |
+| `docs/design.md` | Tokens de cor, tipografia, espaçamento e botão |
+| `docs/telas.md` | Especificação funcional das telas |
 | `SETUP.md` | Guia original de criação do repositório. Histórico |
 
 ---
