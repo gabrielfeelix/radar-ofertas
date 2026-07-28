@@ -94,7 +94,7 @@ async function montaNavegacao(): Promise<{
     {
       titulo: "Catálogo",
       itens: [
-        { href: "/", rotulo: "Anúncios", contagem: banco?.anuncios, ponto: "#1B76B8" },
+        { href: "/produtos", rotulo: "Produtos", contagem: banco?.anuncios, ponto: "#1B76B8" },
         { href: "/colheita/fontes", rotulo: "Fontes", contagem: banco?.fontesAtivas, ponto: "#7A4FBF" },
         {
           href: "/colheita/mencoes",

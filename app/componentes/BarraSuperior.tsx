@@ -1,12 +1,11 @@
 /**
  * Barra superior.
  *
- * Duas honestidades deliberadas em relação ao protótipo:
- *
- * A BUSCA APARECE DESABILITADA. Ela é da Fase 2 (`docs/telas.md`), e
- * um campo de busca que aceita texto e não busca nada é a única coisa
- * pior que não ter busca: a pessoa digita, não acontece nada, e ela
- * conclui que o catálogo está vazio.
+ * A BUSCA É UM FORMULÁRIO, e leva ao catálogo. Ela ficou desabilitada
+ * enquanto não havia tela de catálogo para receber o termo — campo que
+ * aceita texto e não busca nada faz a pessoa concluir que o catálogo
+ * está vazio. Agora que `/produtos` existe, ela funciona, sem
+ * JavaScript nenhum: o termo vira endereço, e endereço se guarda.
  *
  * O ESTADO DA ROTINA É O DE VERDADE. O protótipo mostra "Rotina
  * 06:08" sempre em verde. Aqui, quando não há execução registrada, a
@@ -23,15 +22,19 @@ export type EstadoDaRotina =
 export function BarraSuperior({ rotina }: { rotina: EstadoDaRotina }) {
   return (
     <header className="sticky top-0 z-10 hidden items-center gap-5 border-b border-borda bg-superficie px-6 py-3 lg:flex">
-      <div className="flex max-w-96 flex-1 items-center gap-3 rounded-md border border-borda bg-fundo px-4 py-3">
+      <form
+        action="/produtos"
+        className="flex max-w-96 flex-1 items-center gap-3 rounded-md border border-borda bg-fundo px-4 py-3"
+      >
         <span className="size-3 flex-none rounded-circulo border-2 border-texto-apagado" aria-hidden />
         <input
           type="search"
-          disabled
-          placeholder="Buscar produto, anúncio ou canal — chega na Fase 2"
+          name="q"
+          placeholder="Buscar no catálogo"
+          aria-label="Buscar no catálogo"
           className="min-w-0 flex-1 bg-transparent text-base text-texto outline-none placeholder:text-texto-fraco"
         />
-      </div>
+      </form>
 
       <div className="ml-auto flex items-center gap-4">
         <FaixaDaRotina rotina={rotina} />
