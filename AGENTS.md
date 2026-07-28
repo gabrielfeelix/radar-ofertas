@@ -176,6 +176,7 @@ A raiz `/` leva para `/aprovar`: a casa do dono é o trabalho, não a consulta.
 | `Pagina` | cinco larguras diferentes. A tela declara uma medida; cabeçalho, KPIs e conteúdo ficam dentro dela |
 | `Botao` | laranja/vermelho/verde cheios competindo |
 | `Modal` | formulário de criar solto no pé da página, e acordeão dentro do cartão |
+| `Campo` | quatro estilos de campo diferentes, um deles com a paleta crua do Tailwind |
 
 E uma regra mudou: **monoespaçado é para texto literal** (subid, slug, SKU, comando), nunca para dinheiro — alinhar coluna é trabalho do `tabular-nums`. Detalhe e motivo de cada uma em `docs/design.md`, em "A passada visual de 28/07".
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { AcoesDoFormulario, classeDeCampo, classeDeCampoLiteral } from "@/app/componentes/Campo";
 
 import { cadastraFonte, type ResultadoFonte } from "@/app/acoes/fontes";
 import { leIdentificadorDeCanal } from "@/lib/canais";
@@ -88,7 +89,7 @@ function Campos({
             value={canal}
             onChange={(e) => setCanal(e.target.value)}
             placeholder="@ofertas_pet"
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 font-mono text-base"
+            className={classeDeCampoLiteral}
           />
           {leitura?.ok === true && (
             <p className="mt-2 text-base text-sucesso">
@@ -109,7 +110,7 @@ function Campos({
             name="nicho_id"
             required
             defaultValue={nichos.length === 1 ? nichos[0].id : ""}
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 text-base"
+            className={classeDeCampo}
           >
             <option value="">escolha…</option>
             {nichos.map((n) => (
@@ -125,16 +126,16 @@ function Campos({
             name="nome"
             type="text"
             maxLength={80}
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 text-base"
+            className={classeDeCampo}
           />
         </Campo>
       </div>
 
-      <div>
-        <Botao type="submit" variante="primaria" tamanho="lg" disabled={enviando || leitura?.ok === false}>
+      <AcoesDoFormulario>
+        <Botao type="submit" variante="primaria" disabled={enviando || leitura?.ok === false}>
           {enviando ? "Salvando…" : "Adicionar canal"}
         </Botao>
-      </div>
+      </AcoesDoFormulario>
     </form>
   );
 }

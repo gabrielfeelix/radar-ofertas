@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { AcoesDoFormulario, classeDeCampo } from "@/app/componentes/Campo";
 
 import { salvaCanal, type ResultadoCanal } from "@/app/acoes/canais";
 import { NICHOS, type CanalSimulado } from "@/lib/simulacao/loja";
@@ -55,7 +56,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
             required
             defaultValue={canal?.nome}
             placeholder="Achados de Pet"
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 text-base"
+            className={classeDeCampo}
           />
         </Campo>
 
@@ -63,7 +64,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
           <select
             name="plataforma"
             defaultValue={canal?.plataforma ?? "whatsapp"}
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 text-base"
+            className={classeDeCampo}
           >
             <option value="whatsapp">WhatsApp</option>
             <option value="telegram">Telegram</option>
@@ -109,7 +110,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
             required
             value={teto}
             onChange={(e) => setTeto(Number(e.target.value))}
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 font-mono text-base"
+            className={classeDeCampo}
           />
         </Campo>
 
@@ -119,7 +120,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
             type="number"
             min={0}
             defaultValue={canal?.audiencia ?? 0}
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 font-mono text-base"
+            className={classeDeCampo}
           />
         </Campo>
 
@@ -132,7 +133,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
             type="text"
             defaultValue={canal?.horarios}
             placeholder="09:00 e 18:00"
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 text-base"
+            className={classeDeCampo}
           />
         </Campo>
       </div>
@@ -143,7 +144,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
             name="parceiro"
             type="text"
             defaultValue={canal?.parceiro ?? "você"}
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 text-base"
+            className={classeDeCampo}
           />
         </Campo>
 
@@ -152,7 +153,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
             name="operador"
             type="text"
             defaultValue={canal?.operador ?? "você"}
-            className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 text-base"
+            className={classeDeCampo}
           />
         </Campo>
       </div>
@@ -163,8 +164,19 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
         arranjos convivem. A parte do dono é o que sobra, e por isso
         não é campo: se fosse, os três poderiam somar 97.
       */}
+      {/*
+        Continua `<fieldset>`, que é o que agrupa campos relacionados
+        para o leitor de tela — mas a `<legend>` visível é montada pelo
+        navegador sobre a borda, fora do fluxo, e nunca combina com o
+        resto. Tirá-la do fluxo à mão (com `float`) quebra a grade que
+        vem depois. Então: legenda só para quem ouve, rótulo comum para
+        quem vê, com o mesmo desenho de qualquer outra seção.
+      */}
       <fieldset className="rounded-lg border border-borda bg-superficie-alt p-5">
-        <legend className="px-2 text-base font-bold">Divisão da comissão</legend>
+        <legend className="sr-only">Divisão da comissão</legend>
+        <p className="mb-4 text-xs font-bold tracking-eyebrow text-texto-fraco uppercase" aria-hidden>
+          Divisão da comissão
+        </p>
 
         <div className="grid gap-5 sm:grid-cols-3">
           <Campo rotulo="Por trazer a audiência">
@@ -175,7 +187,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
               max={100}
               value={audiencia}
               onChange={(e) => setAudiencia(Number(e.target.value))}
-              className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 font-mono text-base"
+              className={classeDeCampo}
             />
           </Campo>
 
@@ -187,7 +199,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
               max={100}
               value={operacao}
               onChange={(e) => setOperacao(Number(e.target.value))}
-              className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 font-mono text-base"
+              className={classeDeCampo}
             />
           </Campo>
 
@@ -212,8 +224,8 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
         {erroDe("split") && <p className="mt-3 text-base text-perigo">{erroDe("split")}</p>}
       </fieldset>
 
-      <div className="flex items-center gap-4">
-        <Botao type="submit" variante="primaria" tamanho="lg" disabled={salvando || dono < 0}>
+      <AcoesDoFormulario>
+        <Botao type="submit" variante="primaria" disabled={salvando || dono < 0}>
           {salvando ? "Salvando…" : canal ? "Salvar canal" : "Criar canal"}
         </Botao>
 
@@ -222,7 +234,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
             {canal ? "Salvo." : "Canal criado. Já entra na capacidade da aprovação."}
           </span>
         )}
-      </div>
+      </AcoesDoFormulario>
     </form>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
+import { AcoesDoFormulario, classeDeCampo } from "@/app/componentes/Campo";
 
 import { criaNicho, type ResultadoNicho } from "@/app/acoes/ajustes";
 import { Botao } from "@/app/componentes/Botao";
@@ -28,9 +29,9 @@ export function FormularioNicho() {
   }, [resultado, fechaModal]);
 
   return (
-    <form action={acao} className="flex flex-wrap items-end gap-3" key={resultado?.ok ? resultado.token : "novo"}>
-      <label className="flex-1">
-        <span className="mb-2 block text-base font-semibold">Nome do nicho</span>
+    <form action={acao} className="flex flex-col gap-4" key={resultado?.ok ? resultado.token : "novo"}>
+      <label className="flex flex-col gap-2">
+        <span className="text-base font-semibold">Nome do nicho</span>
         <input
           name="nome"
           type="text"
@@ -38,13 +39,15 @@ export function FormularioNicho() {
           minLength={2}
           maxLength={40}
           placeholder="Bebê, ferramenta, papelaria…"
-          className="w-full rounded-md border border-borda-forte bg-superficie px-4 py-3 text-base"
+          className={classeDeCampo}
         />
       </label>
 
-      <Botao type="submit" variante="primaria" disabled={salvando}>
-        {salvando ? "Criando…" : "Criar nicho"}
-      </Botao>
+      <AcoesDoFormulario>
+        <Botao type="submit" variante="primaria" disabled={salvando}>
+          {salvando ? "Criando…" : "Criar nicho"}
+        </Botao>
+      </AcoesDoFormulario>
 
       {resultado?.ok === false && (
         <p className="w-full text-base text-perigo">{resultado.mensagem}</p>

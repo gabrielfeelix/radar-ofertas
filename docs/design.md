@@ -293,6 +293,18 @@ Duas armadilhas que custaram tempo e ficam anotadas:
 1. **Nunca ponha classe de display na tag `<dialog>`.** O `<dialog>` fechado é escondido pelo `display: none` do navegador, e um `flex` o sobrescreve — o modal fica visível o tempo todo, por cima da tela. A coluna que rola é o `<div>` de dentro.
 2. **O preflight do Tailwind zera o `margin: auto`** que centraliza o `<dialog>` modal. Sem uma regra explícita, ele nasce grudado no canto superior esquerdo.
 
+### `Campo` — uma forma de campo, e a barra de ação
+
+Cada formulário tinha inventado o seu: `px-4 py-3` num, `px-4 py-2` noutro, `px-3 py-2` num terceiro. O de cadastrar por link é anterior aos tokens e nunca foi revisitado — usava `border-neutral-300 bg-white`, paleta crua do Tailwind, fora do design system inteiro.
+
+Numa página larga isso passa. Dentro de um modal, com seis campos juntos num quadro pequeno, cada divergência de 4px vira um degrau visível.
+
+Duas formas, e a diferença é semântica: `classeDeCampo` para o padrão, `classeDeCampoLiteral` para o que é texto literal — endereço de canal, link colado, identificador de afiliado. Mesma regra do monoespaçado, abaixo.
+
+E `AcoesDoFormulario`: divisória e ação à direita. Sem ela o botão de enviar ficava solto no fluxo, encostado à esquerda logo abaixo do último campo — num modal, isso fazia o ato principal parecer mais um campo.
+
+**`<legend>` visível não se conserta com `float`.** O navegador monta a legenda sobre a borda do `<fieldset>`, fora do fluxo, e ela nunca combina com o resto. Tirá-la do fluxo à mão quebra a grade que vem depois — testado, e quebrou. A saída é `<legend class="sr-only">` para quem ouve, mais um rótulo comum para quem vê.
+
 ### A regra do monoespaçado mudou
 
 Era "dinheiro em coluna precisa de largura fixa". Estava errado, e o erro se espalhou: preço, percentual, contagem, número de KPI e até texto de reserva de campo saíram em `JetBrains Mono`. O painel inteiro ficou com cara de despejo de terminal.

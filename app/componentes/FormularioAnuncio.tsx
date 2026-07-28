@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { AcoesDoFormulario, classeDeCampo, classeDeCampoLiteral } from "@/app/componentes/Campo";
 
 import { cadastraAnuncio, type ResultadoCadastro } from "@/app/acoes/cadastra-anuncio";
 import { leLinkDeProduto } from "@/lib/marketplaces";
@@ -109,7 +110,7 @@ function Campos({
           value={link}
           onChange={(e) => setLink(e.target.value)}
           placeholder="https://www.mercadolivre.com.br/..."
-          className="w-full rounded border border-neutral-300 bg-white px-3 py-2 font-mono text-sm"
+          className={classeDeCampoLiteral}
         />
         {leitura?.ok === true && (
           <p className="mt-1 text-sm text-green-700">
@@ -133,7 +134,7 @@ function Campos({
           required
           minLength={3}
           maxLength={120}
-          className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+          className={classeDeCampo}
         />
       </Campo>
 
@@ -147,7 +148,7 @@ function Campos({
             name="nicho_id"
             required
             defaultValue={nichos.length === 1 ? nichos[0].id : ""}
-            className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+            className={classeDeCampo}
           >
             <option value="">escolha…</option>
             {nichos.map((n) => (
@@ -162,7 +163,7 @@ function Campos({
           <input
             name="vendedor"
             type="text"
-            className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+            className={classeDeCampo}
           />
         </Campo>
 
@@ -176,16 +177,16 @@ function Campos({
             type="text"
             inputMode="decimal"
             placeholder="R$ 89,90"
-            className="w-full rounded border border-neutral-300 bg-white px-3 py-2 text-sm"
+            className={classeDeCampo}
           />
         </Campo>
       </div>
 
-      <div>
-        <Botao type="submit" variante="primaria" tamanho="lg" disabled={enviando || leitura?.ok === false}>
+      <AcoesDoFormulario>
+        <Botao type="submit" variante="primaria" disabled={enviando || leitura?.ok === false}>
           {enviando ? "Salvando…" : "Cadastrar anúncio"}
         </Botao>
-      </div>
+      </AcoesDoFormulario>
     </form>
   );
 }

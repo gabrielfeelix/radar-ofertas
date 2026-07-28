@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { classeDeCampoLiteral } from "@/app/componentes/Campo";
 
 import { defineAfiliado, type ResultadoLoja } from "@/app/acoes/marketplaces";
 import { Botao } from "@/app/componentes/Botao";
@@ -46,7 +47,7 @@ export function CampoDeAfiliado({
         type="password"
         autoComplete="off"
         placeholder={configurado ? "trocar o identificador" : "colar o identificador"}
-        className="w-56 rounded-md border border-borda-forte bg-superficie px-4 py-2 font-mono text-base"
+        className={`${classeDeCampoLiteral} w-56`}
       />
 
       <Botao type="submit" variante="secundaria" tamanho="sm" disabled={salvando}>
