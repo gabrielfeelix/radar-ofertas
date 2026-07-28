@@ -19,15 +19,16 @@ A pesquisa de mercado (`docs/mercado.md`) confirmou que isso é raro: o padrão 
 - **Manutenção** — expurgo da Amazon, expiração de oferta, compactação da série antiga.
 - **Coletor diário** — fontes plugáveis por marketplace, esperando credencial.
 - **Colheita de canais** — lê canais públicos do Telegram, resolve os links encurtados e cadastra no catálogo o que ainda não conhecemos. Testada contra canal real: 18 anúncios novos em 8 segundos.
-- **Painel** — cadastro de anúncio por link colado e acompanhamento da série.
+- **Painel** — três telas: cadastro de anúncio por link colado com acompanhamento da série, rendimento por canal de colheita, e menções com problema. As duas de colheita foram verificadas contra três canais reais: 60 posts, 35 links, 6 anúncios novos e 29 descartes, cada um com o motivo à vista.
 - **Automação** — CI a cada push, rotina diária e backup semanal.
-- **Testes** — `pnpm testa` cobre o leitor de link, sem precisar de banco nem rede.
+- **Testes** — `pnpm testa` cobre o leitor de link e o de identificador de canal, sem precisar de banco nem rede.
 
 ### Falta
 
 | O quê | Depende de |
 |---|---|
-| Tela da fila de ofertas | nada — é o próximo trabalho |
+| Tela de canal (nicho, plataforma, teto diário) | nada — é o próximo trabalho |
+| Telas de aprovar e publicar | canal existir |
 | Colheita por conta de usuário (grupo fechado) | número dedicado e sessão |
 | Coleta de preço real | **credencial de marketplace** |
 | Projeto Supabase na nuvem | conta criada |
