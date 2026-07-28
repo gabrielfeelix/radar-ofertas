@@ -183,6 +183,7 @@ Antes de escrever tela, leia `docs/plano.md`: a ordem não é a do menu, e a reg
 | `docs/telas.md` | Especificação funcional das telas |
 | `docs/dados.md` | Schema, comportas e o modelo de segurança |
 | `docs/infra.md` | O que roda onde, quanto custa, o que falta |
+| `docs/design.md` | Tokens, e o endereço do protótipo — que **não está no repositório** |
 
 ### Como este projeto trabalha
 
