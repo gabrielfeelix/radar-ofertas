@@ -244,3 +244,138 @@ A pesquisa também fechou a porta da alternativa: **não existe via oficial e au
 **Resultado do teste de subid (Fase 0).** Registrar aqui, por marketplace: suporta subid, tamanho máximo, formato aceito, prazo de aparecimento no relatório.
 
 **Domínio.** Não registrado. Precisa de um curto para o redirecionador.
+
+---
+
+## D-018 · O painel é uma web app responsiva instalável, não um app nativo
+**Data:** 2026-07-27
+
+Um código só, servindo celular e desktop, instalável na tela inicial como PWA. Sem app nativo, sem loja de aplicativo, sem segundo frontend.
+
+**Motivo:** o envio no WhatsApp é manual por decisão de projeto (D-002), e envio manual acontece no telefone. Isso torna o celular obrigatório para nós — enquanto os concorrentes, que automatizam o disparo por QR Code, conseguem viver só de desktop. A restrição que escolhemos por integridade é justamente a que nos obriga ao mobile.
+
+A pesquisa confirma o caminho: o **Divulgador Inteligente**, a maior ferramenta do mercado, não é app nativo. A central de ajuda deles só ensina "adicionar à tela inicial" no Android e no iPhone. É PWA.
+
+**Custo:** nenhuma capacidade nativa (notificação push confiável no iOS, acesso a hardware). Nenhuma delas é necessária aqui.
+
+**Mudaria se:** surgir necessidade real de notificação push no iOS para avisar o operador da fila do dia.
+
+---
+
+## D-019 · Nicho é entidade; produto tem um, canal aceita vários
+**Data:** 2026-07-27
+
+`nicho` vira tabela. `produto` ganha `nicho_id` — um só. A relação entre canal e nicho é muitos-para-muitos: um canal aceita a lista de nichos que quiser.
+
+**Motivo:** a operação planejada tem dezenas de canais agrupados por assunto — na ordem de quinze de pet, dez de alimentação. Com `nicho` como texto livre, cada cadastro produz uma grafia (`pet`, `Pet`, `PET`, `pets`), e a regra "manda oferta de pet para os canais de pet" passa a não encontrar metade dos canais, em silêncio. Chave estrangeira elimina a classe inteira de erro.
+
+A tag fica no **produto** e não no anúncio porque o nicho é da coisa, não da loja: o mesmo produto em três marketplaces são três anúncios e uma classificação só.
+
+Muitos-para-muitos dos dois lados foi recusado. Produto com vários nichos custa complexidade em toda tela e resolve pouco — a flexibilidade real (um canal de "Casa e Cozinha" que aceita dois nichos) vive no lado do canal, que é onde ela é barata.
+
+**Custo:** classificar produto passa a ser obrigatório no cadastro. Produto sem nicho não alcança canal nenhum.
+
+**Mudaria se:** aparecer categoria genuinamente ambígua em volume — ração de cachorro sendo `pet` e `alimentação` ao mesmo tempo, com canais dos dois querendo recebê-la.
+
+---
+
+## D-020 · Aprovar e publicar são atos de papéis diferentes
+**Data:** 2026-07-27
+
+O dono aprova uma oferta **uma vez**, e ela vira uma publicação por canal elegível. Cada operador vê apenas a fila do canal dele.
+
+**Motivo:** é aritmética, não preferência. Dez ofertas de pet por dia em quinze canais de pet são 150 envios manuais diários — perto de cinquenta minutos, contra os dez minutos que o `docs/roadmap.md` estabelece como limite antes de o operador desistir. Distribuído entre quinze operadores, são três minutos cada.
+
+Nenhum concorrente pesquisado separa os dois atos, porque todos automatizam o envio e nunca encontram esse limite.
+
+**Custo:** a fila de envio precisa existir mesmo na Fase 2, quando dono e operador são a mesma pessoa.
+
+**Mudaria se:** o WhatsApp abrir via oficial de publicação automatizada, o que dissolveria o gargalo humano.
+
+---
+
+## D-021 · Coluna de operação e RLS por ela desde a primeira migration
+**Data:** 2026-07-27
+
+Toda tabela recebe `operacao_id`, e todo RLS passa por essa coluna. Existe **uma** linha em `operacao`. Nada na interface menciona a palavra.
+
+**Motivo:** é a única decisão desta lista que é cara de retroagir. Login, telas e nichos entram depois sem dor; separação de tenant toca toda tabela, toda policy e toda consulta — fazer depois é reescrever o banco com série histórica dentro, e a série não pode ser refeita.
+
+O `docs/mercado.md` já concluiu que vender a ferramenta é mercado real, com preço estabelecido entre R$ 29 e R$ 247 por mês. O concorrente **HypeFlow** anuncia "workspace isolado" na própria tela de login. Não estamos construindo isso — estamos deixando de fechar a porta.
+
+**Custo:** hoje, uma coluna e uma cláusula por policy. Praticamente zero com o banco vazio.
+
+**Isto não é escopo de SaaS.** Sem cadastro público, sem plano, sem cobrança, sem tela de assinatura. O `AGENTS.md` continua valendo: arquitetura multi-workspace é da Fase 4.
+
+**Mudaria se:** nada. O custo de manter é menor que o de remover.
+
+---
+
+## D-022 · Autenticação por e-mail e senha, construída agora
+**Data:** 2026-07-27
+
+Login com e-mail e senha, contas criadas por convite do dono. Sem cadastro público. Construído na Fase 1, não na Fase 3.
+
+**Motivo do método:** link mágico por e-mail quebra dentro de PWA — o link abre no navegador e a sessão nasce lá, não no aplicativo instalado, e o usuário volta ao ícone ainda deslogado. Com a D-018 escolhendo PWA, isso desqualifica o link mágico. Login social exigiria configurar OAuth e depender de domínio verificado, que ainda não existe. Senha não depende de nada externo e o gerenciador do celular preenche sozinho.
+
+**Motivo da antecipação:** o `docs/roadmap.md` põe autenticação na Fase 3, mas o painel da Fase 2 vai para a internet. Painel publicado sem porta, com `service_role` atrás, é buraco de segurança e não simplificação. Login é infraestrutura, não funcionalidade de fase.
+
+Os papéis `operador` e `parceiro` nascem no enum e nas policies desde já; as telas próprias deles continuam na Fase 3.
+
+**Mudaria se:** o domínio for registrado cedo — aí o login social entra como opção adicional, convivendo com a senha na mesma conta.
+
+---
+
+## D-023 · Limiares de curadoria por nicho, herdando do global
+**Data:** 2026-07-27
+
+`parametro` passa a aceitar um nicho. A busca tenta o valor do nicho e, não achando, cai no global. Configura-se apenas o que foge do padrão.
+
+**Motivo:** consequência direta da D-019. Vinte por cento de desconto em ração é oferta excelente; vinte por cento em eletrônico é terça-feira comum. Um limiar único ou reprova tudo de um lado ou carimba tudo do outro — e "curadoria virou carimbo" é exatamente o risco que o `docs/roadmap.md` manda vigiar.
+
+**Custo:** muda a assinatura da função lida pelo motor e obriga a reexecutar os dez casos de teste de `avalia_anuncios`. Barato agora, com o banco vazio.
+
+**Mudaria se:** a operação permanecer de um nicho só, quando a herança seria peso morto — mas ela é invisível nesse caso.
+
+---
+
+## D-024 · Terceira comporta: preço recorrente
+**Data:** 2026-07-27
+
+O motor ganha uma comporta: se o anúncio esteve neste preço em mais que uma fração X dos dias da janela, não é oferta — é o preço normal com etiqueta de promoção.
+
+**Motivo:** os critérios públicos de moderação do **Promobit** reprovam explicitamente "preços recorrentes", além de reprovar preço mais de 10% acima da média histórica. Eles chegaram a isso operando 200 a 300 ofertas por dia. Hoje o nosso motor não detecta esse caso: um produto que passa 25 dias por mês "com desconto" passaria por aprovado.
+
+É a comporta que mais reforça a tese central do projeto, e o dado para calculá-la já é nosso — a série histórica é própria, não emprestada do marketplace.
+
+**Custo:** um parâmetro novo a calibrar, e ele só se calibra com semanas de série real acumulada. Até lá, o valor inicial é chute informado.
+
+**Mudaria se:** a comporta se mostrar redundante com a comparação contra a mediana, o que só o dado real dirá.
+
+---
+
+## D-025 · Navegação por tarefa, moldada por papel
+**Data:** 2026-07-27
+
+A navegação espelha o trabalho, não as tabelas. A tela inicial é sempre "o que precisa de mim agora", e o conjunto de áreas muda conforme quem entrou: cinco para o dono, duas para o operador, uma para o parceiro.
+
+**Motivo:** um item de menu por entidade produziria onze itens com o trabalho diário enterrado em um deles — que é literalmente o desenho que o `docs/roadmap.md` identifica como o erro original do projeto, "oito seções de painel... decorar apartamento sem parede".
+
+A moldagem por papel entrega de graça o benefício de ter dois aplicativos separados: quando existir operador de verdade, ele já estará usando uma interface mínima, sem que um segundo frontend tenha sido construído.
+
+**Custo:** entidades de baixa frequência (nicho, parceiro, template) ficam a dois níveis de navegação. Compensado por busca global.
+
+**Mudaria se:** a operação crescer a ponto de o app do operador merecer otimização que atrapalhe o do dono.
+
+---
+
+## Pendência · Hospedagem do painel está sem caminho real
+**Data:** 2026-07-27
+
+A D-016 decidiu Cloudflare Workers via OpenNext, **e isso nunca foi implementado**: o `package.json` não tem `@opennextjs/cloudflare` nem script de deploy. Hoje não existe caminho de publicação nenhum.
+
+O dono pediu para trocar por Vercel. O impedimento da D-004 continua de pé e é contratual, não técnico: **o plano Hobby da Vercel não permite uso comercial**, e este projeto gera receita de afiliado. Na prática seria Vercel Pro a US$ 20 por mês — sozinho mais caro que todo o resto da infraestrutura somada.
+
+Alternativas gratuitas e comercialmente livres a avaliar: Netlify, Railway, Render, Fly.
+
+**Não bloqueia nada agora** — o painel só vai ao ar junto com o domínio, que também não existe. Decidir quando chegar lá, e registrar aqui como decisão.
