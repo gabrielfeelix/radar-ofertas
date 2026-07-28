@@ -74,7 +74,7 @@ export function BarraLateral({
                   key={item.href}
                   href={item.href}
                   aria-current={ativo ? "page" : undefined}
-                  className={`mx-3 flex items-center gap-3 rounded-md px-3 py-3 text-base ${
+                  className={`mx-3 flex items-center gap-3 rounded-md px-4 py-3 text-base ${
                     ativo
                       ? "bg-marca font-bold text-white"
                       : "font-semibold text-texto-medio hover:bg-fundo"

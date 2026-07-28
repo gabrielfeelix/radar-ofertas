@@ -37,8 +37,8 @@ const VARIANTE: Record<Variante, string> = {
 const TAMANHO: Record<Tamanho, string> = {
   // O `sm` só existe no desktop: em tela de toque, o mínimo é 44px de
   // altura, garantido pelo globals.css.
-  sm: "px-3 py-2 text-sm font-semibold",
-  md: "px-4 py-3 text-base font-bold",
+  sm: "px-4 py-2 text-sm font-semibold",
+  md: "px-5 py-3 text-base font-bold",
   lg: "px-5 py-4 text-md font-bold",
 };
 

@@ -133,6 +133,19 @@ export const NOME_DA_LOJA: Record<OfertaSimulada["loja"], string> = {
 };
 
 /**
+ * Cor de cada loja, igual à que está no banco.
+ *
+ * Cor de terceiro não entra no design system: ela pertence a outra
+ * pessoa e vive como dado. Aqui é cópia da tabela `marketplace`
+ * porque a simulação não fala com o banco.
+ */
+export const COR_DA_LOJA: Record<OfertaSimulada["loja"], { texto: string; fundo: string }> = {
+  mercado_livre: { texto: "#8A7A00", fundo: "#FBF7D6" },
+  shopee: { texto: "#C1441F", fundo: "#FDEDE7" },
+  amazon: { texto: "#9A6210", fundo: "#FBF1E1" },
+};
+
+/**
  * Motivos de rejeição. Lista fechada de propósito: rejeição com
  * motivo digitado vira texto livre que ninguém agrega depois, e o
  * ponto de exigir motivo é justamente poder calibrar o motor.

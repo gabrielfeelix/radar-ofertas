@@ -9,9 +9,11 @@ import {
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao } from "@/app/componentes/Botao";
 import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
+import { EtiquetaDeLoja } from "@/app/componentes/EtiquetaDeLoja";
 import { PainelDaOferta } from "@/app/componentes/PainelDaOferta";
 import { formataReais } from "@/lib/dinheiro";
 import {
+  COR_DA_LOJA,
   MOTIVOS_DE_REJEICAO,
   NOME_DA_LOJA,
   buscaOferta,
@@ -199,9 +201,11 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
         <div className="flex min-w-0 flex-col gap-1">
           <p className="truncate text-base font-semibold tracking-titulo">{oferta.produto}</p>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-sm bg-preenchimento px-2 py-1 text-xs font-bold text-texto-medio">
-              {NOME_DA_LOJA[oferta.loja]}
-            </span>
+            <EtiquetaDeLoja
+              nome={NOME_DA_LOJA[oferta.loja]}
+              corTexto={COR_DA_LOJA[oferta.loja].texto}
+              corFundo={COR_DA_LOJA[oferta.loja].fundo}
+            />
             <span className="text-xs text-texto-fraco">
               {nomeDoNicho(oferta.nicho)} · {oferta.diasDeSerie} dias de série ·{" "}
               {canais.length} {canais.length === 1 ? "canal" : "canais"}

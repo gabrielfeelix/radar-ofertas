@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { FormularioAnuncio } from "@/app/componentes/FormularioAnuncio";
 import { CabecalhoDaPagina, Kpis } from "@/app/componentes/CabecalhoDaPagina";
+import { EtiquetaDeLoja } from "@/app/componentes/EtiquetaDeLoja";
 import { formataReais } from "@/lib/dinheiro";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type {
@@ -285,9 +286,22 @@ function TabelaDeProdutos({
                 <span className="block truncate text-base font-semibold">
                   {produto.titulo_canonico}
                 </span>
-                <span className="block truncate text-xs text-texto-fraco">
-                  {anuncios.map((a) => porMarketplace.get(a.marketplace_id)?.nome).join(" · ") ||
-                    "sem anúncio"}
+                <span className="mt-1 flex flex-wrap items-center gap-1">
+                  {anuncios.length === 0 ? (
+                    <span className="text-xs text-texto-fraco">sem anúncio</span>
+                  ) : (
+                    anuncios.map((a) => {
+                      const loja = porMarketplace.get(a.marketplace_id);
+                      return (
+                        <EtiquetaDeLoja
+                          key={a.id}
+                          nome={loja?.nome ?? "—"}
+                          corTexto={loja?.cor_texto}
+                          corFundo={loja?.cor_fundo}
+                        />
+                      );
+                    })
+                  )}
                 </span>
               </span>
             </span>
@@ -392,7 +406,13 @@ function TabelaDeAnuncios({
                   </Link>
                   <span className="font-mono text-xs text-texto-fraco">{anuncio.sku_externo}</span>
                 </td>
-                <td className="px-5 py-3 text-texto-medio">{loja?.nome ?? "—"}</td>
+                <td className="px-5 py-3">
+                  <EtiquetaDeLoja
+                    nome={loja?.nome ?? "—"}
+                    corTexto={loja?.cor_texto}
+                    corFundo={loja?.cor_fundo}
+                  />
+                </td>
                 <td className="px-5 py-3 text-right font-mono tabular-nums">
                   {/*
                     Amazon nunca acumula série: a política de associados

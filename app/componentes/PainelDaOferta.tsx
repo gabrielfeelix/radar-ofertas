@@ -2,8 +2,10 @@ import Link from "next/link";
 
 import { adiaOferta, aprovaOferta, rejeitaOferta } from "@/app/acoes/curadoria";
 import { Botao } from "@/app/componentes/Botao";
+import { EtiquetaDeLoja } from "@/app/componentes/EtiquetaDeLoja";
 import { formataReais } from "@/lib/dinheiro";
 import {
+  COR_DA_LOJA,
   MOTIVOS_DE_REJEICAO,
   NOME_DA_LOJA,
   canaisElegiveis,
@@ -67,9 +69,11 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
         <div>
           <h2 className="text-lg font-bold leading-titulo tracking-titulo">{oferta.produto}</h2>
           <p className="mt-2 flex items-center gap-2">
-            <span className="rounded-sm bg-preenchimento px-2 py-1 text-xs font-bold text-texto-medio">
-              {NOME_DA_LOJA[oferta.loja]}
-            </span>
+            <EtiquetaDeLoja
+              nome={NOME_DA_LOJA[oferta.loja]}
+              corTexto={COR_DA_LOJA[oferta.loja].texto}
+              corFundo={COR_DA_LOJA[oferta.loja].fundo}
+            />
             <span className="text-sm text-texto-fraco">
               {oferta.vendedor} · nicho {nomeDoNicho(oferta.nicho)}
             </span>

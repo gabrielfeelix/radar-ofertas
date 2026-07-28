@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { alternaAnuncioAtivo, defineNichoDoProduto } from "@/app/acoes/catalogo";
 import { Botao } from "@/app/componentes/Botao";
 import { CabecalhoDaPagina } from "@/app/componentes/CabecalhoDaPagina";
+import { EtiquetaDeLoja } from "@/app/componentes/EtiquetaDeLoja";
 import { formataReais } from "@/lib/dinheiro";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type {
@@ -220,9 +221,11 @@ function CartaoDoAnuncio({
       className={`rounded-lg border p-5 ${anuncio.ativo ? "border-borda bg-superficie" : "border-borda bg-superficie-alt"}`}
     >
       <div className="flex flex-wrap items-center gap-3">
-        <span className="rounded-sm bg-preenchimento px-2 py-1 text-xs font-bold text-texto-medio">
-          {loja?.nome ?? "loja desconhecida"}
-        </span>
+        <EtiquetaDeLoja
+          nome={loja?.nome ?? "loja desconhecida"}
+          corTexto={loja?.cor_texto}
+          corFundo={loja?.cor_fundo}
+        />
         <a
           href={anuncio.url_original}
           target="_blank"

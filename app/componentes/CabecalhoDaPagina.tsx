@@ -21,7 +21,7 @@ export function CabecalhoDaPagina({
 }) {
   return (
     <div className="flex flex-wrap items-end gap-5 px-6 pt-6 pb-2">
-      <div className="flex min-w-64 flex-1 flex-col gap-1">
+      <div className="flex min-w-64 flex-1 flex-col gap-2">
         <p className="flex items-center gap-2 text-sm text-texto-fraco">
           <span>{trilha}</span>
           <span aria-hidden>/</span>
@@ -47,7 +47,7 @@ export function Kpis({
       {itens.map((kpi) => (
         <div
           key={kpi.rotulo}
-          className="flex min-w-40 flex-1 flex-col gap-1 rounded-lg border border-borda bg-superficie px-5 py-4"
+          className="flex min-w-40 flex-1 flex-col gap-2 rounded-lg border border-borda bg-superficie px-5 py-4"
         >
           <p className="text-sm font-semibold text-texto-fraco">{kpi.rotulo}</p>
           <p className="font-mono text-2xl font-extrabold tabular-nums tracking-titulo">
