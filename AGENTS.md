@@ -131,26 +131,61 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 ## 9. Estado atual
 
-**Fase 0 em andamento** (contas de afiliado e prova de subid, trabalho manual do dono), com a base da Fase 1 sendo construída em paralelo. As duas não conflitam: o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
+Atualizado em 27/07/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou.
 
-Já existe:
+**Fase 0 em andamento** (contas de afiliado e prova de subid: trabalho manual do dono), com a base da Fase 1 construída em paralelo. As duas não conflitam — o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
-- Repositório privado em `gabrielfeelix/radar-ofertas`, versões travadas (`docs/ambiente.md`).
-- Migrations da Fase 1: `marketplace`, `produto`, `anuncio`, `preco_ponto`, com RLS ligado, a view `anuncio_serie` e as funções `registra_preco` e `expurga_precos_expirados`.
-- Painel da Fase 1: cadastro de anúncio por link colado e tabela de acompanhamento da série.
-- `lib/marketplaces.ts` lê a URL e extrai loja e código do anúncio, sem fazer requisição.
+### Pronto e verificado
 
-- Coletor diário com fontes plugáveis por marketplace, testado sem credencial.
-- Motor de validação: `oferta`, `parametro`, `comissao_categoria`, as duas comportas e a nota, com dez casos cobertos. Detecta 3.000 anúncios em 1,5 s.
-- Rotinas de manutenção: expurgo, expiração de oferta e compactação da série.
-- **Colheita de canais públicos do Telegram** (D-012), rodada contra um canal real: 20 posts, 37 links, 18 anúncios novos em 8 segundos.
-- Testes do leitor de link em `testes/links.mjs`, rodados por `pnpm testa` e pelo CI.
+**Banco** — 12 migrations em `supabase/migrations/`, reescritas do zero em 27/07 (exceção deliberada e aprovada, com o banco vazio). `operacao_id` em toda tabela, papel como lista, nicho como entidade, limiar herdando por nicho, contador de reprovação por comporta e registro de execução das rotinas.
 
-Ainda não existe, e é o próximo bloco de trabalho:
+**Motor de curadoria** — `avalia_anuncios` é *a regra*, numa implementação só. 13 cenários verificados. 3.000 anúncios com 600 mil pontos em 1,4 s.
 
-- **Tela da fila de ofertas.** Não depende de nada — dá para construir com dados semeados.
-- Colheita por conta de usuário do Telegram, para alcançar grupo fechado.
-- Credencial de marketplace. Sem ela o coletor roda mas não coleta nada.
-- Projeto Supabase na nuvem e segredos no GitHub.
+**Coletor diário** — fontes plugáveis por marketplace (`supabase/functions/coleta-diaria`). Roda hoje; sem credencial, pula a loja e informa.
 
-Leia `docs/mercado.md` antes de propor qualquer coisa sobre distribuição ou concorrência — ele tem a pesquisa de como o mercado opera de fato, e corrige duas suposições do plano original.
+**Colheita** — lê canais públicos do Telegram (`supabase/functions/colheita-canais`). Rodada contra canal real: 20 posts, 37 links, 18 anúncios novos em 8 s.
+
+**Painel** — cadastro por link colado e acompanhamento da série. É a única tela que existe.
+
+**Automação** — CI a cada push, rotina diária e backup semanal em `.github/workflows/`.
+
+**Design system** — tokens em `app/globals.css`, explicados em `docs/design.md`. Só cor, tipografia, espaçamento, raio e botão. Card fora de propósito.
+
+### Próxima tarefa
+
+**A tela de colheita.** É o item 3 de `docs/plano.md`, e o subsistema pronto e testado que não tem nenhuma superfície — nem para ver o que cada canal rende, nem para diagnosticar link que não foi reconhecido.
+
+Três telas, sobre dados que já existem:
+
+1. **Fontes** — `rendimento_da_fonte`: menções, anúncios novos, já conhecidos, descartados. Adicionar canal, ativar, desativar, definir o nicho que os produtos herdam.
+2. **Menções com problema** — `mencao` com `resultado in ('nao_reconhecido','erro','loja_desconhecida')`. É a única superfície onde a pendência do formato da Shopee (em `docs/decisoes.md`) fica visível.
+3. **Preço alegado × observado** — `mencao.preco_alegado_centavos` contra a nossa série. Existe para flagrar canal que mente, e não tem consumidor.
+
+Antes de escrever tela, leia `docs/plano.md`: a ordem não é a do menu, e a regra que evita cascata é **nenhuma tela é construída com dado falso**.
+
+### Bloqueado, e por quem
+
+- **Coleta de preço real** — falta credencial de marketplace. O dono resolve. A Shopee é a aposta melhor: a Open API de afiliado resolve dado e link na mesma chave.
+- **Projeto Supabase na nuvem** — o dono cria; depois é `pnpm db:publica`. **Quando isso acontecer, a exceção da reescrita de migration fecha** e volta a valer a regra da seção 6.
+- **Segredos no GitHub** — dependem da nuvem existir.
+- **Redirecionador e subid** — dependem de domínio registrado.
+- **Colheita por conta de usuário do Telegram** — o dono tem número dedicado; falta gerar a string de sessão. Ela nunca entra no Git nem em mensagem.
+
+### Leia antes de opinar
+
+| Arquivo | Quando |
+|---|---|
+| `docs/plano.md` | Antes de escolher o que construir. Tem a ordem e o porquê |
+| `docs/decisoes.md` | Antes de propor qualquer mudança. D-001 a D-025 |
+| `docs/mercado.md` | Antes de falar de concorrência ou distribuição |
+| `docs/telas.md` | Especificação funcional das telas |
+| `docs/dados.md` | Schema, comportas e o modelo de segurança |
+| `docs/infra.md` | O que roda onde, quanto custa, o que falta |
+
+### Como este projeto trabalha
+
+Três trilhas em paralelo, nunca em cascata: **banco e motor** (rápido, sem interface), **design system** (componente entra quando a tela pedir), **telas** (uma por vez, ponta a ponta).
+
+A regra que sustenta isso: **nenhuma tela é construída com dado falso.** Se a tela precisa de dado que o banco não tem, ou o banco ganha o dado primeiro, ou a tela sai da fila. Foi ela que revelou, antes de qualquer interface, que três telas especificadas não tinham dado por trás.
+
+E teste com dado real sempre que der. A colheita só começou a funcionar de verdade quando foi rodada contra um canal existente: a primeira versão trazia 3 anúncios de 38 links, e o dado real expôs três bugs que nenhuma revisão teria achado.
