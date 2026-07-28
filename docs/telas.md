@@ -4,7 +4,75 @@ O que cada tela resolve, o que ela mostra, o que dá para fazer nela e para onde
 
 **Este documento não fala de interface.** Sem layout, sem cor, sem componente, sem posição na página. Ele descreve função, prioridade e fluxo. O desenho visual é trabalho à parte e tem liberdade total sobre a forma, desde que a função abaixo seja atendida.
 
-Leia junto com `docs/dados.md` (de onde vem cada dado) e `docs/roadmap.md` (por que algumas telas ainda não existem).
+Ele é **autocontido de propósito**: dá para desenhar a partir dele sem ler mais nada do repositório. Quem quiser ir fundo encontra o modelo de dados em `docs/dados.md`, o contexto comercial em `docs/negocio.md`, a pesquisa de concorrentes em `docs/mercado.md` e o faseamento em `docs/roadmap.md`.
+
+---
+
+# O que é este sistema
+
+O **Radar de Ofertas** monitora o preço de produtos em marketplaces brasileiros (Mercado Livre, Shopee, Amazon), detecta quando algo **ficou realmente barato**, e distribui essas ofertas para canais de WhatsApp e Telegram com link de afiliado. Quando alguém compra pelo link, o sistema recebe comissão.
+
+Tudo em português do Brasil. Valores em reais, datas no fuso de São Paulo.
+
+## O diferencial, e por que ele define as telas
+
+Não é um disparador de mensagens. Existem dezenas deles.
+
+O padrão do mercado é: um robô vigia o canal de oferta de outra pessoa, pega o que já foi publicado, troca o link de afiliado pelo próprio e reenvia. Não há conferência de preço nenhuma. Quando alguém no topo da cadeia publica uma promoção falsa, ela se propaga por dezenas de canais em minutos.
+
+Este sistema faz o contrário: mantém **série histórica de preço própria**, coletada todo dia, e usa ela para decidir se o desconto é verdadeiro. O "preço de R$ 299, por R$ 199" que o marketplace exibe é inflado e não é usado em lugar nenhum — a comparação é sempre contra o que **nós observamos** ao longo do tempo.
+
+Isso tem consequência direta em quase toda tela deste documento: elas existem para tornar essa decisão **visível, explicável e auditável**. Uma tela que esconde o porquê de uma oferta ter sido aprovada destrói o único diferencial do produto.
+
+## O vocabulário
+
+Quatro conceitos que parecem o mesmo e não são. Confundi-los quebra o sistema inteiro, então as telas precisam manter a distinção visível:
+
+| Termo | O que é |
+|---|---|
+| **produto** | A identidade da coisa. "Tapete higiênico SuperSecão 80×60". |
+| **anúncio** | Esse produto **numa loja específica**. O mesmo tapete na Amazon, na Shopee e no Mercado Livre são **três anúncios do mesmo produto**, com três preços e três históricos. |
+| **oferta** | Um anúncio que **ficou barato agora**. Tem começo, fim e uma nota de 0 a 100. |
+| **publicação** | Uma oferta **enviada para um canal**. É o que gera link, clique e comissão. |
+
+E mais cinco:
+
+| Termo | O que é |
+|---|---|
+| **nicho** | O assunto do produto: pet, alimentação, eletrônico. Um produto tem **um** nicho; um canal aceita **vários**. É o que roteia oferta para canal. |
+| **canal** | Um canal de WhatsApp ou de Telegram onde as ofertas são publicadas. Cada um tem seus nichos, seu horário e seu operador. |
+| **parceiro** | Quem traz a audiência — um amigo com um canal, um youtuber. A comissão gerada pelo canal dele é dividida. |
+| **subid** | Um código único carimbado em cada publicação. É ele que, quando a venda aparece no relatório do marketplace, diz **de qual canal veio**. Sem subid não existe divisão de receita. |
+| **nota** | Pontuação de 0 a 100 que resume a qualidade da oferta: desconto real, comissão em reais, qualidade do vendedor. As parcelas ficam gravadas separadas para que a nota seja sempre explicável. |
+
+## Quem opera
+
+Uma pessoa só, no começo: o dono. Ele não é desenvolvedor — é designer de UX que entende de produto e o suficiente de banco de dados. O sistema roda na máquina dele e, mais tarde, num endereço privado na internet.
+
+Com o tempo entram **operadores** (amigos que publicam num canal) e **parceiros** (que só conferem quanto renderam). A operação planejada chega à ordem de vinte e cinco canais.
+
+## As cinco restrições que moldam tudo
+
+Não são preferências. Cada uma tem uma consequência prática, e violá-las quebra algo real.
+
+1. **O WhatsApp nunca é automatizado.** Não existe via oficial para publicar em massa no WhatsApp — quem promete isso usa ferramenta não oficial, que viola os termos e derruba o número. O número é o ativo do parceiro. O sistema monta o texto e abre o aplicativo; **um humano aperta enviar**. No Telegram, sim, o robô publica sozinho pela API oficial.
+
+2. **Por causa disso, o celular é obrigatório.** O envio acontece no telefone porque é manual. O painel é uma web app responsiva instalável na tela inicial — um código só, servindo celular e desktop.
+
+3. **Nunca afirmar desconto histórico sem lastro.** Enquanto um anúncio tiver menos de 14 dias de série coletada, nenhuma tela e nenhuma mensagem pode dizer "menor preço histórico". Usa-se a redação honesta, com a data em que a observação começou. Mentir sobre preço é o erro que mata os concorrentes.
+
+4. **A curadoria mora no banco de dados**, numa implementação só. As telas leem o veredito e os motivos que o banco produz; nenhuma delas recalcula a regra por conta própria. Uma tela que explicasse a decisão com lógica própria acabaria explicando uma coisa enquanto o sistema faz outra — e seria acreditada.
+
+5. **Nenhum dado pessoal de quem consome.** Não há cadastro de membro de canal. De cliques guarda-se o hash do endereço de rede, nunca o endereço. Sem nome, sem telefone, sem e-mail.
+
+## O ritmo real da operação
+
+Importa para o desenho porque define o que as telas mostram na maior parte do tempo:
+
+- O sistema aprova algo em torno de **5 a 30 ofertas por dia** — não centenas. Os concorrentes repassam de 50 a 100 porque não conferem nada; curadoria custa, repasse não.
+- **Nas primeiras semanas quase não há oferta nenhuma**, porque cada produto novo só se torna avaliável depois de acumular série de preço. Poucas na primeira semana, algo entre dez e quinze na terceira, trinta a partir da sexta.
+- Portanto **estado vazio não é caso de borda: é o estado normal no começo**, e por isso ele aparece descrito em cada tela abaixo.
+- O trabalho diário de publicar precisa caber em **dez minutos**. Se passar disso, o operador desiste em três semanas e o canal morre junto — é o modo de morte mais provável do sistema, mais provável do que falta de oferta.
 
 ---
 
