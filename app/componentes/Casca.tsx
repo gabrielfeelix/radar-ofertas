@@ -6,6 +6,7 @@ import {
 } from "./BarraLateral";
 import { BarraSuperior, type EstadoDaRotina } from "./BarraSuperior";
 
+import { montaQuadroDeAtencao } from "@/lib/atencao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { ofertasDaFila, publicacoesDaFila } from "@/lib/simulacao/loja";
 
@@ -52,6 +53,11 @@ async function montaNavegacao(): Promise<{
   const aPublicar = publicacoesDaFila().filter((p) => !p.enviadaEm && !p.cancelada).length;
 
   const banco = await leDoBanco();
+  // A contagem do menu é a mesma da tela: se divergirem, o dono
+  // aprende a não confiar no número do menu, e o alerta que importa
+  // passa junto.
+  const { alertas } = await montaQuadroDeAtencao();
+  const criticos = alertas.filter((a) => a.severidade === "critico").length;
 
   const grupos: GrupoDaBarra[] = [
     {
@@ -59,6 +65,14 @@ async function montaNavegacao(): Promise<{
       itens: [
         { href: "/aprovar", rotulo: "Aprovar", contagem: naFila, ponto: "#F16A0D" },
         { href: "/publicar", rotulo: "Publicar", contagem: aPublicar, ponto: "#1FA855" },
+        {
+          href: "/atencao",
+          rotulo: "Precisa de atenção",
+          // Só o crítico vira medalha. Medalha em cima de aviso
+          // informativo é o que ensina a ignorar o menu inteiro.
+          contagem: criticos > 0 ? criticos : undefined,
+          ponto: criticos > 0 ? "#C13232" : "#9AA0AA",
+        },
       ],
     },
     {
