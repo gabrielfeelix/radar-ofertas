@@ -49,7 +49,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
         }
       />
 
-      <main className="flex w-full max-w-3xl flex-col gap-6 px-6 pt-5 pb-10">
+      <div className="flex w-full max-w-3xl flex-col gap-6 px-6 pt-5 pb-10">
       <AvisoSimulacao detalhe="Canal simulado. Editar aqui muda a capacidade que a tela de aprovar mostra, e nada mais." />
 
       {!canal.ativo && (
@@ -93,7 +93,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
           sozinho.
         </p>
       </section>
-      </main>
+      </div>
     </>
   );
 }

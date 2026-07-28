@@ -34,6 +34,16 @@ export type CanalSimulado = {
   nichos: string[];
   /** Teto real de posts por dia. A fila respeita; não avisa depois de estourar. */
   tetoDiario: number;
+  /**
+   * Publicações que já saíram hoje: as que o canal tinha antes de
+   * você abrir o sistema, mais as que você enviou agora.
+   *
+   * É calculado, e não guardado, porque guardado ele mentia: você
+   * publicava seis no canal e as "vagas restantes" continuavam as
+   * mesmas, o que faz a capacidade — o número que a tela de aprovar
+   * usa para mudar comportamento — apontar para o lugar errado logo
+   * depois do trabalho começar.
+   */
   publicadasHoje: number;
   audiencia: number;
   /** Quem traz a audiência. */
@@ -146,14 +156,16 @@ export const MOTIVOS_DE_REJEICAO = [
  * iguais, a tela de canal pareceria simples e quebraria no primeiro
  * parceiro real.
  */
-const canaisDaOperacao: CanalSimulado[] = [
+type CanalGuardado = Omit<CanalSimulado, "publicadasHoje"> & { publicadasAntes: number };
+
+const canaisDaOperacao: CanalGuardado[] = [
   {
     id: "c1",
     nome: "Achados de Pet",
     plataforma: "whatsapp",
     nichos: ["pet"],
     tetoDiario: 6,
-    publicadasHoje: 2,
+    publicadasAntes: 2,
     audiencia: 890,
     parceiro: "você",
     operador: "você",
@@ -170,7 +182,7 @@ const canaisDaOperacao: CanalSimulado[] = [
     plataforma: "telegram",
     nichos: ["pet", "casa"],
     tetoDiario: 10,
-    publicadasHoje: 3,
+    publicadasAntes: 3,
     audiencia: 2400,
     parceiro: "Bruno",
     operador: "Bruno",
@@ -187,7 +199,7 @@ const canaisDaOperacao: CanalSimulado[] = [
     plataforma: "whatsapp",
     nichos: ["casa"],
     tetoDiario: 4,
-    publicadasHoje: 4,
+    publicadasAntes: 4,
     audiencia: 1250,
     parceiro: "você",
     operador: "você",
@@ -203,7 +215,7 @@ const canaisDaOperacao: CanalSimulado[] = [
     plataforma: "telegram",
     nichos: ["eletronico"],
     tetoDiario: 8,
-    publicadasHoje: 1,
+    publicadasAntes: 1,
     audiencia: 5100,
     parceiro: "Rafael",
     // Traz a audiência, mas quem publica é outra pessoa.
@@ -217,12 +229,23 @@ const canaisDaOperacao: CanalSimulado[] = [
 ];
 
 export function canais(): CanalSimulado[] {
-  return canaisDaOperacao.map((c) => ({ ...c }));
+  return canaisDaOperacao.map((c) => ({
+    ...c,
+    publicadasHoje: c.publicadasAntes + enviadasHojeNoCanal(c.id),
+  }));
 }
 
 export function buscaCanal(id: string): CanalSimulado | undefined {
-  const canal = canaisDaOperacao.find((c) => c.id === id);
-  return canal ? { ...canal } : undefined;
+  return canais().find((c) => c.id === id);
+}
+
+/** Quantas publicações saíram deste canal nesta sessão. */
+function enviadasHojeNoCanal(canalId: string): number {
+  let total = 0;
+  for (const [id, estado] of estadoDasPublicacoes) {
+    if (estado.enviadaEm && id.endsWith(`:${canalId}`)) total++;
+  }
+  return total;
 }
 
 export type DadosDoCanal = {
@@ -244,7 +267,7 @@ export function criaCanal(dados: DadosDoCanal): string {
   canaisDaOperacao.push({
     id,
     ...dados,
-    publicadasHoje: 0,
+    publicadasAntes: 0,
     ativo: true,
     ultimaPublicacaoEm: null,
   });
@@ -482,6 +505,13 @@ export function vagasDeHoje(): number {
     .reduce((total, c) => total + Math.max(0, c.tetoDiario - c.publicadasHoje), 0);
 }
 
+/** Vagas que sobram neste canal agora. */
+export function vagasDoCanal(canalId: string): number {
+  const canal = buscaCanal(canalId);
+  if (!canal || !canal.ativo) return 0;
+  return Math.max(0, canal.tetoDiario - canal.publicadasHoje);
+}
+
 /**
  * Quantas publicações a fila inteira geraria se tudo fosse aprovado.
  * É o número que muda comportamento: sem ele o dono aprova de graça
@@ -507,6 +537,15 @@ export function desfazDecisao(id: string): void {
   const oferta = fila.find((o) => o.id === id);
   if (!oferta) return;
 
+  // Some também com o estado das publicações que a aprovação gerou.
+  // Sem isto, uma publicação já marcada como enviada continuava
+  // contando no teto do canal depois de a aprovação ser desfeita — e
+  // reaprovar a mesma oferta a trazia de volta "já enviada", sem que
+  // nada tivesse sido enviado.
+  for (const canalId of oferta.canaisEscolhidos) {
+    estadoDasPublicacoes.delete(`${id}:${canalId}`);
+  }
+
   oferta.status = "nova";
   oferta.motivoRejeicao = null;
   oferta.canaisEscolhidos = [];
@@ -525,6 +564,22 @@ export function desfazDecisao(id: string): void {
  * tela precisa comunicar — a referência é o que NÓS observamos, nunca
  * o "preço de" da loja.
  */
+/**
+ * O funil que a tela mostra quando a fila está vazia.
+ *
+ * Vive aqui, e não na tela, porque é dado da operação: quando o
+ * backend entrar, estes três números passam a vir de contagem real
+ * sem que a tela mude. "Nenhuma oferta hoje" é inútil; o que impede a
+ * conclusão errada de que o sistema quebrou é ver onde o funil parou.
+ */
+export function funilDeHoje(): Array<{ n: number; rotulo: string }> {
+  return [
+    { n: 340, rotulo: "anúncios monitorados" },
+    { n: 12, rotulo: "com série suficiente para avaliar" },
+    { n: ofertasDaFila().length, rotulo: "abaixo do limiar hoje" },
+  ];
+}
+
 export function serieDePrecos(oferta: OfertaSimulada): number[] {
   const pontos = Math.min(oferta.diasDeSerie, 30);
   const serie: number[] = [];
@@ -591,7 +646,7 @@ export function publicacoesDaFila(): PublicacaoSimulada[] {
     if (oferta.status !== "aprovada") continue;
 
     for (const canalId of oferta.canaisEscolhidos) {
-      const canal = canaisDaOperacao.find((c) => c.id === canalId);
+      const canal = buscaCanal(canalId);
       if (!canal) continue;
 
       const id = `${oferta.id}:${canal.id}`;
@@ -644,6 +699,41 @@ export function desfazEnvio(id: string): void {
 
 export function cancelaPublicacao(id: string): void {
   estadoDasPublicacoes.set(id, { enviadaEm: null, origem: null, cancelada: true });
+}
+
+export function desfazCancelamento(id: string): void {
+  estadoDasPublicacoes.delete(id);
+}
+
+/**
+ * Devolve a oferta para a fila de aprovação.
+ *
+ * Usado quando o preço muda entre a fila e o envio. O operador não
+ * aprova nem rejeita — deixá-lo com um item travado e só "cancelar"
+ * como saída seria dar a ele um veto de curadoria disfarçado. Então
+ * a publicação some e a oferta volta a ser decidida, agora com o
+ * preço de agora.
+ */
+export function devolveParaAprovacao(ofertaId: string): void {
+  const oferta = fila.find((o) => o.id === ofertaId);
+  if (!oferta) return;
+
+  for (const canalId of oferta.canaisEscolhidos) {
+    estadoDasPublicacoes.delete(`${oferta.id}:${canalId}`);
+  }
+
+  // O preço que mudou passa a ser o preço corrente: é sobre ele que
+  // a decisão nova acontece.
+  oferta.precoAtualCentavos = PRECO_QUE_MUDOU[oferta.id] ?? oferta.precoAtualCentavos;
+  oferta.descontoPct = Math.round(
+    ((oferta.precoReferenciaCentavos - oferta.precoAtualCentavos) / oferta.precoReferenciaCentavos) *
+      100,
+  );
+  delete PRECO_QUE_MUDOU[oferta.id];
+
+  oferta.status = "nova";
+  oferta.canaisEscolhidos = [];
+  oferta.motivoRejeicao = null;
 }
 
 /**

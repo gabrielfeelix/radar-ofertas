@@ -76,7 +76,7 @@ export default async function Mencoes({
         subtitulo="Link avistado que não virou anúncio. É aqui que aparece formato de loja que o leitor ainda não entende — o tipo de falha que não dá erro em lugar nenhum e só se manifesta como catálogo crescendo devagar."
       />
 
-      <main className="flex w-full max-w-5xl flex-col gap-6 px-6 pt-5 pb-10">
+      <div className="flex w-full max-w-5xl flex-col gap-6 px-6 pt-5 pb-10">
       <section className="flex flex-wrap gap-3">
         <Filtro href="/colheita/mencoes" rotulo="todas" quantidade={total} ativo={filtro === null} />
         {RESULTADOS_COM_PROBLEMA.map((resultado) => (
@@ -171,7 +171,7 @@ export default async function Mencoes({
         </Link>
         .
       </p>
-      </main>
+      </div>
     </>
   );
 }
@@ -267,12 +267,12 @@ function Filtro({
 
 function AvisoDeConfiguracao({ mensagem }: { mensagem: string }) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6">
       <h1 className="text-xl font-bold tracking-titulo">Falta configurar</h1>
       <p className="rounded-lg border border-atencao-borda bg-atencao-fundo p-5 text-base">
         {mensagem}
       </p>
       <p className="text-base text-texto-fraco">Passo a passo completo em docs/ambiente.md.</p>
-    </main>
+    </div>
   );
 }

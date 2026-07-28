@@ -63,7 +63,7 @@ export default async function Painel() {
         subtitulo="Fase 1 · radar silencioso. Nenhum grupo ainda — o objetivo aqui é acumular série de preço antes de precisar dela."
       />
 
-      <main className="flex w-full max-w-5xl flex-col gap-8 px-6 pt-5 pb-10">
+      <div className="flex w-full max-w-5xl flex-col gap-8 px-6 pt-5 pb-10">
       <section className="grid gap-4 sm:grid-cols-3">
         <Indicador
           rotulo="Anúncios ativos"
@@ -85,9 +85,9 @@ export default async function Painel() {
         />
       </section>
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-5">
-        <h2 className="mb-1 text-lg font-medium">Cadastrar anúncio</h2>
-        <p className="mb-4 text-sm text-neutral-500">
+      <section className="rounded-lg border border-borda bg-superficie p-5">
+        <h2 className="mb-1 text-lg font-bold tracking-titulo">Cadastrar anúncio</h2>
+        <p className="mb-5 text-base text-texto-fraco">
           Título e preço são digitados à mão por enquanto. Buscar isso sozinho na página depende dos
           termos de cada marketplace, e essa decisão ainda está em aberto.
         </p>
@@ -95,25 +95,25 @@ export default async function Painel() {
       </section>
 
       <section>
-        <h2 className="mb-3 text-lg font-medium">
+        <h2 className="mb-3 text-lg font-bold tracking-titulo">
           Anúncios monitorados{" "}
-          <span className="text-sm font-normal text-neutral-500">({anuncios.length})</span>
+          <span className="text-sm font-normal text-texto-fraco">({anuncios.length})</span>
         </h2>
 
         {anuncios.length === 0 ? (
-          <p className="rounded-lg border border-dashed border-neutral-300 p-8 text-center text-sm text-neutral-500">
+          <p className="rounded-lg border border-dashed border-borda-forte p-8 text-center text-base text-texto-fraco">
             Nenhum anúncio ainda. Cole o primeiro link acima.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-neutral-200 text-xs uppercase tracking-wide text-neutral-500">
+          <div className="overflow-x-auto rounded-lg border border-borda bg-superficie">
+            <table className="w-full text-left text-base">
+              <thead className="border-b border-borda bg-superficie-alt text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Produto</th>
-                  <th className="px-3 py-2 font-medium">Loja</th>
-                  <th className="px-3 py-2 font-medium">Série</th>
-                  <th className="px-3 py-2 font-medium">Menor / Mediana</th>
-                  <th className="px-3 py-2 font-medium">Última coleta</th>
+                  <th className="px-4 py-3">Produto</th>
+                  <th className="px-4 py-3">Loja</th>
+                  <th className="px-4 py-3">Série</th>
+                  <th className="px-4 py-3">Menor / Mediana</th>
+                  <th className="px-4 py-3">Última coleta</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,43 +125,43 @@ export default async function Painel() {
                   const atraso = diasDesde(anuncio.ultima_coleta_em, agora);
 
                   return (
-                    <tr key={anuncio.id} className="border-b border-neutral-100 last:border-0">
-                      <td className="px-3 py-2">
+                    <tr key={anuncio.id} className="border-b border-borda-sutil last:border-0">
+                      <td className="px-4 py-3">
                         <a
                           href={anuncio.url_original}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="underline decoration-neutral-300 underline-offset-2"
+                          className="underline decoration-borda-forte underline-offset-2"
                         >
                           {produto?.titulo_canonico ?? "—"}
                         </a>
-                        <span className="ml-2 font-mono text-xs text-neutral-400">
+                        <span className="ml-2 font-mono text-xs text-texto-fraco">
                           {anuncio.sku_externo}
                         </span>
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-4 py-3">
                         {marketplace?.nome ?? "—"}
                         {marketplace && !marketplace.base_de_historico && (
                           // Amazon: a política limita a retenção de preço a 24h,
                           // então esta linha nunca vai acumular série.
                           <span
-                            className="ml-1 text-xs text-neutral-400"
+                            className="ml-1 text-xs text-texto-fraco"
                             title="Não forma série histórica: a política da loja limita a retenção de preço."
                           >
                             (sem histórico)
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-4 py-3">
                         {marketplace?.base_de_historico === false ? (
-                          <span className="text-neutral-400">—</span>
+                          <span className="text-texto-fraco">—</span>
                         ) : (
-                          <span className={dias >= META_DIAS_DE_SERIE ? "text-green-700" : ""}>
+                          <span className={dias >= META_DIAS_DE_SERIE ? "text-sucesso" : ""}>
                             {dias} {dias === 1 ? "dia" : "dias"}
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-2 tabular-nums">
+                      <td className="px-4 py-3 font-mono tabular-nums">
                         {serie?.menor_preco_centavos != null
                           ? `${formataReais(serie.menor_preco_centavos)} / ${formataReais(
                               serie.mediana_preco_centavos ?? serie.menor_preco_centavos,
@@ -170,7 +170,7 @@ export default async function Painel() {
                       </td>
                       <td
                         className={`px-3 py-2 ${
-                          atraso >= DIAS_PARA_ALERTA ? "text-red-700" : "text-neutral-500"
+                          atraso >= DIAS_PARA_ALERTA ? "text-perigo" : "text-texto-fraco"
                         }`}
                       >
                         {descreveAtraso(anuncio.ultima_coleta_em, agora)}
@@ -183,7 +183,7 @@ export default async function Painel() {
           </div>
         )}
       </section>
-      </main>
+      </div>
     </>
   );
 }
@@ -245,12 +245,12 @@ function Indicador({
   atingido: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4">
-      <p className="text-xs uppercase tracking-wide text-neutral-500">{rotulo}</p>
-      <p className={`text-2xl font-semibold tabular-nums ${atingido ? "text-green-700" : ""}`}>
+    <div className="rounded-lg border border-borda bg-superficie p-4">
+      <p className="text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">{rotulo}</p>
+      <p className={`font-mono text-2xl font-extrabold tabular-nums tracking-titulo ${atingido ? "text-sucesso" : ""}`}>
         {valor}
       </p>
-      <p className="text-xs text-neutral-400">{detalhe}</p>
+      <p className="text-xs text-texto-fraco">{detalhe}</p>
     </div>
   );
 }
@@ -261,10 +261,10 @@ function Indicador({
  */
 function AvisoDeConfiguracao({ mensagem }: { mensagem: string }) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-6">
-      <h1 className="text-2xl font-semibold">Falta configurar</h1>
-      <p className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm">{mensagem}</p>
-      <ol className="list-decimal space-y-1 pl-5 text-sm text-neutral-600">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-6">
+      <h1 className="text-xl font-extrabold tracking-titulo">Falta configurar</h1>
+      <p className="rounded-lg border border-atencao-borda bg-atencao-fundo p-4 text-sm">{mensagem}</p>
+      <ol className="list-decimal space-y-1 pl-5 text-sm text-texto-medio">
         <li>
           <code className="font-mono">pnpm db:sobe</code> — sobe o banco local em Docker
         </li>
@@ -275,7 +275,7 @@ function AvisoDeConfiguracao({ mensagem }: { mensagem: string }) {
           Copie esses valores para o arquivo <code className="font-mono">.env</code>
         </li>
       </ol>
-      <p className="text-sm text-neutral-500">Passo a passo completo em docs/ambiente.md.</p>
-    </main>
+      <p className="text-base text-texto-fraco">Passo a passo completo em docs/ambiente.md.</p>
+    </div>
   );
 }

@@ -405,6 +405,29 @@ Simulação responde essa pergunta hoje, com testador de verdade, por um custo b
 
 ---
 
+## Revisão · O que a passada pelas telas achou
+**Data:** 2026-07-28
+
+Revisão das sete telas construídas, contra `docs/telas.md`, o protótipo e a operação real. Seis achados, três deles defeito e não gosto. Todos corrigidos na mesma passada.
+
+**1. A capacidade parava de contar assim que o trabalho começava.** `publicadasHoje` era um número guardado: publicar seis num canal deixava "vagas restantes" intacto. É o número que a tela de aprovar usa para mudar comportamento, e ele apontava para o lugar errado justamente depois do primeiro envio. Agora é calculado — o que o canal já tinha mais o que saiu nesta sessão.
+
+**2. A tela dizia que a publicação travada voltava para a aprovação, e nada voltava.** O item ficava travado para sempre. O operador não pode resolver, porque a decisão é de curadoria e não é dele — então ele ficava com um item morto e "cancelar" como única saída, que é veto de curadoria disfarçado. Agora existe o botão que devolve de verdade, **com o preço de agora**, que é sobre o que a decisão nova precisa acontecer.
+
+**3. A lista de motivos da rejeição era cortada pela borda da tabela.** O contêiner tinha `overflow-hidden` para arredondar o canto, e o menu abria dentro dele. A ação mais sensível da tela aparecia pela metade.
+
+**4. Desfazer a aprovação esquecia as publicações que ela tinha gerado.** Uma publicação já marcada como enviada continuava contando no teto do canal, e reaprovar a mesma oferta a trazia de volta "já enviada" sem que nada tivesse sido enviado. Achado pelo teste, não por revisão de código.
+
+**5. A fila de publicação estava agrupada por plataforma, não por canal.** Publicar é um ato por canal: quem está no telefone abre um aplicativo, cola, volta. Agrupar por plataforma obriga a pular de canal em canal dentro do mesmo bloco. Também entraram o "faltam 5 de 8" — sem ele uma fila de oito parece infinita no terceiro item — e o subid à vista, que é o primeiro lugar onde se olha quando uma comissão não casa.
+
+**6. O teto do canal não era respeitado por quem publica.** O botão de lote publicaria tudo, inclusive o que passa do combinado com o parceiro. Agora o teto vale no lote e no item, e a tela diz quantas cabem hoje e quantas ficam para amanhã — antes de o dono aprovar, não depois.
+
+Duas coisas menores na mesma passada: o painel de anúncios ainda usava as cores antigas, anteriores ao design system; e cada tela abria o próprio `<main>`, com o `h1` fora dele.
+
+**A lição, para a próxima tela:** cinco dos seis achados são de *fluxo entre telas*, não de tela. Aprovar mexe na capacidade que Canais mostra, publicar consome o teto que Aprovar usa para avisar, preço mudado volta para quem decide. Tela revisada sozinha parece correta; o defeito mora na costura.
+
+---
+
 ## Pendência · Encurtador da Shopee não resolve por requisição de servidor
 **Data:** 2026-07-28
 

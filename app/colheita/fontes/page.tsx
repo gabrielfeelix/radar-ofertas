@@ -74,7 +74,7 @@ export default async function Fontes() {
         ]}
       />
 
-      <main className="flex w-full max-w-5xl flex-col gap-7 px-6 pt-5 pb-10">
+      <div className="flex w-full max-w-5xl flex-col gap-7 px-6 pt-5 pb-10">
       <section>
         <h2 className="mb-4 text-lg font-bold tracking-titulo">Rendimento por canal</h2>
 
@@ -284,7 +284,7 @@ export default async function Fontes() {
           </div>
         )}
       </section>
-      </main>
+      </div>
     </>
   );
 }
@@ -413,12 +413,12 @@ function descreveQuando(quando: string | null): string {
 
 function AvisoDeConfiguracao({ mensagem }: { mensagem: string }) {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6">
       <h1 className="text-xl font-bold tracking-titulo">Falta configurar</h1>
       <p className="rounded-lg border border-atencao-borda bg-atencao-fundo p-5 text-base">
         {mensagem}
       </p>
       <p className="text-base text-texto-fraco">Passo a passo completo em docs/ambiente.md.</p>
-    </main>
+    </div>
   );
 }

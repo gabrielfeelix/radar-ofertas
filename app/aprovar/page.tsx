@@ -16,6 +16,7 @@ import {
   NOME_DA_LOJA,
   buscaOferta,
   canaisElegiveis,
+  funilDeHoje,
   nomeDoNicho,
   ofertasDaFila,
   publicacoesSeAprovarTudo,
@@ -103,13 +104,17 @@ export default async function Aprovar({
         ]}
       />
 
-      <main className="flex flex-col gap-5 px-6 pt-5 pb-10">
+      <div className="flex flex-col gap-5 px-6 pt-5 pb-10">
         <AvisoSimulacao />
 
         {fila.length === 0 ? (
           <FilaVazia decididas={decididas.length} />
         ) : (
-          <div className="overflow-hidden rounded-lg border border-borda bg-superficie">
+          // Sem `overflow-hidden`: ele cortava a lista de motivos da
+          // rejeição, aberta de dentro da linha. Menu que aparece pela
+          // metade transforma a ação mais sensível da tela em
+          // tentativa e erro.
+          <div className="rounded-lg border border-borda bg-superficie">
             <div className="hidden grid-cols-[minmax(150px,1fr)_112px_84px_56px_96px_auto] items-center gap-4 border-b border-borda bg-superficie-alt px-5 py-3 text-xs font-bold uppercase tracking-eyebrow text-texto-fraco lg:grid">
               <span>Produto</span>
               <span>Preço</span>
@@ -149,7 +154,7 @@ export default async function Aprovar({
             </ul>
           </section>
         )}
-      </main>
+      </div>
 
       {detalhe && detalhe.status === "nova" && <PainelDaOferta oferta={detalhe} />}
     </>
@@ -157,6 +162,12 @@ export default async function Aprovar({
 }
 
 function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: CanalSimulado[] }) {
+  // Aprovar com todos os canais no teto não é erro — a publicação
+  // espera amanhã, porque o teto é combinado com o parceiro. Mas
+  // precisa estar dito antes, senão o dono aprova achando que sai
+  // hoje e descobre a diferença na hora de publicar.
+  const vagas = canais.reduce((total, c) => total + Math.max(0, c.tetoDiario - c.publicadasHoje), 0);
+
   return (
     <article className="relative grid grid-cols-1 gap-4 border-b border-borda-sutil px-5 py-4 last:border-0 hover:bg-superficie-alt lg:grid-cols-[minmax(150px,1fr)_112px_84px_56px_96px_auto] lg:items-center">
       {/*
@@ -211,6 +222,14 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
             {oferta.publicadaAntesEm && (
               <span className="rounded-sm bg-perigo-fundo px-2 py-1 text-xs font-semibold text-perigo">
                 repetido em {formataDia(oferta.publicadaAntesEm)}
+              </span>
+            )}
+            {canais.length > 0 && vagas === 0 && (
+              <span
+                className="rounded-sm bg-info-fundo px-2 py-1 text-xs font-semibold text-info"
+                title="Os canais elegíveis já usaram o teto de hoje. A publicação espera amanhã."
+              >
+                sai amanhã
               </span>
             )}
           </div>
@@ -365,11 +384,9 @@ function LinhaDecidida({ oferta }: { oferta: OfertaSimulada }) {
 function FilaVazia({ decididas }: { decididas: number }) {
   const total = todasAsOfertas().length;
 
-  const funil = [
-    { n: 340, rotulo: "anúncios monitorados", pct: 100, cor: "#1B76B8" },
-    { n: 12, rotulo: "com série suficiente para avaliar", pct: 28, cor: "#F16A0D" },
-    { n: 0, rotulo: "abaixo do limiar hoje", pct: 2, cor: "#9AA0AA" },
-  ];
+  const cores = ["#1B76B8", "#F16A0D", "#9AA0AA"];
+  const funil = funilDeHoje();
+  const maior = Math.max(...funil.map((f) => f.n), 1);
 
   return (
     <div className="flex max-w-3xl flex-col gap-5 rounded-lg border border-borda bg-superficie p-8">
@@ -385,14 +402,14 @@ function FilaVazia({ decididas }: { decididas: number }) {
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            {funil.map((etapa) => (
+            {funil.map((etapa, i) => (
               <div
                 key={etapa.rotulo}
                 className="flex items-center gap-4 rounded-md border border-borda-sutil bg-superficie-alt px-4 py-3"
               >
                 <span
                   className="w-14 text-right font-mono text-lg font-extrabold tabular-nums tracking-titulo"
-                  style={{ color: etapa.cor }}
+                  style={{ color: cores[i] }}
                 >
                   {etapa.n}
                 </span>
@@ -400,7 +417,7 @@ function FilaVazia({ decididas }: { decididas: number }) {
                 <span className="h-2 w-28 rounded-xs bg-preenchimento" aria-hidden>
                   <span
                     className="block h-2 rounded-xs"
-                    style={{ width: `${etapa.pct}%`, background: etapa.cor }}
+                    style={{ width: `${Math.max(2, (etapa.n / maior) * 100)}%`, background: cores[i] }}
                   />
                 </span>
               </div>

@@ -15,6 +15,7 @@
 
 import {
   alternaCanalAtivo,
+  devolveParaAprovacao,
   atualizaCanal,
   buscaCanal,
   canais,
@@ -205,6 +206,59 @@ confere(
   "trocar o nicho muda o roteamento",
   canaisElegiveis("pet").some((c) => c.id === novoId) &&
     !canaisElegiveis("eletronico").some((c) => c.id === novoId),
+);
+
+// --- Capacidade acompanha o que foi publicado -------------------
+// Guardada, ela mentia: publicar seis num canal deixava "vagas
+// restantes" intacto, e a capacidade e o numero que muda o
+// comportamento de quem aprova.
+const canalTelegram = canais().find((c) => c.plataforma === "telegram" && c.ativo);
+const ofertaDoCanal = ofertasDaFila().find((o) =>
+  canaisElegiveis(o.nicho).some((c) => c.id === canalTelegram.id),
+);
+decideOferta(ofertaDoCanal.id, { status: "aprovada", canais: [canalTelegram.id] });
+
+const antesDeEnviar = buscaCanal(canalTelegram.id).publicadasHoje;
+marcaEnviada(`${ofertaDoCanal.id}:${canalTelegram.id}`, "fluxo");
+confere(
+  "publicar consome vaga do canal",
+  buscaCanal(canalTelegram.id).publicadasHoje === antesDeEnviar + 1,
+);
+desfazEnvio(`${ofertaDoCanal.id}:${canalTelegram.id}`);
+confere(
+  "desfazer devolve a vaga",
+  buscaCanal(canalTelegram.id).publicadasHoje === antesDeEnviar,
+);
+
+// --- Preco mudado devolve para a aprovacao ----------------------
+// A tela dizia que voltava e nada voltava: o item ficava travado
+// para sempre, e o operador nao pode resolver porque a decisao nao e
+// dele.
+decideOferta("o5", { status: "aprovada", canais: canaisElegiveis("pet").map((c) => c.id) });
+const travadas = publicacoesDaFila().filter(
+  (p) => p.ofertaId === "o5" && p.precoAgoraCentavos !== p.precoNaFilaCentavos,
+);
+confere("existe publicacao travada por preco", travadas.length > 0);
+
+devolveParaAprovacao("o5");
+confere(
+  "devolver tira as publicacoes travadas da fila de envio",
+  !publicacoesDaFila().some((p) => p.ofertaId === "o5"),
+);
+const voltou = ofertasDaFila().find((o) => o.id === "o5");
+confere("e a oferta volta para a fila de decisao", voltou !== undefined);
+confere(
+  "com o preco de agora, nao o que estava na fila",
+  voltou.precoAtualCentavos === 18990,
+);
+confere(
+  "e o desconto recalculado sobre a mesma referencia",
+  voltou.descontoPct ===
+    Math.round(
+      ((voltou.precoReferenciaCentavos - voltou.precoAtualCentavos) /
+        voltou.precoReferenciaCentavos) *
+        100,
+    ),
 );
 
 console.log(`\n${falhas === 0 ? "todos os casos passaram" : `${falhas} casos falharam`}`);

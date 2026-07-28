@@ -4,9 +4,12 @@ import { revalidatePath } from "next/cache";
 
 import {
   cancelaPublicacao,
+  desfazCancelamento,
   desfazEnvio,
+  devolveParaAprovacao,
   marcaEnviada,
   publicacoesDaFila,
+  vagasDoCanal,
 } from "@/lib/simulacao/loja";
 
 /**
@@ -34,8 +37,12 @@ export async function registraEnvio(form: FormData): Promise<void> {
   // avisa, e isto é a garantia de que avisar não é só decoração.
   if (publicacao.precoAgoraCentavos !== publicacao.precoNaFilaCentavos) return;
 
+  // Teto é limite real, não sugestão.
+  if (vagasDoCanal(publicacao.canal.id) <= 0) return;
+
   marcaEnviada(id, "fluxo");
   revalidatePath("/publicar");
+  revalidatePath("/canais");
 }
 
 /**
@@ -45,16 +52,25 @@ export async function registraEnvio(form: FormData): Promise<void> {
  * itens do caminho do polegar. Não fere a regra do WhatsApp: ela
  * restringe só o WhatsApp, e o Telegram tem API oficial para isso.
  */
-export async function publicaLoteTelegram(): Promise<void> {
+export async function publicaLoteTelegram(form: FormData): Promise<void> {
+  const canalAlvo = String(form.get("canal_id") ?? "");
+
   for (const publicacao of publicacoesDaFila()) {
     if (publicacao.canal.plataforma !== "telegram") continue;
+    if (canalAlvo !== "" && publicacao.canal.id !== canalAlvo) continue;
     if (publicacao.enviadaEm || publicacao.cancelada) continue;
     if (publicacao.precoAgoraCentavos !== publicacao.precoNaFilaCentavos) continue;
+
+    // O teto do canal é limite real, e o lote respeita. Sem isto, o
+    // botão que existe para poupar toque seria justamente o que
+    // estoura o combinado com o parceiro.
+    if (vagasDoCanal(publicacao.canal.id) <= 0) continue;
 
     marcaEnviada(publicacao.id, "fluxo");
   }
 
   revalidatePath("/publicar");
+  revalidatePath("/canais");
 }
 
 /**
@@ -77,9 +93,35 @@ export async function registraEnvioAutoDeclarado(form: FormData): Promise<void> 
 export async function desfazEnvioDaPublicacao(form: FormData): Promise<void> {
   desfazEnvio(String(form.get("publicacao_id") ?? ""));
   revalidatePath("/publicar");
+  revalidatePath("/canais");
 }
 
 export async function cancelaEnvio(form: FormData): Promise<void> {
   cancelaPublicacao(String(form.get("publicacao_id") ?? ""));
   revalidatePath("/publicar");
+}
+
+/** Cancelar também tem volta: é decisão interna, nada saiu daqui. */
+export async function desfazCancelamentoDaPublicacao(form: FormData): Promise<void> {
+  desfazCancelamento(String(form.get("publicacao_id") ?? ""));
+  revalidatePath("/publicar");
+}
+
+/**
+ * Devolve para a aprovação a publicação travada por preço.
+ *
+ * A tela dizia que o item "voltou para a fila de aprovação" e nada
+ * voltava — ele ficava travado para sempre, e o operador não tem como
+ * resolver, porque não é dele a decisão de curadoria. Agora volta de
+ * verdade, e volta com o preço de agora, que é sobre o que a decisão
+ * nova precisa acontecer.
+ */
+export async function devolveOfertaParaAprovacao(form: FormData): Promise<void> {
+  const ofertaId = String(form.get("oferta_id") ?? "");
+  if (ofertaId === "") return;
+
+  devolveParaAprovacao(ofertaId);
+
+  revalidatePath("/publicar");
+  revalidatePath("/aprovar");
 }

@@ -62,7 +62,7 @@ export default async function Canais() {
         ]}
       />
 
-      <main className="flex w-full max-w-5xl flex-col gap-6 px-6 pt-5 pb-10">
+      <div className="flex w-full max-w-5xl flex-col gap-6 px-6 pt-5 pb-10">
       <AvisoSimulacao detalhe="Estes canais não existem. Nada é publicado neles, e a audiência é inventada." />
 
       <section className="flex flex-col gap-4">
@@ -79,7 +79,7 @@ export default async function Canais() {
         </p>
         <FormularioCanal />
       </section>
-      </main>
+      </div>
     </>
   );
 }

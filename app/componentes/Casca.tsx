@@ -32,7 +32,12 @@ export async function Casca({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <BarraInferior grupos={grupos} />
         <BarraSuperior rotina={rotina} />
-        {children}
+        {/*
+          Um <main> só, aqui, com o título da tela dentro dele. Antes
+          cada página abria o próprio, e o h1 ficava fora — leitor de
+          tela anunciava "conteúdo principal" depois do título.
+        */}
+        <main className="flex flex-1 flex-col">{children}</main>
       </div>
     </div>
   );
