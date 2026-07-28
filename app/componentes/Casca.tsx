@@ -6,6 +6,7 @@ import {
 } from "./BarraLateral";
 import { BarraSuperior, type EstadoDaRotina } from "./BarraSuperior";
 
+import { montaTrilhaDeArranque } from "@/lib/arranque";
 import { montaQuadroDeAtencao } from "@/lib/atencao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { ofertasDaFila, publicacoesDaFila } from "@/lib/simulacao/loja";
@@ -59,6 +60,11 @@ async function montaNavegacao(): Promise<{
   const { alertas } = await montaQuadroDeAtencao();
   const criticos = alertas.filter((a) => a.severidade === "critico").length;
 
+  // A trilha só existe enquanto a operação estiver incompleta. Item de
+  // menu que continua ali depois de resolvido vira mobília.
+  const { passos, completa } = await montaTrilhaDeArranque();
+  const faltam = passos.filter((p) => p.estado !== "pronto").length;
+
   const grupos: GrupoDaBarra[] = [
     {
       titulo: "Hoje",
@@ -73,6 +79,16 @@ async function montaNavegacao(): Promise<{
           contagem: criticos > 0 ? criticos : undefined,
           ponto: criticos > 0 ? "#C13232" : "#9AA0AA",
         },
+        ...(completa
+          ? []
+          : [
+              {
+                href: "/arranque",
+                rotulo: "Trilha de arranque",
+                contagem: faltam,
+                ponto: "#7A4FBF",
+              },
+            ]),
       ],
     },
     {

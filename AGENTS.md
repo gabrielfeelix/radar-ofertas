@@ -151,7 +151,9 @@ Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 **Design system** — tokens em `app/globals.css`, explicados em `docs/design.md`. Só cor, tipografia, espaçamento, raio e botão. Card fora de propósito.
 
-**Telas de decisão, com operação simulada (D-026)** — `/aprovar` (com painel de detalhe por oferta), `/publicar`, `/canais` (com detalhe por canal) e `/atencao`, sobre `lib/simulacao/`. A `/atencao` é a única que mistura: coleta, catálogo e configuração vêm do banco de verdade, canais vêm da simulação. Decidir da linha, capacidade no topo, rejeitar com motivo de lista curta, diagnóstico por comporta, Telegram em lote, desfazer no envio, bloqueio por preço mudado. A máquina de estados tem teste próprio em `testes/simulacao.mjs`.
+**Telas de decisão, com operação simulada (D-026)** — `/aprovar` (com painel de detalhe por oferta), `/publicar`, `/canais` (com detalhe por canal), `/atencao` e `/arranque`, sobre `lib/simulacao/`. As duas últimas misturam: coleta, catálogo e configuração vêm do banco de verdade, canais vêm da simulação — e a trilha **não conta canal simulado como canal**, porque o trabalho dela é dizer o que ainda não existe.
+
+**Dependências de temporizador de terceiro ficaram anotadas em `docs/infra.md`** — agendador do GitHub, pausa do Supabase, token do Mercado Livre, sessão do Telegram, credencial da Shopee. Decidir todas juntas quando as telas terminarem, não antes. Decidir da linha, capacidade no topo, rejeitar com motivo de lista curta, diagnóstico por comporta, Telegram em lote, desfazer no envio, bloqueio por preço mudado. A máquina de estados tem teste próprio em `testes/simulacao.mjs`.
 
 **A ordem de trabalho mudou em 28/07, por decisão do dono:** interface primeiro, backend plugado depois, ação por ação. O que falta para essas telas terem dado real não é código — é credencial, domínio e canal. Leia a D-026 antes de propor voltar à ordem antiga.
 
@@ -159,8 +161,7 @@ Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 Continuar a interface, sempre com dado simulado, nesta ordem:
 
-1. **Trilha de arranque** — o próximo passo num sistema vazio, enquanto a operação estiver incompleta. Ela e a `/atencao` conversam: uma diz o que quebrou, a outra diz o que ainda não existe.
-2. **Produtos e produto** — catálogo com busca, série por anúncio e histórico de rejeição, incluindo o motivo de cada rejeição.
+1. **Produtos e produto** — catálogo com busca, série por anúncio e histórico de rejeição, incluindo o motivo de cada rejeição.
 3. **Nichos e Curadoria** — os limiares num lugar só, com a taxa de aprovação ao lado do controle que a altera.
 
 **Antes de construir tela nova, revise as que existem.** A revisão de 28/07 achou seis coisas, e cinco eram de costura entre telas — aprovar mexe na capacidade que Canais mostra, publicar consome o teto que Aprovar usa para avisar. Tela revisada sozinha parece correta. Está em `docs/decisoes.md`, em "Revisão · O que a passada pelas telas achou".
