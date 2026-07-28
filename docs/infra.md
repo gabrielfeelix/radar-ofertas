@@ -151,6 +151,24 @@ A **string de sessão do Telegram** merece nota à parte: ela equivale à conta 
 
 ---
 
+## Dependências de temporizador de terceiro — decidir ao fim das telas
+
+**Anotado em 28/07/2026, para resolver de uma vez quando as telas estiverem prontas.** São todos o mesmo problema com roupas diferentes: alguma coisa fora do nosso controle expira, e o sintoma é o sistema parar em silêncio.
+
+| O quê | O que expira | Sintoma quando expira |
+|---|---|---|
+| **Agendador do GitHub Actions** | workflow agendado é desativado após **60 dias sem commit** no repositório | a coleta simplesmente não roda. Nenhum erro, nenhum aviso, e a série ganha um buraco por dia |
+| **Projeto gratuito do Supabase** | pausa após **7 dias sem requisição** | o painel e as funções param de responder. Foi por isso que o agendador ficou no GitHub e não no `pg_cron` (D-015) |
+| **Token de afiliado do Mercado Livre** | `ML_REFRESH_TOKEN` tem validade e precisa ser renovado | o coletor pula a loja e informa — visível, mas só para quem olha |
+| **Sessão de usuário do Telegram** | a string de sessão pode ser invalidada pelo próprio Telegram | a colheita de grupo fechado para de trazer link |
+| **Credencial da Open API da Shopee** | chave com validade a confirmar quando ela existir | idem |
+
+Hoje existe **um remendo e uma superfície**: a tela `/atencao` conta os dias que faltam para o agendador dormir, lendo a data do último commit do próprio `.git`. Isso avisa, mas não resolve — e não cobre os outros quatro.
+
+**Não decidir agora, de propósito.** Cada caminho possível — segundo agendador externo, commit automático de manutenção, monitor que pinga de fora, renovação automática de token — muda o desenho da infraestrutura, e desenhar isso no meio das telas é trocar duas coisas ao mesmo tempo. **Rever quando as telas terminarem**, junto, como um problema só: *como o sistema percebe que uma dependência externa venceu, e como ele avisa antes de parar.*
+
+---
+
 ## O que falta, na ordem
 
 1. **Projeto Supabase na nuvem** — `pnpm db:publica` aplica as 9 migrations.
