@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { AcoesDoFormulario, classeDeCampo, classeDeCampoLiteral } from "@/app/componentes/Campo";
+import { AcoesDoFormulario,
+  Campo, classeDeCampo, classeDeCampoLiteral } from "@/app/componentes/Campo";
 
 import { cadastraFonte, type ResultadoFonte } from "@/app/acoes/fontes";
 import { leIdentificadorDeCanal } from "@/lib/canais";
@@ -140,26 +141,3 @@ function Campos({
   );
 }
 
-function Campo({
-  rotulo,
-  dica,
-  erro,
-  children,
-}: {
-  rotulo: string;
-  dica?: string;
-  erro?: string | null;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-base font-semibold">{rotulo}</span>
-      {children}
-      {erro ? (
-        <p className="mt-2 text-base text-perigo">{erro}</p>
-      ) : dica ? (
-        <p className="mt-2 text-sm text-texto-fraco">{dica}</p>
-      ) : null}
-    </label>
-  );
-}

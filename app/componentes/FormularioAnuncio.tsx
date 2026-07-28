@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { AcoesDoFormulario, classeDeCampo, classeDeCampoLiteral } from "@/app/componentes/Campo";
+import { AcoesDoFormulario,
+  Campo, classeDeCampo, classeDeCampoLiteral } from "@/app/componentes/Campo";
 
 import { cadastraAnuncio, type ResultadoCadastro } from "@/app/acoes/cadastra-anuncio";
 import { leLinkDeProduto } from "@/lib/marketplaces";
@@ -191,26 +192,3 @@ function Campos({
   );
 }
 
-function Campo({
-  rotulo,
-  dica,
-  erro,
-  children,
-}: {
-  rotulo: string;
-  dica?: string;
-  erro?: string | null;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium">{rotulo}</span>
-      {children}
-      {erro ? (
-        <p className="mt-1 text-sm text-red-700">{erro}</p>
-      ) : dica ? (
-        <p className="mt-1 text-xs text-neutral-500">{dica}</p>
-      ) : null}
-    </label>
-  );
-}

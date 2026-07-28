@@ -1,7 +1,14 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { AcoesDoFormulario, classeDeCampo } from "@/app/componentes/Campo";
+import {
+  AcoesDoFormulario,
+  Campo,
+  CampoComUnidade,
+  classeDeCampo,
+  classeDeCampoNu,
+  ValorCalculado,
+} from "@/app/componentes/Campo";
 
 import { salvaCanal, type ResultadoCanal } from "@/app/acoes/canais";
 import { NICHOS, type CanalSimulado } from "@/lib/simulacao/loja";
@@ -180,39 +187,37 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
 
         <div className="grid gap-5 sm:grid-cols-3">
           <Campo rotulo="Por trazer a audiência">
-            <input
-              name="split_audiencia"
-              type="number"
-              min={0}
-              max={100}
-              value={audiencia}
-              onChange={(e) => setAudiencia(Number(e.target.value))}
-              className={classeDeCampo}
-            />
+            <CampoComUnidade unidade="%">
+              <input
+                name="split_audiencia"
+                type="number"
+                min={0}
+                max={100}
+                value={audiencia}
+                onChange={(e) => setAudiencia(Number(e.target.value))}
+                className={classeDeCampoNu}
+              />
+            </CampoComUnidade>
           </Campo>
 
           <Campo rotulo="Por operar">
-            <input
-              name="split_operacao"
-              type="number"
-              min={0}
-              max={100}
-              value={operacao}
-              onChange={(e) => setOperacao(Number(e.target.value))}
-              className={classeDeCampo}
-            />
+            <CampoComUnidade unidade="%">
+              <input
+                name="split_operacao"
+                type="number"
+                min={0}
+                max={100}
+                value={operacao}
+                onChange={(e) => setOperacao(Number(e.target.value))}
+                className={classeDeCampoNu}
+              />
+            </CampoComUnidade>
           </Campo>
 
-          <div>
-            <span className="mb-2 block text-base font-semibold">Fica com você</span>
-            <p
-              className={`rounded-md px-4 py-3 text-base font-bold tabular-nums ${
-                dono < 0 ? "bg-perigo-fundo text-perigo" : "bg-superficie text-texto"
-              }`}
-            >
-              {dono}%
-            </p>
-          </div>
+          {/* Resultado, não campo — e agora com cara de resultado. */}
+          <ValorCalculado rotulo="Fica com você" alerta={dono < 0}>
+            {dono}%
+          </ValorCalculado>
         </div>
 
         {dono < 0 && (
@@ -239,26 +244,3 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
   );
 }
 
-function Campo({
-  rotulo,
-  dica,
-  erro,
-  children,
-}: {
-  rotulo: string;
-  dica?: string;
-  erro?: string | null;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-2 block text-base font-semibold">{rotulo}</span>
-      {children}
-      {erro ? (
-        <p className="mt-2 text-base text-perigo">{erro}</p>
-      ) : dica ? (
-        <p className="mt-2 text-sm text-texto-fraco">{dica}</p>
-      ) : null}
-    </label>
-  );
-}
