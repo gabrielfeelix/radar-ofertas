@@ -25,6 +25,8 @@
  * regra é de mentira (restrição 4 de `docs/telas.md`).
  */
 
+import type { DadosDaMensagem } from "@/lib/mensagem";
+
 export type Plataforma = "whatsapp" | "telegram";
 
 export type CanalSimulado = {
@@ -623,7 +625,15 @@ export type PublicacaoSimulada = {
   canal: CanalSimulado;
   produto: string;
   url: string;
-  mensagem: string;
+  /**
+   * O que a mensagem precisa saber, e não a mensagem pronta.
+   *
+   * Quem monta o texto é o modelo que o dono edita em Ajustes, e ele
+   * mora no banco. Se a simulação montasse a frase aqui, editar o
+   * modelo não mudaria nada na fila — que é justamente o que a tela de
+   * modelos existe para permitir.
+   */
+  dadosDaMensagem: Omit<DadosDaMensagem, "link">;
   /** Preço no momento em que entrou na fila. */
   precoNaFilaCentavos: number;
   /** Preço agora. Diferente do de cima = a oferta mudou embaixo. */
@@ -675,7 +685,17 @@ export function publicacoesDaFila(): PublicacaoSimulada[] {
         canal,
         produto: oferta.produto,
         url: oferta.url,
-        mensagem: montaMensagem(oferta),
+        dadosDaMensagem: {
+          produto: oferta.produto,
+          precoCentavos: oferta.precoAtualCentavos,
+          precoAntesCentavos: oferta.precoReferenciaCentavos,
+          descontoPct: oferta.descontoPct,
+          loja: NOME_DA_LOJA[oferta.loja],
+          vendedor: oferta.vendedor,
+          janelaDias: oferta.referenciaJanelaDias,
+          observadoDesde: oferta.observadoDesde,
+          podeAfirmarMinimo: oferta.podeAfirmarMinimo,
+        },
         precoNaFilaCentavos: oferta.precoAtualCentavos,
         precoAgoraCentavos: PRECO_QUE_MUDOU[oferta.id] ?? oferta.precoAtualCentavos,
         // Subid único por publicação, nunca reaproveitado: é o campo
@@ -747,35 +767,6 @@ export function devolveParaAprovacao(ofertaId: string): void {
   oferta.status = "nova";
   oferta.canaisEscolhidos = [];
   oferta.motivoRejeicao = null;
-}
-
-/**
- * A mensagem publicada.
- *
- * Sem série de 14 dias, nada de "menor preço histórico" — a redação
- * honesta traz a data em que a observação começou. Vale para a
- * mensagem tanto quanto para a tela: é ela que chega em milhares de
- * pessoas com o nome do canal em cima.
- */
-function montaMensagem(oferta: OfertaSimulada): string {
-  const lastro = oferta.podeAfirmarMinimo
-    ? `Menor preço em ${oferta.referenciaJanelaDias} dias.`
-    : `Menor preço que observamos desde ${formataDiaBR(oferta.observadoDesde)}.`;
-
-  return [
-    `🔥 ${oferta.produto}`,
-    "",
-    `De ${formataSimples(oferta.precoReferenciaCentavos)} por ${formataSimples(oferta.precoAtualCentavos)} (−${oferta.descontoPct}%)`,
-    lastro,
-    "",
-    `${NOME_DA_LOJA[oferta.loja]} · ${oferta.vendedor}`,
-    "👉 [link com subid]",
-  ].join("\n");
-}
-
-function formataDiaBR(iso: string): string {
-  const [ano, mes, dia] = iso.split("-");
-  return `${dia}/${mes}/${ano.slice(2)}`;
 }
 
 /**

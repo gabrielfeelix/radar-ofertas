@@ -232,6 +232,27 @@ export type ComportaDiaLinha = {
   reprovados: number;
 };
 
+/**
+ * Como a mensagem publicada é escrita.
+ *
+ * Um corpo só; o que muda com a série é o trecho do lastro. O porquê
+ * de não serem dois modelos está em `lib/mensagem.ts`.
+ */
+export type ModeloMensagemLinha = {
+  id: string;
+  operacao_id: string;
+  nome: string;
+  /** Nulo = global. Preenchido = sobrescreve para aquele canal. */
+  canal_id: string | null;
+  corpo: string;
+  lastro_com: string;
+  /** Nunca pode afirmar mínimo histórico (regra 3.4). */
+  lastro_sem: string;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+};
+
 export type OfertaStatus = "nova" | "aprovada" | "rejeitada" | "adiada" | "expirada";
 
 export type OfertaLinha = {
@@ -369,6 +390,7 @@ export type Banco = {
         ComissaoCategoriaLinha,
         "operacao_id" | "marketplace_id" | "nicho_id" | "percentual"
       >;
+      modelo_mensagem: Tabela<ModeloMensagemLinha, "operacao_id" | "nome" | "corpo">;
       comporta_dia: Tabela<ComportaDiaLinha, "operacao_id" | "dia" | "comporta">;
     };
     Views: {

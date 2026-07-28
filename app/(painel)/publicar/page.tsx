@@ -14,6 +14,8 @@ import { Botao, BotaoDePlataforma } from "@/app/componentes/Botao";
 import { BotaoWhatsApp } from "@/app/componentes/BotaoWhatsApp";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { formataReais } from "@/lib/dinheiro";
+import { montaMensagem, type ModeloDeMensagem } from "@/lib/mensagem";
+import { modeloGlobal } from "@/lib/modelo";
 import {
   publicacoesDaFila,
   vagasDoCanal,
@@ -42,6 +44,11 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function Publicar() {
+  // O texto sai do modelo que o dono edita em Ajustes, e não de uma
+  // função dentro do código. Sem banco, cai no de partida — a fila não
+  // pode ficar sem mensagem só porque o Docker está parado.
+  const modelo = await modeloGlobal();
+
   const todas = publicacoesDaFila();
   const pendentes = todas.filter((p) => !p.enviadaEm && !p.cancelada);
   const enviadas = todas.filter((p) => p.enviadaEm);
@@ -113,7 +120,7 @@ export default async function Publicar() {
         )}
 
         {[...porCanal.values()].map((grupo) => (
-          <GrupoDoCanal key={grupo.canal.id} canal={grupo.canal} itens={grupo.itens} />
+          <GrupoDoCanal key={grupo.canal.id} canal={grupo.canal} itens={grupo.itens} modelo={modelo} />
         ))}
 
         {bloqueadas.length > 0 && (
@@ -201,7 +208,15 @@ export default async function Publicar() {
  * as vagas acabam, o resto espera amanhã, e é melhor saber disso antes
  * de publicar do que depois de explicar ao parceiro.
  */
-function GrupoDoCanal({ canal, itens }: { canal: CanalSimulado; itens: PublicacaoSimulada[] }) {
+function GrupoDoCanal({
+  canal,
+  itens,
+  modelo,
+}: {
+  canal: CanalSimulado;
+  itens: PublicacaoSimulada[];
+  modelo: ModeloDeMensagem;
+}) {
   const vagas = vagasDoCanal(canal.id);
   const cabemHoje = Math.min(vagas, itens.length);
   const paraAmanha = itens.length - cabemHoje;
@@ -257,7 +272,7 @@ function GrupoDoCanal({ canal, itens }: { canal: CanalSimulado; itens: Publicaca
       <ul className="flex flex-col">
         {itens.map((publicacao, indice) => (
           <li key={publicacao.id} className="border-b border-borda-sutil last:border-0">
-            <CartaoDeEnvio publicacao={publicacao} cabeHoje={indice < cabemHoje} />
+            <CartaoDeEnvio publicacao={publicacao} cabeHoje={indice < cabemHoje} modelo={modelo} />
           </li>
         ))}
       </ul>
@@ -268,10 +283,19 @@ function GrupoDoCanal({ canal, itens }: { canal: CanalSimulado; itens: Publicaca
 function CartaoDeEnvio({
   publicacao,
   cabeHoje,
+  modelo,
 }: {
   publicacao: PublicacaoSimulada;
   cabeHoje: boolean;
+  modelo: ModeloDeMensagem;
 }) {
+  // O link do redirecionador ainda não existe — falta domínio. O subid
+  // é real desde já, e é ele que liga a venda ao canal.
+  const texto = montaMensagem(modelo, {
+    ...publicacao.dadosDaMensagem,
+    link: `${process.env.URL_BASE_REDIRECIONADOR ?? "https://link.pendente"}/${publicacao.subid}`,
+  });
+
   return (
     <article className="flex flex-col gap-4 p-5">
       <div className="flex items-start gap-4">
@@ -293,12 +317,12 @@ function CartaoDeEnvio({
         errado.
       */}
       <pre className="whitespace-pre-wrap rounded-md bg-superficie-alt p-4 font-sans text-base leading-longo">
-        {publicacao.mensagem}
+        {texto}
       </pre>
 
       {cabeHoje ? (
         publicacao.canal.plataforma === "whatsapp" ? (
-          <BotaoWhatsApp publicacaoId={publicacao.id} mensagem={publicacao.mensagem} />
+          <BotaoWhatsApp publicacaoId={publicacao.id} mensagem={texto} />
         ) : (
           <form action={publicaLoteTelegram}>
             <input type="hidden" name="canal_id" value={publicacao.canal.id} />

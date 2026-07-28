@@ -133,6 +133,7 @@ async function montaNavegacao(): Promise<{
         { href: "/ajustes/curadoria", rotulo: "Rigor da curadoria", ponto: "#4B5563" },
         { href: "/ajustes/nichos", rotulo: "Nichos", ponto: "#4B5563" },
         { href: "/ajustes/marketplaces", rotulo: "Marketplaces", ponto: "#4B5563" },
+        { href: "/ajustes/modelos", rotulo: "Modelos de mensagem", ponto: "#4B5563" },
       ],
     },
   ];
