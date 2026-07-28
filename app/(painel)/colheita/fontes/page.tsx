@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { alternaFonteAtiva, defineNichoDaFonte, MISTO } from "@/app/acoes/fontes";
+import { alternaFonteAtiva, defineNichoDaFonte } from "@/app/acoes/fontes";
+import { MISTO } from "@/lib/colheita";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioFonte } from "@/app/componentes/FormularioFonte";

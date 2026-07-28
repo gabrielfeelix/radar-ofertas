@@ -153,14 +153,15 @@ A tela nunca fala com a simulação: ela chama uma ação em `app/acoes/`, que h
 
 **Colheita** — `supabase/functions/colheita-canais`. Rodada contra três canais reais: 60 posts, 35 links, 6 anúncios novos, 29 descartes.
 
-**Onze telas**, em `app/`:
+**Quinze telas.** As de painel ficam no grupo `app/(painel)/`, que é o que dá ao Login uma tela sem barra lateral:
 
 | Área | Telas | Dado |
 |---|---|---|
 | Hoje | `/aprovar` (+ painel `?oferta=`), `/publicar`, `/atencao`, `/arranque` | simulado; atenção e arranque leem o banco também |
-| Catálogo | `/produtos` (grão produto e anúncio, busca), `/produtos/[id]`, `/colheita/fontes`, `/colheita/mencoes` | **real** |
+| Catálogo | `/produtos` (grão produto e anúncio, busca), `/produtos/[id]`, `/produtos/sem-nicho`, `/colheita/fontes`, `/colheita/mencoes` | **real** |
 | Distribuição | `/canais`, `/canais/[id]` | simulado |
-| Ajustes | `/ajustes/curadoria`, `/ajustes/nichos`, `/ajustes/marketplaces` | **real** |
+| Ajustes | `/ajustes/curadoria`, `/ajustes/nichos`, `/ajustes/marketplaces`, `/ajustes/modelos` | **real** |
+| Entrada | `/entrar` — fora da casca, sem barra lateral | **real** |
 
 A raiz `/` leva para `/aprovar`: a casa do dono é o trabalho, não a consulta.
 
@@ -190,6 +191,8 @@ Conta nasce por script enquanto a tela de convite (Fase 3) não existe:
 pnpm usuario:cria "voce@exemplo.com" "Seu Nome" dono
 ```
 
+**Auditoria de tela** — `pnpm verifica` não vê layout. Dois defeitos desta rodada passaram por tipo, lint e teste e só apareceram abrindo o navegador: 97 botões sem `cursor: pointer`, e uma constante exportada de arquivo `"use server"`, que quebra em execução. **Antes de dizer que uma tela está pronta, abra e clique.**
+
 **Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15) e a máquina de estados da simulação (27). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
 
 **Automação** — CI a cada push, rotina diária e backup semanal em `.github/workflows/`.
@@ -198,9 +201,7 @@ pnpm usuario:cria "voce@exemplo.com" "Seu Nome" dono
 
 Faltam da especificação, em ordem de utilidade:
 
-1. **Modelos de mensagem** — com a prévia mostrando as duas redações lado a lado, a completa e a honesta reduzida, para a diferença ser escolhida e não descoberta em produção. É a última peça antes de a mensagem publicada deixar de ser texto fixo no código.
-2. **Login** — a porta. É Fase 1 e continua sem existir; sem ela nada pode ir para a internet.
-3. **Dinheiro** (Conversões, Repasses, Parceiros, painel do parceiro) — Fase 2 e 3. **Não construa antes de existir comissão**: são telas de dado que não existe nem simulado.
+1. **Dinheiro** (Conversões, Repasses, Parceiros, painel do parceiro) — Fase 2 e 3. **Não construa antes de existir comissão**: são telas de dado que não existe nem simulado.
 
 Depois disso, dois blocos que não são tela:
 

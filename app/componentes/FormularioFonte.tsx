@@ -4,7 +4,8 @@ import { useActionState, useEffect, useState } from "react";
 import { AcoesDoFormulario,
   Campo, classeDeCampo, classeDeCampoLiteral } from "@/app/componentes/Campo";
 
-import { cadastraFonte, MISTO, type ResultadoFonte } from "@/app/acoes/fontes";
+import { cadastraFonte, type ResultadoFonte } from "@/app/acoes/fontes";
+import { MISTO } from "@/lib/colheita";
 import { leIdentificadorDeCanal } from "@/lib/canais";
 
 import type { NichoOpcao } from "./FormularioAnuncio";

@@ -94,6 +94,10 @@ export default async function Produtos({
     return true;
   });
 
+  // Filtro é nicho OU busca. Sem nenhum dos dois, uma lista vazia quer
+  // dizer "o catálogo está vazio", que é outra conversa.
+  const filtrado = Boolean(nichoFiltro) || busca !== "";
+
   const semNicho = produtos.filter((p) => p.nicho_id === null).length;
   const parados = anuncios.filter(
     (a) => a.ativo && diasDesde(a.ultima_coleta_em, agora) >= DIAS_PARA_ALERTA,
@@ -198,6 +202,7 @@ export default async function Produtos({
 
         {grao === "produto" ? (
           <TabelaDeProdutos
+            filtrado={filtrado}
             produtos={filtrados}
             anunciosDoProduto={anunciosDoProduto}
             serieDoAnuncio={serieDoAnuncio}
@@ -206,6 +211,7 @@ export default async function Produtos({
           />
         ) : (
           <TabelaDeAnuncios
+            filtrado={filtrado}
             anuncios={anunciosFiltrados}
             porProduto={porProduto}
             porMarketplace={porMarketplace}
@@ -220,12 +226,14 @@ export default async function Produtos({
 }
 
 function TabelaDeProdutos({
+  filtrado,
   produtos,
   anunciosDoProduto,
   serieDoAnuncio,
   porNicho,
   porMarketplace,
 }: {
+  filtrado: boolean;
   produtos: ProdutoLinha[];
   anunciosDoProduto: Map<string, AnuncioLinha[]>;
   serieDoAnuncio: Map<string, AnuncioSerieLinha>;
@@ -233,11 +241,11 @@ function TabelaDeProdutos({
   porMarketplace: Map<string, MarketplaceLinha>;
 }) {
   if (produtos.length === 0) {
-    return (
-      <p className="rounded-lg border border-dashed border-borda-forte p-8 text-center text-base text-texto-fraco">
-        Nenhum produto com esse filtro. A colheita traz produto novo toda madrugada.
-      </p>
-    );
+    // Catálogo vazio e busca sem resultado são a mesma tela e coisas
+    // diferentes: uma diz "ainda não começou", a outra "procure outra
+    // palavra". Dizer "nenhum produto com esse filtro" sem filtro
+    // nenhum faz o dono procurar um filtro que não existe.
+    return <Vazio filtrado={filtrado} />;
   }
 
   return (
@@ -338,12 +346,14 @@ function TabelaDeProdutos({
 }
 
 function TabelaDeAnuncios({
+  filtrado,
   anuncios,
   porProduto,
   porMarketplace,
   serieDoAnuncio,
   agora,
 }: {
+  filtrado: boolean;
   anuncios: AnuncioLinha[];
   porProduto: Map<string, ProdutoLinha>;
   porMarketplace: Map<string, MarketplaceLinha>;
@@ -351,11 +361,7 @@ function TabelaDeAnuncios({
   agora: number;
 }) {
   if (anuncios.length === 0) {
-    return (
-      <p className="rounded-lg border border-dashed border-borda-forte p-8 text-center text-base text-texto-fraco">
-        Nenhum anúncio com esse filtro.
-      </p>
-    );
+    return <Vazio filtrado={filtrado} anuncio />;
   }
 
   // Ordenado pela última coleta: a pergunta desta visão é operacional
@@ -547,6 +553,50 @@ function AvisoDeConfiguracao({ mensagem }: { mensagem: string }) {
         {mensagem}
       </p>
       <p className="text-base text-texto-fraco">Passo a passo completo em docs/ambiente.md.</p>
+    </div>
+  );
+}
+
+/**
+ * O vazio do catálogo, com a diferença que importa.
+ *
+ * Sem filtro, o catálogo está começando e o caminho é ligar fonte de
+ * colheita ou cadastrar por link. Com filtro, o catálogo tem coisa e a
+ * busca é que não achou — e aí o caminho é limpar o filtro.
+ */
+function Vazio({ filtrado, anuncio = false }: { filtrado: boolean; anuncio?: boolean }) {
+  const coisa = anuncio ? "anúncio" : "produto";
+
+  return (
+    <div className="rounded-lg border border-dashed border-borda-forte p-8 text-center">
+      {filtrado ? (
+        <>
+          <p className="text-md font-bold tracking-titulo">Nada com esse filtro.</p>
+          <p className="mx-auto mt-2 max-w-md text-base text-texto-fraco">
+            O catálogo tem {coisa}, mas nenhum casa com o que você pediu.
+          </p>
+          <Link
+            href="/produtos"
+            className="mt-5 inline-block rounded-md border border-borda-forte bg-superficie px-5 py-3 text-base font-bold text-texto-medio hover:bg-fundo"
+          >
+            Limpar filtros
+          </Link>
+        </>
+      ) : (
+        <>
+          <p className="text-md font-bold tracking-titulo">O catálogo está vazio.</p>
+          <p className="mx-auto mt-2 max-w-md text-base leading-longo text-texto-fraco">
+            A série de preço leva semanas para se formar, então quanto antes entrar produto, antes
+            existe oferta. A colheita enche sozinha toda madrugada — falta ligar a primeira fonte.
+          </p>
+          <Link
+            href="/colheita/fontes"
+            className="mt-5 inline-block rounded-md bg-marca px-5 py-3 text-base font-bold text-white shadow-marca hover:bg-marca-hover"
+          >
+            Ligar uma fonte de colheita
+          </Link>
+        </>
+      )}
     </div>
   );
 }

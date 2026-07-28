@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { leIdentificadorDeCanal } from "@/lib/canais";
+import { MISTO } from "@/lib/colheita";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 
 /**
@@ -36,14 +37,6 @@ import { supabaseServidor } from "@/lib/supabase/servidor";
  * é trabalho por item. O que não se aceita é o campo **em branco por
  * distração** — por isso a escolha continua obrigatória.
  */
-
-/**
- * O valor que o formulário manda quando o canal é genérico.
- *
- * Não é string vazia: vazio é o campo não preenchido, e distinguir os
- * dois é o que permite exigir uma escolha sem proibir "misto".
- */
-export const MISTO = "misto";
 
 export type ResultadoFonte =
   | { ok: true; fonteId: string; identificador: string; token: string }

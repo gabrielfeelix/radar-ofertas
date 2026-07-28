@@ -167,11 +167,32 @@ input,
     filter 120ms ease;
 }
 
-/* Elemento clicável tem cursor de clique — inclusive summary, que o
-   navegador entrega com cursor de texto. */
+/* Elemento clicável tem cursor de clique.
+   Isto é mais amplo do que parece necessário, e é de propósito: o
+   preflight do Tailwind v4 não põe `cursor: pointer` em `<button>`,
+   então 97 botões do painel apareciam com a setinha de "não clica".
+   A auditoria de tela achou; revisão de código nunca acharia. */
+button:not(:disabled),
 summary,
+select,
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]),
+input[type="checkbox"],
+input[type="radio"],
 [role="button"] {
   cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Resposta ao toque: o botão afunda 1px enquanto pressionado.
+   Em tela sensível ao toque não há hover, então este é o único retorno
+   entre o dedo encostar e a página responder. */
+button:not(:disabled):active,
+[role="button"]:active {
+  transform: translateY(1px);
 }
 
 summary::-webkit-details-marker {
