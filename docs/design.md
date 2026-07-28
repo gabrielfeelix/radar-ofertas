@@ -10,9 +10,9 @@ A fonte de verdade é `app/globals.css`. Este documento explica; o CSS executa.
 
 ## O que o protótipo revelou
 
-Levantamento do `Radar de Ofertas.dc.html`, que **não está neste repositório** — ele vive no projeto de design do Claude, `claude.ai/design/p/8a12d079-d3de-4ed0-b8b4-f5f427a1c97e` ("Fila de aprovação e sistema"), junto com as capturas de tela. Abra o protótipo antes de mexer em interface: este documento tem os valores, ele tem a intenção.
+Levantamento do `Radar de Ofertas.dc.html`, que está em **`referencia-claude-deisgn/`**, neste repositório, com as quatorze telas desenhadas. Abra ele antes de mexer em interface: este documento tem os valores, ele tem a intenção. A versão viva fica em `claude.ai/design/p/8a12d079-d3de-4ed0-b8b4-f5f427a1c97e`.
 
-Uma limitação a saber antes de tentar: aquele projeto é do tipo comum, **não é design system**. O `/design-sync` só escreve em projeto criado como design system, e o tipo é definido na criação e não muda. Sincronizar componente daqui para lá exige um projeto novo — decisão que ainda não foi tomada.
+Uma limitação a saber antes de tentar sincronizar: aquele projeto é do tipo comum, **não é design system**. O `/design-sync` só escreve em projeto criado como design system, e o tipo é definido na criação e não muda. Levar componente daqui para lá exige um projeto novo — decisão que ainda não foi tomada.
 
 | | Encontrado | Proposto |
 |---|---|---|
