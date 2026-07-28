@@ -131,7 +131,7 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 ## 9. Estado atual
 
-Atualizado em 27/07/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou.
+Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou.
 
 **Fase 0 em andamento** (contas de afiliado e prova de subid: trabalho manual do dono), com a base da Fase 1 construída em paralelo. As duas não conflitam — o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
@@ -145,7 +145,7 @@ Atualizado em 27/07/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 **Colheita** — lê canais públicos do Telegram (`supabase/functions/colheita-canais`). Rodada contra canal real: 20 posts, 37 links, 18 anúncios novos em 8 s.
 
-**Painel** — cadastro por link colado e acompanhamento da série. É a única tela que existe.
+**Painel** — três telas: cadastro por link colado com acompanhamento da série (`/`), rendimento por canal (`/colheita/fontes`) e menções com problema (`/colheita/mencoes`). As duas de colheita foram construídas e verificadas contra três canais reais do Telegram: 60 posts, 35 links, 6 anúncios novos, 29 descartes — e os 29 aparecem na tela com o motivo de cada um.
 
 **Automação** — CI a cada push, rotina diária e backup semanal em `.github/workflows/`.
 
@@ -153,13 +153,14 @@ Atualizado em 27/07/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 ### Próxima tarefa
 
-**A tela de colheita.** É o item 3 de `docs/plano.md`, e o subsistema pronto e testado que não tem nenhuma superfície — nem para ver o que cada canal rende, nem para diagnosticar link que não foi reconhecido.
+**Canal: o mínimo.** É o item 4 de `docs/plano.md` — nicho, plataforma e teto diário — e a última coisa que falta antes das filas.
 
-Três telas, sobre dados que já existem:
+As filas dependem de duas coisas, por motivos **independentes**:
 
-1. **Fontes** — `rendimento_da_fonte`: menções, anúncios novos, já conhecidos, descartados. Adicionar canal, ativar, desativar, definir o nicho que os produtos herdam.
-2. **Menções com problema** — `mencao` com `resultado in ('nao_reconhecido','erro','loja_desconhecida')`. É a única superfície onde a pendência do formato da Shopee (em `docs/decisoes.md`) fica visível.
-3. **Preço alegado × observado** — `mencao.preco_alegado_centavos` contra a nossa série. Existe para flagrar canal que mente, e não tem consumidor.
+- **Canal → capacidade.** A tela de aprovação mostra *"30 ofertas → 87 publicações → 18 vagas hoje"*. Sem canal esse número não existe e a tela nasce cega. Aprovar sem canal também é ato silencioso: a aprovação gera uma publicação por canal que aceita o nicho, e não haveria nenhum.
+- **Colheita → volume.** A colheita enche o **catálogo**, não a fila. Sem catálogo cheio, a aprovação seria testada com três itens — o erro do protótipo, desenhado para quatro publicações e quebrado em trinta.
+
+Canal não espera colheita: a colheita já está feita, mas mesmo se não estivesse, canal poderia ter vindo antes.
 
 Antes de escrever tela, leia `docs/plano.md`: a ordem não é a do menu, e a regra que evita cascata é **nenhuma tela é construída com dado falso**.
 
@@ -170,6 +171,7 @@ Antes de escrever tela, leia `docs/plano.md`: a ordem não é a do menu, e a reg
 - **Segredos no GitHub** — dependem da nuvem existir.
 - **Redirecionador e subid** — dependem de domínio registrado.
 - **Colheita por conta de usuário do Telegram** — o dono tem número dedicado; falta gerar a string de sessão. Ela nunca entra no Git nem em mensagem.
+- **Links `shp.ee`** — o encurtador da Shopee devolve 404 para requisição de servidor, com ou sem User-Agent de navegador. Canal que só publica `shp.ee` rende zero, e a tela de menções mostra isso. Resolve junto com a credencial da Open API. **Não invente contorno** — simular navegador é raspagem com outro nome.
 
 ### Leia antes de opinar
 

@@ -379,3 +379,33 @@ O dono pediu para trocar por Vercel. O impedimento da D-004 continua de pé e é
 Alternativas gratuitas e comercialmente livres a avaliar: Netlify, Railway, Render, Fly.
 
 **Não bloqueia nada agora** — o painel só vai ao ar junto com o domínio, que também não existe. Decidir quando chegar lá, e registrar aqui como decisão.
+
+---
+
+## Pendência · Encurtador da Shopee não resolve por requisição de servidor
+**Data:** 2026-07-28
+
+A primeira colheita rodada contra a tela de menções mostrou o quadro real: **13 de 13 links de um canal de Shopee foram descartados**, todos `shp.ee`, todos com a mesma mensagem — link curto que precisa ser aberto no navegador.
+
+Conferido fora do sistema: `curl https://shp.ee/<código>` devolve **404 com e sem User-Agent de navegador**. Não é o nosso leitor errando formato; é a Shopee recusando expandir o link para quem não é aplicativo dela. O mesmo motivo já registrado na pendência da ordem de `shopid`/`itemid`.
+
+**Consequência prática:** canal que publica só `shp.ee` rende zero, e o rendimento por canal mostra isso corretamente — 13 menções, 13 descartadas, nenhum anúncio.
+
+**Some quando a credencial da Open API de afiliado da Shopee chegar:** ela devolve o link de produto e os dois identificadores separados, sem depender de expandir encurtador. Ou seja, é mais um item que espera o dono, não trabalho de código.
+
+**Não invente contorno:** simular navegador para expandir link da Shopee é raspagem com outro nome, e cai na regra da seção 8 do AGENTS.md.
+
+---
+
+## Correção · A colheita perdia todo descarte, em silêncio
+**Data:** 2026-07-28
+
+Achado ao construir a tela de menções e rodar a colheita contra três canais reais: o resumo dizia **29 descartes** e o banco tinha **zero**.
+
+Causa: as duas inserções diretas em `mencao` dentro de `colheita-canais` não mandavam `operacao_id`, que a reescrita de 27/07 tornou obrigatório — e **nenhuma das duas conferia o `error` da resposta**. O caminho feliz passava, porque `registra_mencao` é `security definer` e resolve a operação sozinha.
+
+O efeito seria o pior tipo de falha: a colheita informando sucesso, a tela de menções vazia justamente quando mais teria o que mostrar, e a conclusão errada de que o leitor de link está ótimo. O único sintoma seria catálogo crescendo mais devagar do que devia.
+
+**Corrigido** com uma função só de inserção de descarte, que carrega a operação da fonte e confere o erro — conflito de índice único continua sendo silêncio, porque link repetido no mesmo post não é falha.
+
+**A regra que achou isso** está em `docs/plano.md`: teste com dado real. Nenhuma revisão de código teria pego, porque o código estava sintaticamente correto e o resumo da execução parecia bom.

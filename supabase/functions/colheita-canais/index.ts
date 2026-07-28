@@ -53,7 +53,11 @@ Deno.serve(async (req: Request) => {
 
   const { data: fontes, error: erroFontes } = await db
     .from("fonte_descoberta")
-    .select("id, identificador, nome, tipo_leitura, ultimo_post_id")
+    // A operação vem junto: as menções descartadas são inseridas
+    // direto na tabela, e `mencao.operacao_id` é NOT NULL. Só o
+    // caminho feliz passa por `registra_mencao`, que resolve a
+    // operação sozinha por ser security definer.
+    .select("id, operacao_id, identificador, nome, tipo_leitura, ultimo_post_id")
     .eq("ativo", true)
     .eq("tipo_leitura", "web_publica")
     .order("ultima_leitura_em", { ascending: true, nullsFirst: true })
@@ -114,7 +118,8 @@ Deno.serve(async (req: Request) => {
       try {
         resolvida = await resolveLink(url);
       } catch (erro) {
-        await db.from("mencao").insert({
+        await registraDescarte(db, resumo, {
+          operacao_id: fonte.operacao_id,
           fonte_id: fonte.id,
           post_externo_id: post.id,
           url_bruta: url,
@@ -123,14 +128,14 @@ Deno.serve(async (req: Request) => {
           publicada_em: post.publicadaEm,
           processada_em: new Date().toISOString(),
         });
-        resumo.descartados++;
         return;
       }
 
       const leitura = leLinkDeProduto(resolvida);
 
       if (!leitura.ok) {
-        await db.from("mencao").insert({
+        await registraDescarte(db, resumo, {
+          operacao_id: fonte.operacao_id,
           fonte_id: fonte.id,
           post_externo_id: post.id,
           url_bruta: url,
@@ -142,7 +147,6 @@ Deno.serve(async (req: Request) => {
           publicada_em: post.publicadaEm,
           processada_em: new Date().toISOString(),
         });
-        resumo.descartados++;
         return;
       }
 
@@ -186,6 +190,35 @@ Deno.serve(async (req: Request) => {
 
   return responde(200, resumo);
 });
+
+/**
+ * Grava a menção que não virou anúncio.
+ *
+ * O `error` é conferido, e essa conferência é o motivo desta função
+ * existir. Antes, as duas inserções ignoravam a resposta do banco —
+ * e como `operacao_id` faltava, TODO descarte era recusado em
+ * silêncio: a colheita somava 29 descartes no resumo e gravava
+ * zero. O resultado seria a tela de menções vazia justamente quando
+ * mais tivesse o que mostrar, e a conclusão errada de que o leitor
+ * de link está ótimo.
+ */
+async function registraDescarte(
+  db: ReturnType<typeof createClient>,
+  resumo: { descartados: number; falhas: string[] },
+  linha: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await db.from("mencao").insert(linha);
+
+  if (error) {
+    // Conflito no índice único é link repetido no mesmo post — não
+    // é falha, é a colheita fazendo o trabalho dela.
+    if (error.code !== "23505") {
+      resumo.falhas.push(`menção descartada não gravou: ${error.message}`);
+    }
+  }
+
+  resumo.descartados++;
+}
 
 async function marcaLeitura(
   db: ReturnType<typeof createClient>,

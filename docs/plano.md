@@ -34,12 +34,19 @@ Correm em paralelo, com ritmos diferentes. Só se cruzam onde está escrito.
 
 ## Ordem, e por que ela mudou
 
-A ordem intuitiva seria *aprovar → publicar → resto*. Está errada, e as duas revisões convergiram no mesmo motivo: **as filas não podem nascer antes de `canal` existir.**
+A ordem intuitiva seria *aprovar → publicar → resto*. Está errada, e por **duas razões independentes**. Elas apontam para o mesmo lugar — as filas vêm depois — mas não são a mesma coisa, e confundi-las faz parecer que uma resolve a outra.
+
+**Canal → filas: capacidade.**
 
 - Aprovar sem canal nenhum é ato sem efeito, silencioso — a aprovação gera uma publicação por canal que aceita o nicho, e não há nenhum.
-- O número mais importante da tela de aprovação é a capacidade: *"30 ofertas → 87 publicações → 18 vagas hoje"*. Sem canal, não existe.
+- O número mais importante da tela de aprovação é a capacidade: *"30 ofertas → 87 publicações → 18 vagas hoje"*. Sem canal esse número não existe, e a tela nasce cega.
 
-E a colheita vem antes das filas porque é ela que enche a fila. Testar a tela de aprovação com três itens repetiria exatamente o erro do protótipo, que foi desenhado para quatro publicações e quebra em trinta.
+**Colheita → filas: volume.**
+
+- A colheita enche o **catálogo**, não a fila. A fila é o que o motor aprova do catálogo, depois que cada anúncio acumulou série.
+- Sem catálogo cheio, a tela de aprovação seria testada com três itens — exatamente o erro do protótipo, que foi desenhado para quatro publicações e quebra em trinta.
+
+**Canal não depende de colheita, e colheita não depende de canal.** A ordem 3 → 4 abaixo é conveniência, não dependência: as duas poderiam ser construídas em qualquer ordem, ou em paralelo.
 
 ### Ordem definitiva
 

@@ -73,6 +73,77 @@ export type AnuncioLinha = {
   atualizado_em: string;
 };
 
+export type TipoLeituraFonte = "web_publica" | "conta_usuario";
+
+export type FonteDescobertaLinha = {
+  id: string;
+  operacao_id: string;
+  plataforma: string;
+  /** Nome do canal sem o @. */
+  identificador: string;
+  nome: string | null;
+  tipo_leitura: TipoLeituraFonte;
+  /** O nicho que os produtos colhidos herdam. Nulo = colheita não roteável. */
+  nicho_id: string | null;
+  ativo: boolean;
+  ultima_leitura_em: string | null;
+  ultimo_post_id: number | null;
+  criado_em: string;
+  atualizado_em: string;
+};
+
+export type MencaoResultado =
+  | "pendente"
+  | "anuncio_novo"
+  | "anuncio_existente"
+  | "loja_desconhecida"
+  | "nao_reconhecido"
+  | "erro";
+
+/** Os resultados que exigem olho humano. Espelha `mencao_problema_idx`. */
+export const RESULTADOS_COM_PROBLEMA: MencaoResultado[] = [
+  "pendente",
+  "nao_reconhecido",
+  "loja_desconhecida",
+  "erro",
+];
+
+export type MencaoLinha = {
+  id: number;
+  operacao_id: string;
+  fonte_id: string;
+  post_externo_id: number;
+  publicada_em: string | null;
+  /** Link com o afiliado de outra pessoa. Auditoria apenas: nunca republicado. */
+  url_bruta: string;
+  url_resolvida: string | null;
+  marketplace_id: string | null;
+  sku_externo: string | null;
+  anuncio_id: string | null;
+  /** Alegação de terceiro. Nunca entra em preco_ponto. */
+  preco_alegado_centavos: number | null;
+  resultado: MencaoResultado;
+  detalhe: string | null;
+  vista_em: string;
+  processada_em: string | null;
+};
+
+/** View `rendimento_da_fonte` — quanto cada canal rende. */
+export type RendimentoDaFonteLinha = {
+  fonte_id: string;
+  operacao_id: string;
+  identificador: string;
+  nome: string | null;
+  tipo_leitura: TipoLeituraFonte;
+  nicho_id: string | null;
+  ativo: boolean;
+  ultima_leitura_em: string | null;
+  mencoes: number;
+  anuncios_novos: number;
+  ja_conhecidos: number;
+  descartadas: number;
+};
+
 export type OfertaStatus = "nova" | "aprovada" | "rejeitada" | "adiada" | "expirada";
 
 export type OfertaLinha = {
@@ -181,10 +252,13 @@ export type Banco = {
         "operacao_id" | "produto_id" | "marketplace_id" | "url_original" | "sku_externo"
       >;
       oferta: Tabela<OfertaLinha, "operacao_id" | "anuncio_id">;
+      fonte_descoberta: Tabela<FonteDescobertaLinha, "operacao_id" | "identificador">;
+      mencao: Tabela<MencaoLinha, "operacao_id" | "fonte_id" | "post_externo_id" | "url_bruta">;
     };
     Views: {
       anuncio_serie: { Row: AnuncioSerieLinha; Relationships: [] };
       saude_operacao: { Row: SaudeOperacaoLinha; Relationships: [] };
+      rendimento_da_fonte: { Row: RendimentoDaFonteLinha; Relationships: [] };
     };
     Functions: {
       registra_preco: {
