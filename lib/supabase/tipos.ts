@@ -40,6 +40,25 @@ export type NichoLinha = {
   atualizado_em: string;
 };
 
+/**
+ * Percentual de comissão de uma loja para um nicho, com vigência.
+ *
+ * Nunca fica em código: ele muda a cada campanha sazonal, e a comissão
+ * calculada é sempre marcada como estimativa. A linha vigente é a que
+ * tem `vigente_ate` nulo — o histórico fica, porque comissão de venda
+ * antiga foi calculada pelo percentual daquela época.
+ */
+export type ComissaoCategoriaLinha = {
+  id: string;
+  operacao_id: string;
+  marketplace_id: string;
+  nicho_id: string;
+  percentual: number;
+  vigente_desde: string;
+  vigente_ate: string | null;
+  criado_em: string;
+};
+
 export type ProdutoLinha = {
   id: string;
   operacao_id: string;
@@ -307,6 +326,10 @@ export type Banco = {
       mencao: Tabela<MencaoLinha, "operacao_id" | "fonte_id" | "post_externo_id" | "url_bruta">;
       execucao_rotina: Tabela<ExecucaoRotinaLinha, "operacao_id" | "tarefa">;
       parametro: Tabela<ParametroLinha, "operacao_id" | "chave" | "valor">;
+      comissao_categoria: Tabela<
+        ComissaoCategoriaLinha,
+        "operacao_id" | "marketplace_id" | "nicho_id" | "percentual"
+      >;
       comporta_dia: Tabela<ComportaDiaLinha, "operacao_id" | "dia" | "comporta">;
     };
     Views: {
