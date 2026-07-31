@@ -35,9 +35,11 @@ Cada peça está numa fronteira diferente de propósito: o banco guarda a regra,
 | Motor de curadoria | **Pronto e testado** |
 | Rotinas de manutenção | **Prontas e testadas** |
 | CI, rotina diária e backup | **Escritos**, esperando os segredos no GitHub |
-| Projeto Supabase na nuvem | **Falta** |
+| Projeto Supabase na nuvem | ✅ `fcdkczueohekmgaaacdr`, São Paulo |
+| Edge Functions na nuvem | ✅ `coleta-diaria` e `colheita-canais`, publicadas em 31/07 |
+| Segredos no GitHub | ✅ os quatro, em 31/07. Rotina diária e backup rodaram e passaram |
+| Painel publicado | ✅ https://radar-ofertas.vercel.app (Vercel Hobby, dívida da D-032) |
 | Domínio e redirecionador | **Falta** |
-| Painel publicado | **Falta** |
 | Colheita de canais | **Falta** |
 
 ---
@@ -174,8 +176,18 @@ Hoje existe **um remendo e uma superfície**: a tela `/atencao` conta os dias qu
 
 ## O que falta, na ordem
 
-1. **Projeto Supabase na nuvem** — `pnpm db:publica` aplica as 9 migrations.
-2. **Segredos no GitHub** — destrava a rotina diária e o backup.
+1. ~~**Projeto Supabase na nuvem**~~ — feito em 31/07, 16 migrations aplicadas.
+2. ~~**Segredos no GitHub**~~ — feito em 31/07. As duas rotinas foram disparadas
+   à mão e passaram; o backup gerou artefato de 140 KB.
 3. **Credencial de marketplace** — sem ela o coletor roda e não coleta nada.
+   Continua sendo o gargalo: é o que faz o catálogo existir, e sem catálogo as
+   telas de decisão ficam corretas e vazias.
 4. **Domínio** — precede o redirecionador, que precede qualquer publicação.
-5. **Publicar o painel** — só faz sentido quando houver oferta na fila.
+5. ~~**Publicar o painel**~~ — feito em 31/07, com a dívida da D-032 anotada.
+
+**Uma armadilha que custou três execuções**, para quem for mexer no backup: o
+runner do Ubuntu 24.04 traz o cliente 16 do Postgres, o servidor do Supabase é
+17, e o `pg_dump` se recusa a falar com servidor mais novo. Instalar o
+`postgresql-client-17` **não basta** — o 16 continua ganhando no `PATH`. O
+workflow agora aponta para `/usr/lib/postgresql/17/bin/pg_dump` e confere a
+versão no passo de instalar, em vez de descobrir na hora do dump.

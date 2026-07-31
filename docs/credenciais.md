@@ -197,7 +197,7 @@ loja só, a base do produto fica numa perna só.
 |---|---|
 | **Nome** | `Radar de Ofertas 4YU` (nome curto `radar-ofertas-4yu`) |
 | **Client ID** | `7618355784652588` |
-| **Client Secret** | no `.env`, como `ML_CLIENT_SECRET` |
+| **Client Secret** | ⚠️ **não está em lugar nenhum.** Conferido em 31/07 no `.env`, no cofre `4yu-apps/.secrets/` e nas variáveis da Vercel: em nenhum. Precisa ser copiado de novo da tela da aplicação |
 | **Onde** | `developers.mercadolivre.com.br` → *Minhas aplicações* |
 
 **Como ela foi configurada**, para quem precisar conferir ou repetir:
@@ -215,10 +215,11 @@ loja só, a base do produto fica numa perna só.
   anúncios que **você** publica. Não existe tópico que entregue promoção de
   terceiro; marcar qualquer um só torna obrigatória uma URL de notificação que
   este projeto não tem. Feed oficial de oferta é a Shopee, não o ML.
-- **URIs de redirect:** as duas da Vercel, `.../callback`. Uma é o alias estável
-  do projeto, a outra é a URL do deploy de 31/07. **Confirme a grafia exata na
-  tela da aplicação antes de usar** — ela precisa bater caractere por caractere
-  nos dois passos abaixo, e o registro aqui foi feito de memória.
+- **URIs de redirect:** as duas da Vercel, `.../callback`. O alias estável é
+  **`https://radar-ofertas.vercel.app/callback`**; a outra é a URL do deploy de
+  31/07, que muda a cada publicação e por isso não serve a longo prazo.
+  **Confirme a grafia exata na tela da aplicação antes de usar** — ela precisa
+  bater caractere por caractere nos dois passos abaixo.
 
 ### Falta só o refresh token
 
@@ -228,9 +229,12 @@ loja só, a base do produto fica numa perna só.
    https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=7618355784652588&redirect_uri=REDIRECT
    ```
 
-2. Autorize. O navegador vai para `REDIRECT?code=TG-xxxxx`. A página vai dar 404
-   ou erro de conexão — **tudo bem**, o que interessa é o `code` na barra de
-   endereço. Ele **vale ~10 minutos e serve uma vez só**.
+2. Autorize. O navegador vai para `REDIRECT?code=TG-xxxxx`.
+
+   **Não dá 404** — isso foi testado em 31/07. O painel não tem rota `/callback`,
+   então o middleware redireciona para a tela de entrada **preservando o code**:
+   a barra fica em `/entrar?code=TG-xxxxx&de=%2Fcallback`. É de lá que você
+   copia. O `code` **vale ~10 minutos e serve uma vez só**.
 
 3. Troque o code pelos tokens:
 

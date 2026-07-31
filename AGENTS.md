@@ -153,7 +153,9 @@ Dia longo, quatro frentes. Ordem de leitura para quem chega agora: esta lista, d
 
 **4. O sistema saiu da máquina local.** Projeto Supabase criado e migrations aplicadas, e o painel publicado. Ver "Bloqueado, e por quem" logo abaixo, que mudou bastante.
 
-**5. A simulação começou a sair do painel, e isto está pela metade.** Decisão do dono no fim do dia: *"agora estamos parando de brincar de mockup"*. Encerra a exceção da D-026. **Canais já lê o banco; Aprovar e Publicar ainda são simuladas.** O passo a passo do que falta, na ordem, está em `docs/tirar-a-simulacao.md` — leia antes de tocar em qualquer uma das duas. Para saber onde parou: `grep -rln "simulacao/loja" app lib testes`.
+**5. A simulação saiu do painel, inteira.** Decisão do dono: *"agora estamos parando de brincar de mockup"*. Encerra a exceção da D-026. `lib/simulacao/loja.ts` foi apagado e as três telas — Canais, Aprovar e Publicar — leem o banco. A faixa `AvisoSimulacao` não existe mais, porque não há tela mentindo. **Nenhuma tela do painel mostra número inventado.** O que a travessia mudou está em `docs/tirar-a-simulacao.md`.
+
+**6. A infraestrutura saiu do papel.** Segredos do GitHub subidos, Edge Functions publicadas na nuvem, variáveis da Vercel completadas em Preview e Development. As duas rotinas agendadas foram **disparadas à mão e passaram** — não estão só configuradas, estão comprovadas.
 
 ### Contas e credenciais — onde estamos
 
@@ -166,7 +168,7 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 | **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
 | **Shopee — afiliado** | ⏳ cadastro enviado, até 3 dias úteis | esperar e-mail |
 | **Shopee — Open API** | ⛔ bloqueado | exige o ID de afiliado, que só existe depois de aprovar. **Depois disso, até 2 semanas** |
-| **Mercado Livre — API de itens** | 🟡 aplicação criada em 31/07, `Radar de Ofertas 4YU`, Client ID `7618355784652588` | falta **só** o `ML_REFRESH_TOKEN` — fluxo de navegador, passo a passo em `docs/credenciais.md` §4b |
+| **Mercado Livre — API de itens** | 🟡 aplicação criada em 31/07, `Radar de Ofertas 4YU`, Client ID `7618355784652588` | faltam **dois**: o `ML_CLIENT_SECRET`, que a versão anterior deste arquivo dava como presente no `.env` e **não está em lugar nenhum** (conferido no `.env`, no cofre da 4YU e nas variáveis da Vercel), e o `ML_REFRESH_TOKEN`. Passo a passo em `docs/credenciais.md` §4b |
 | **Canais** | ✅ `t.me/radarpet` (público) e grupo de WhatsApp | audiência |
 
 **Duas correções que a prática impôs à pesquisa**, e que valem para quem for planejar prazo:
@@ -180,9 +182,9 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 
 ### Como este projeto trabalha hoje
 
-**Interface primeiro, backend plugado depois (D-026, decisão do dono em 28/07).** O que falta para as telas de decisão terem dado real não é código: é credencial de marketplace, domínio e canal com audiência — nada disso sob controle de quem escreve o sistema. Então as telas são construídas sobre uma **operação simulada** em `lib/simulacao/loja.ts`, vão à mão de testadores nesse estado, e o backend entra ação por ação depois. Leia a D-026 antes de propor voltar à ordem antiga.
+**Interface primeiro, backend plugado depois (D-026, decisão do dono em 28/07 — exceção encerrada em 31/07).** As telas de decisão foram construídas sobre uma operação simulada, foram revisadas nesse estado, e o backend entrou depois. **Isso terminou:** a simulação não existe mais e todas as telas leem o banco.
 
-A tela nunca fala com a simulação: ela chama uma ação em `app/acoes/`, que hoje mexe na memória e amanhã escreve no banco. A assinatura não muda.
+A parte que continua valendo, e que fez a troca caber numa sessão: **a tela nunca fala com a fonte do dado.** Ela chama uma ação em `app/acoes/`, e a assinatura da ação não muda quando a fonte muda. `aprovaOferta(form)` era `aprovaOferta(form)` com a simulação e continua sendo com o banco — o que mudou foi só o corpo. Mantenha isso.
 
 **Antes de construir tela nova, revise as que existem.** A revisão de 28/07 achou seis defeitos, e cinco eram de **costura entre telas** — aprovar mexe na capacidade que Canais mostra, publicar consome o teto que Aprovar usa para avisar, preço mudado devolve para quem decide. Tela revisada sozinha parece correta. Está em `docs/decisoes.md`, em "Revisão · O que a passada pelas telas achou".
 
@@ -198,13 +200,15 @@ A tela nunca fala com a simulação: ela chama uma ação em `app/acoes/`, que h
 
 **Quinze telas.** As de painel ficam no grupo `app/(painel)/`, que é o que dá ao Login uma tela sem barra lateral:
 
-| Área | Telas | Dado |
-|---|---|---|
-| Hoje | `/aprovar` (+ painel `?oferta=`), `/publicar`, `/atencao`, `/arranque` | simulado; atenção e arranque leem o banco também |
-| Catálogo | `/produtos` (grão produto e anúncio, busca), `/produtos/[id]`, `/produtos/sem-nicho`, `/colheita/fontes`, `/colheita/mencoes` | **real** |
-| Distribuição | `/canais`, `/canais/[id]` | simulado |
-| Ajustes | `/ajustes/curadoria`, `/ajustes/nichos`, `/ajustes/marketplaces`, `/ajustes/modelos` | **real** |
-| Entrada | `/entrar` — fora da casca, sem barra lateral | **real** |
+**Todas leem o banco desde 31/07.** Não há mais tela simulada, e a coluna "dado" saiu daqui porque a resposta virou a mesma para todas.
+
+| Área | Telas |
+|---|---|
+| Hoje | `/aprovar` (+ painel `?oferta=`), `/publicar`, `/atencao`, `/arranque` |
+| Catálogo | `/produtos` (grão produto e anúncio, busca), `/produtos/[id]`, `/produtos/sem-nicho`, `/colheita/fontes`, `/colheita/mencoes` |
+| Distribuição | `/canais`, `/canais/[id]` |
+| Ajustes | `/ajustes/curadoria`, `/ajustes/nichos`, `/ajustes/marketplaces`, `/ajustes/modelos` |
+| Entrada | `/entrar` — fora da casca, sem barra lateral |
 
 A raiz `/` leva para `/aprovar`: a casa do dono é o trabalho, não a consulta.
 
@@ -250,9 +254,11 @@ pnpm usuario:cria "voce@exemplo.com" "Seu Nome" dono
 
 **Fechado em 31/07:** o Canal do WhatsApp virou a **D-031** — terceira superfície, entra como terceiro valor de `canal.plataforma` e nunca como booleano ao lado, e é decisão de Fase 2 porque muda o fluxo de publicação junto (o `wa.me` não alcança Canal). A distinção **30 aprovadas ≠ 30 publicações por canal** e a referência de receita (90 dias → R$ 800/mês; 12 meses → R$ 5–15 mil/mês) já estão no `docs/roadmap.md`, nas Fases 1 e 2.
 
-**Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15), a máquina de estados da simulação (27), as regras da mensagem (35), a intercalação por variedade (14) e os horários de pico (30). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
+**Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15), as regras da mensagem (35), a intercalação por variedade (14) e os horários de pico (30). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
 
-**Automação** — CI a cada push, rotina diária e backup semanal em `.github/workflows/`.
+Os 27 casos da máquina de estados da simulação saíram em 31/07 junto com ela, e **não foram substituídos por testes equivalentes de propósito**: eles verificavam um módulo em memória. O que os substitui são as constraints da migration 16, conferidas uma a uma contra o banco da nuvem — subid de 8 caracteres sem `0/O/1/I/l`, subid diferente por canal, a mesma oferta não indo duas vezes ao mesmo canal, `enviada` sem data recusada, estado fora da lista recusado, rejeição sem motivo recusada. Regra que vive em constraint não regride.
+
+**Automação** — CI a cada push, rotina diária e backup semanal em `.github/workflows/`, **com os segredos no lugar e as três comprovadas rodando**. Push na `main` também publica na Vercel, que está ligada ao repositório: commit em `main` vai ao ar sozinho.
 
 ### Próxima tarefa
 
@@ -260,14 +266,13 @@ Faltam da especificação, em ordem de utilidade:
 
 1. **Dinheiro** (Conversões, Repasses, Parceiros, painel do parceiro) — Fase 2 e 3. **Não construa antes de existir comissão**: são telas de dado que não existe nem simulado.
 
-Depois disso, dois blocos que não são tela:
+Depois disso, um bloco que não é tela:
 
-- **Plugar o backend** nas telas de decisão, uma ação por vez.
 - **Dependências de temporizador de terceiro** — estão anotadas em `docs/infra.md`, para serem resolvidas juntas quando as telas terminarem. Agendador do GitHub, pausa do Supabase, token do Mercado Livre, sessão do Telegram, credencial da Shopee: todas o mesmo problema, algo fora do nosso controle expira e o sistema para em silêncio.
 
 ### Pendências desta sessão — leia antes de tocar em qualquer coisa
 
-**As migrations 14 e 15 foram aplicadas em 31/07.** `npx supabase migration list --local` mostra as 15 casadas. Conferido no banco, não só no log: o modelo `Padrão` começa com `#publi · {loja}` na primeira linha, `anuncio.imagem_url` e `imagem_obtida_em` existem, e `expurga_imagens_expiradas` roda.
+**São 16 migrations.** A 16 (`publicacao`) está aplicada no local e na nuvem, e as constraints dela foram conferidas contra a nuvem uma a uma, com dado de verdade criado e apagado depois. Conferido no banco, não só no log: o modelo `Padrão` começa com `#publi · {loja}` na primeira linha, `anuncio.imagem_url` e `imagem_obtida_em` existem, e `expurga_imagens_expiradas` roda.
 
 **Nunca use `pnpm db:reset` para aplicar migration.** Ele não aplica — apaga e recria o banco inteiro. Foi assim que os dados colhidos se perderam em 28/07: 6 produtos, 6 anúncios, 3 fontes e 35 menções. O que aplica é:
 
@@ -278,12 +283,15 @@ npx supabase migration up --local
 
 **`pnpm db:tipos` era uma armadilha e foi desarmado em 31/07.** `lib/supabase/tipos.ts` é **escrito à mão**, com comentário em cada campo explicando o porquê, e traz apelidos (`Banco`, `*Linha`) que a aplicação inteira importa. O script sobrescrevia esse arquivo com a saída crua do gerador — ~25 erros de tipo em cadeia, e a explicação de cada campo perdida. Agora ele escreve em `lib/supabase/tipos-gerados.ts`, que é referência descartável e está no `.gitignore`. **Coluna nova continua entrando no arquivo à mão**, até o projeto Supabase da nuvem existir.
 
-**Falta a conferência visual das três telas.** Neste ambiente não deu para abrir navegador: não há Chromium no WSL, e o Chrome do Windows não é alcançável por CDP (o loopback do Windows não responde do WSL e o firewall barra a interface de rede). O que **está** verificado, por HTTP com sessão real:
+**O navegador voltou a funcionar aqui.** A versão anterior deste arquivo dizia que não havia Chromium no WSL. Há: `npx playwright install chromium` baixa e roda (o `install-deps` pede sudo e falha, mas não faz falta). O `pnpm telas` deixou de estar bloqueado.
 
-- as 14 telas respondem 200, sem erro de execução no HTML — é a classe de defeito da constante exportada de `"use server"` da rodada anterior
-- o modelo salvo passa na regra 3.10, que é o que faz o aviso de `/ajustes/modelos` ficar corretamente oculto
+O que **está** verificado, com navegador de verdade e sessão real, contra o painel publicado:
 
-O que **não** está verificado, e é exatamente onde os defeitos da rodada anterior moraram: os três avisos só aparecem em condição ruim, que se produz digitando. Precisa de olho humano, uns dois minutos:
+- as 13 telas logadas respondem 200 e **nenhuma solta erro de execução no navegador**
+- Aprovar e Publicar mostram os estados vazios corretos, sem faixa de simulação
+- o caminho de aprovar → `publicacao` com subid, contra o banco da nuvem: 12 conferências, todas passaram
+
+O que **não** está verificado, e é exatamente onde os defeitos das rodadas anteriores moraram: os avisos que só aparecem em condição ruim, que se produz digitando. E há agora um segundo buraco, maior: **o catálogo da nuvem está vazio**, então as telas foram vistas só nos estados vazios. O título de 180 caracteres que a D-026 avisou que apertaria algum layout ainda não passou por lá. Precisa de olho humano, uns dois minutos:
 
 | Onde | Como fazer aparecer | O que tem de acontecer |
 |---|---|---|
@@ -294,19 +302,21 @@ O que **não** está verificado, e é exatamente onde os defeitos da rodada ante
 
 E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm verifica` não vê layout.
 
+**Ambiente de conferência mudou em 31/07.** O Docker não sobe nesta máquina (pede sudo), então o banco local está fora do ar — mas **existe Chromium agora**: `npx playwright install chromium` funciona no WSL, e o `pnpm telas` roda. A conferência desta sessão foi feita contra o **painel publicado**, com a conta da nuvem, apontando `PAINEL_URL` para `https://radar-ofertas.vercel.app`. As treze telas responderam 200 sem erro de execução no navegador.
+
 **Conta local de teste:** `gabriel@local.test`, papel `dono`. A senha foi redefinida em 31/07 e está fora do Git — se precisar, redefina de novo pelo Studio (`http://127.0.0.1:54323`) ou crie a sua com `pnpm usuario:cria`.
 
-**O catálogo local continua vazio** desde o `db:reset` de 28/07. As 3 fontes estão recadastradas como misto; o catálogo se refaz rodando a colheita.
+**Os dois catálogos estão vazios** — o local desde o `db:reset` de 28/07, e o da nuvem porque nunca teve dado. O catálogo se refaz rodando a colheita, e é o que destrava ver as telas cheias.
 
 ### Bloqueado, e por quem
 
 - **Coleta de preço real** — falta credencial de marketplace, e o caminho mais curto **mudou em 31/07**. A Shopee continua sendo a melhor chave (resolve dado e link de uma vez), mas ela está a cerca de três semanas de distância: cadastro em análise, e a API só pode ser pedida depois de aprovado, levando até duas semanas a mais. **O Mercado Livre virou o atalho, e ele andou:** a aplicação já existe e `ML_CLIENT_ID` e `ML_CLIENT_SECRET` já estão no `.env`. **Falta um único passo**, o `ML_REFRESH_TOKEN`, que sai de um fluxo de navegador descrito em `docs/credenciais.md` §4b. Quem retomar isto: é a primeira coisa da fila, e leva minutos.
 - **Renovação do token do ML rasga o token guardado** — ⚠️ **defeito conhecido, não corrigido.** O Mercado Livre **troca o refresh token a cada renovação** e invalida o anterior. `pegaToken` em `supabase/functions/_compartilhado/fontes/mercado-livre.ts` lê só o `access_token` da resposta e descarta o `refresh_token` novo. Funciona na primeira renovação e quebra na próxima execução fria — o coletor passa a reportar "não consegui renovar o token" e pula a loja. **Tem que ser resolvido antes da primeira coleta agendada:** o token rotacionado precisa ser gravado em algum lugar que sobreviva à Edge Function, e variável de ambiente não é esse lugar.
-- **Segredos gerados** — `COLETA_SEGREDO` ✅ existe no `.env`. **`SAL_HASH_IP` ainda NÃO** — está com o texto de exemplo (`troque_por_uma_string_aleatoria_longa`), apesar de a versão anterior deste arquivo afirmar que existia. Gere antes da primeira coleta: o sal **nunca muda** depois que a coleta começar, senão a contagem de clique único quebra para sempre.
+- ~~**Segredos gerados**~~ — **resolvido em 31/07.** `COLETA_SEGREDO` e `SAL_HASH_IP` existem, os dois com 64 caracteres hex, no `.env` e nas três faixas da Vercel. O sal parecia ser o texto de exemplo porque o `.env` tinha **quatro arquivos colados num só** e a cópia antiga, mais abaixo, redefinia a variável — e no `dotenv` a última definição vence. O `.env` foi separado em `.env`, `.env.producao` e `.env.local`. O sal **nunca mais muda**: nenhum clique foi gravado ainda, e essa era a última janela para acertá-lo.
 - ~~**Projeto Supabase na nuvem**~~ — **resolvido em 31/07/2026.** Projeto `radar-ofertas`, organização 4YU Systems, região São Paulo (`sa-east-1`), ref `fcdkczueohekmgaaacdr`. As 15 migrations foram aplicadas e conferidas contra o banco, tabela por tabela. As chaves vivem em `.env.producao`, fora do Git. **A exceção da reescrita de migration fechou junto** — vale a regra da seção 6.
 
   O `.env` continua apontando para o banco **local**, que é onde o desenvolvimento acontece; a nuvem tem o schema e nenhum dado. Trocar o painel para ler a nuvem é decisão separada, e o gatilho é existir dado real lá.
-- **Segredos no GitHub** — a nuvem já existe, então isto deixou de estar bloqueado: falta subir as chaves de `.env.producao` como segredos do repositório para as rotinas agendadas alcançarem o banco.
+- ~~**Segredos no GitHub**~~ — **resolvido em 31/07.** Os quatro estão lá (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `COLETA_SEGREDO`, `SUPABASE_DB_URL`), e as duas rotinas foram disparadas à mão para provar: a diária respondeu com o resumo zerado (banco vazio, e isso é a resposta certa) e o backup gerou artefato de 140 KB. O `SUPABASE_DB_URL` usa o **session pooler** na porta 5432, e não a conexão direta: o runner do GitHub é IPv4, e a conexão direta do plano gratuito não é.
 - **Redirecionador e subid** — dependem de domínio registrado. Se `radar4yu` virar a marca, o domínio deve combinar.
 - **Prova do subid (Fase 0)** — **já dá para começar**, sem esperar a Shopee: Mercado Livre e Amazon geram link com subid hoje. Falta gerar os links de teste e **pedir a outra pessoa que compre** (autocompra é violação de termo).
 - **Colheita por conta de usuário do Telegram** — o dono tem número dedicado; falta gerar a string de sessão. Ela nunca entra no Git nem em mensagem.
@@ -324,7 +334,7 @@ E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm veri
 | `docs/mercado.md` | Antes de falar de concorrência ou distribuição |
 | `docs/infra.md` | O que roda onde, quanto custa, e as dependências que expiram |
 | `docs/credenciais.md` | O trabalho que só o dono faz: contas de afiliado, compra de teste, Supabase na nuvem, chaves de marketplace e Telegram |
-| `docs/tirar-a-simulacao.md` | **Antes de mexer em Aprovar ou Publicar.** O que já saiu da simulação, o que falta e em que ordem |
+| `docs/tirar-a-simulacao.md` | Registro da travessia, concluída em 31/07. Três coisas mudaram de comportamento contra o banco — vale ler antes de mexer em Aprovar ou Publicar |
 | `docs/refino-visual.md` | Antes de mexer em interface. O diagnóstico visual e as frentes, com o que ficou de fora |
 | `docs/pesquisa-tecnica.md` | Antes de mexer em stack ou política de plataforma. O que está validado e o que está errado |
 | `docs/pesquisa-operacao.md` | Antes de mexer em cadência, horário, formato de mensagem ou canal. Como se toca um grupo de verdade |

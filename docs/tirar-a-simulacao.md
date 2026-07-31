@@ -1,4 +1,4 @@
-# Tirar a simulação — o que falta para o painel ser só dado real
+# Tirar a simulação — feito em 31/07/2026
 
 Decisão do dono em 31/07/2026: *"o painel tá cheio de mockup, tira eles, só deixa
 se forem produtos de verdade — agora estamos parando de brincar de mockup."*
@@ -12,6 +12,64 @@ Este documento existe para que a refatoração possa ser retomada por qualquer
 sessão, sem depender de quem começou.
 
 ---
+
+## ✅ Terminou em 31/07/2026
+
+O `grep` abaixo volta vazio. `lib/simulacao/loja.ts` não existe mais, e nenhuma
+tela do painel mostra número inventado.
+
+```
+grep -rln "simulacao/loja" app lib testes
+```
+
+Este documento fica como registro do que a travessia mudou — não como fila de
+trabalho. O que vier depois disto é outra coisa.
+
+### O que ficou diferente do plano, e por quê
+
+Três pontos que o roteiro não previa e que valem mais que o próprio roteiro:
+
+**Desfazer aprovação não apaga publicação já enviada.** O plano dizia "apaga as
+publicações pendentes que ela gerou". Contra o banco isso precisou de ressalva:
+publicação enviada tem subid circulando, e um dia ele volta no relatório de
+comissão. Apagar a linha faria a venda chegar sem dono. Some só o que está
+`pendente` ou `bloqueada`.
+
+**"Decididas hoje" virou de hoje mesmo.** `todasAsOfertas()` funcionava numa
+simulação que morria com o servidor. Contra o banco, "todas" cresce para sempre,
+e a tela de trabalho do dia viraria o arquivo morto da operação.
+`ofertasDecididasHoje()` filtra por `decidida_em`.
+
+**O preço de agora vem da série, não da oferta.** O bloqueio por preço existe
+justamente para pegar a diferença entre os dois — lê-lo de `oferta.preco_atual`
+seria comparar o número com ele mesmo, e o bloqueio nunca dispararia.
+
+E uma coisa que o roteiro acertou e vale sublinhar: **os 27 testes apagados não
+foram substituídos por testes equivalentes.** O que os substitui é o banco. As
+constraints da migration 16 foram conferidas contra o projeto da nuvem em 31/07,
+uma a uma: subid de 8 caracteres sem `0/O/1/I/l`, subid diferente por canal, a
+mesma oferta não indo duas vezes ao mesmo canal, enviada sem data recusada,
+estado fora da lista recusado, e rejeição sem motivo recusada.
+
+### O que a simulação deixou para trás
+
+`Oferta` e `Publicacao` guardaram a forma que as telas já consumiam, então a
+troca não redesenhou nada. Duas mudanças de forma, as duas por causa do custo de
+consulta:
+
+- A oferta chega **completa** — com nome e cor da loja, nome do nicho, série de
+  preço e canais elegíveis dentro dela. A simulação deixava a tela chamar seis
+  funções auxiliares por linha; contra o banco isso seria seis consultas por
+  linha, numa fila de trinta.
+- `canaisEscolhidos` deixou de ser campo e virou contagem das `publicacao` vivas
+  daquela oferta. Guardado nos dois lugares, os dois discordariam na primeira vez
+  que uma publicação fosse cancelada.
+
+---
+
+## O roteiro original, para consulta
+
+
 
 ## Como saber onde parou
 

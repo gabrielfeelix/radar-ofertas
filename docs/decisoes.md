@@ -410,6 +410,16 @@ Simulação responde essa pergunta hoje, com testador de verdade, por um custo b
 
 **Mudaria se:** a credencial chegar antes de as telas ficarem prontas. Aí o plugue acontece na hora, e a simulação vira material de teste.
 
+### ✅ A exceção terminou em 31/07/2026
+
+O dono encerrou: *"agora estamos parando de brincar de mockup"*. `lib/simulacao/loja.ts` foi apagado, e as três telas que dependiam dele — Canais, Aprovar e Publicar — passaram a ler o banco. A faixa `AvisoSimulacao` não existe mais, porque não há mais tela mentindo.
+
+**A D-026 fez o que prometeu, e vale registrar por quê:** a assinatura das ações não mudou em nenhuma das três. `aprovaOferta(form)` continua sendo `aprovaOferta(form)`; o que mudou foi o corpo, que antes mexia num objeto em memória e agora grava `oferta` e `publicacao`. A condição 1 da lista acima — "nenhuma tela chama a simulação direto" — foi o que tornou a troca um trabalho de uma sessão em vez de uma reescrita.
+
+**O custo previsto não apareceu do jeito esperado**, e isso é informação: o parágrafo acima avisava que "algum layout aperta" com dado real. Não deu para saber ainda, porque o banco da nuvem está vazio — o que se viu foram os estados vazios, que ficaram corretos. O aperto de layout continua esperando o primeiro título de 180 caracteres.
+
+O roteiro da travessia, com o que cada passo destravava, está em `docs/tirar-a-simulacao.md`.
+
 ---
 
 ## Revisão · O que a passada pelas telas achou
@@ -580,9 +590,9 @@ O mercado usa **três** superfícies, não duas:
 
 O painel está publicado na **Vercel, plano Hobby**, na conta `4-yu`, projeto
 `radar-ofertas`. O deploy de 31/07 responde em
-`https://radar-ofertas-hvmdkorj6-4-yu.vercel.app` — esse endereço é **do deploy**,
-muda a cada publicação; o alias estável está em *Vercel → radar-ofertas →
-Domains*. Fica escrito porque dívida sem endereço é dívida difícil de cobrar, e
+**https://radar-ofertas.vercel.app** — este é o alias estável, e é o endereço a
+usar. O `radar-ofertas-hvmdkorj6-4-yu...` que estava aqui antes é a URL **do
+deploy**, que muda a cada publicação. Fica escrito porque dívida sem endereço é dívida difícil de cobrar, e
 porque as URIs de redirect do OAuth do Mercado Livre apontam para ele. Isso
 **contraria a seção 2 do `AGENTS.md`**, que manda hospedar em Cloudflare Workers
 com OpenNext (D-016) e diz, com todas as letras, para não usar o plano gratuito
@@ -595,10 +605,20 @@ adaptador. Decisão do dono, tomada com o conflito explicado na tela.
 um painel que opera links de afiliado é uso comercial. O risco não é multa — é
 **suspensão da conta**, e a conta é a mesma dos outros aplicativos da 4YU.
 
-**O que reduz o risco enquanto durar:** a *Deployment Protection* da Vercel está
-**ligada**, então o painel só abre para quem tem acesso à conta. Enquanto ele não
-for público e não houver publicação real saindo dali, é ambiente de teste — que é
-o que o plano Hobby permite.
+**O que reduziria o risco, e NÃO está no lugar.** Esta decisão dizia, em 31/07,
+que a *Deployment Protection* estava ligada e que por isso o painel só abriria
+para quem tem acesso à conta. **Conferido na mesma noite: está desligada.** As
+três URLs servem a tela de login com 200 para qualquer pessoa na internet, e a
+API do projeto confirma (`ssoProtection: null`, `passwordProtection: null`).
+
+O dono foi avisado e **decidiu deixar aberto por enquanto**, com o argumento de
+que não há publicação real saindo dali. A decisão é dele e está registrada; o que
+não pode continuar é esta página afirmando uma proteção que não existe — mitigação
+escrita e não aplicada é pior que mitigação nenhuma, porque a próxima pessoa lê e
+para de procurar.
+
+**Para religar**, quando for a hora: *Vercel → radar-ofertas → Settings →
+Deployment Protection → Vercel Authentication*.
 
 **Prazo, e é o que faz disto dívida e não desleixo:** sair da Vercel Hobby **antes
 da primeira publicação real em canal com audiência**. Nesse dia, uma de duas:
