@@ -42,7 +42,11 @@ A API é GraphQL, em `affiliate.shopee.com.br/graphql`, autenticada por HMAC-SHA
 
 **Correção de 31/07:** a pesquisa original dizia que a credencial "sai do próprio painel de afiliado, sem porteiro". **Está errado.** O App ID e o Secret **não são autoatendimento**: é preciso abrir um chamado na Central de Ajuda do painel de afiliado, por e-mail, pedindo explicitamente a ativação da API, e a resposta leva **até duas semanas**. Só depois disso a seção "Open API" aparece no painel.
 
-Isso não derruba a D-010 — a via oficial continua sendo a única que não depende de raspagem, e continua resolvendo dado e link na mesma chave. O que muda é o **calendário**: o pedido da API tem que ser aberto no mesmo dia em que a conta de afiliado for aprovada, senão as duas esperas viram uma fila só.
+Isso não derruba a D-010 — a via oficial continua sendo a única que não depende de raspagem, e continua resolvendo dado e link na mesma chave. O que muda é o **calendário**, e ele é pior do que parece: **as duas esperas são obrigatoriamente em série, não em paralelo.**
+
+O formulário do chamado exige o **ID de Afiliado** como campo obrigatório, e esse ID só passa a existir depois da conta aprovada. Não dá para adiantar o pedido da API enquanto o cadastro está em análise — verificado na prática em 31/07, com o formulário aberto na tela.
+
+Portanto: **até 3 dias úteis** de análise do cadastro, e só então **até 2 semanas** de análise da API. O planejamento tem que somar os dois.
 
 É exatamente o que a D-010 apostou: uma chave que resolve dado de produto e link rastreável de uma vez.
 

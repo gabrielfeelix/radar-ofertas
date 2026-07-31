@@ -118,6 +118,14 @@ as rotinas automáticas rodarem sozinhas de madrugada.
 
 ## 3. Credencial da Shopee (Open API de afiliado)
 
+> **Estado em 31/07/2026:** cadastro de afiliado **enviado**, aguardando análise
+> (até 3 dias úteis, resposta por e-mail para `gab.feelix@gmail.com`).
+>
+> **O pedido da API não pôde ser aberto junto**, e isso corrige uma orientação
+> anterior: o formulário do chamado tem o **ID de Afiliado como campo
+> obrigatório**, e ele só existe depois da conta aprovada. As duas esperas são
+> em série. Assim que a aprovação chegar, o chamado é a primeira coisa a fazer.
+
 **Destrava:** a coleta de preço de verdade. Hoje o coletor está pronto e pula
 todas as lojas por falta de chave — o catálogo só enche pela colheita de canais
 alheios, e sem preço coletado não existe série, sem série não existe oferta.
