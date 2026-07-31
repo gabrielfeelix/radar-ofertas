@@ -68,7 +68,19 @@ no `.env`.
 
 ---
 
-## 2. Projeto Supabase na nuvem
+## 2. Projeto Supabase na nuvem — ✅ FEITO em 31/07/2026
+
+> Criado pela linha de comando, com o token de conta que já existia em
+> `4yu-apps/.secrets`. Projeto `radar-ofertas`, organização 4YU Systems, região
+> São Paulo, ref `fcdkczueohekmgaaacdr`. As 15 migrations foram aplicadas e
+> conferidas. Chaves em `.env.producao`, fora do Git.
+>
+> **Uma coisa continua sendo sua:** a senha do banco está em `.env.producao` e o
+> Supabase não a mostra de novo. Copie para um gerenciador de senhas.
+>
+> O passo a passo abaixo fica registrado para quando houver um segundo ambiente.
+
+### Como foi feito, se precisar repetir
 
 **Destrava:** o sistema sair da sua máquina. Hoje o banco só existe no Docker
 local — se o seu computador desligar, não existe sistema. É também o que permite

@@ -83,7 +83,7 @@ Dinheiro, Parceiros e Repasses só depois da primeira comissão. Antes disso sã
 
 O banco está vazio, nada publicado, ninguém mais no projeto. Empilhar correção em dez migrations deixaria o schema ilegível para sempre, para economizar um risco que só existe depois que houver produção.
 
-**Quando o Supabase da nuvem subir, essa porta fecha** e volta a valer a regra normal de `AGENTS.md`: migration aplicada não se altera.
+**A porta fechou em 31/07/2026**, quando o Supabase da nuvem subiu com as 15 migrations aplicadas. Vale a regra normal de `AGENTS.md`: migration aplicada não se altera — cria-se outra.
 
 - `operacao_id` em toda tabela, RLS por ela (D-021)
 - `nicho` como entidade; `produto.nicho_id`, `canal` aceita vários (D-019)

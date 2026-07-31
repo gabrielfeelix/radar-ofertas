@@ -104,7 +104,7 @@ Schema completo, campos e índices: `docs/dados.md`. Não crie tabela fora do qu
 
 - Tabelas e colunas em `snake_case`, português, singular para a tabela (`publicacao`, não `publicacoes`).
 - Toda tabela tem `id` (uuid ou bigint identity), `criado_em` e, quando fizer sentido, `atualizado_em`.
-- Migrations versionadas em `supabase/migrations/`, nome com data e descrição. **Nunca altere migration já aplicada — crie outra.** A reescrita de 27/07/2026 foi exceção deliberada e aprovada, com o banco vazio e nada publicado; essa porta fecha quando o projeto Supabase da nuvem existir.
+- Migrations versionadas em `supabase/migrations/`, nome com data e descrição. **Nunca altere migration já aplicada — crie outra.** A reescrita de 27/07/2026 foi exceção deliberada e aprovada, com o banco vazio e nada publicado. **Essa porta fechou em 31/07/2026**, quando o projeto Supabase da nuvem passou a existir e as 15 migrations foram aplicadas nele: alterar uma migration já aplicada agora significa banco local e banco da nuvem contando histórias diferentes, e a diferença só aparece em produção.
 - Row Level Security ligado em toda tabela desde a primeira migration. Parceiro só enxerga os próprios canais.
 - Componentes React em `PascalCase`, funções em `camelCase`.
 - Nada de `any` em TypeScript sem comentário justificando.
@@ -264,7 +264,9 @@ E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm veri
 ### Bloqueado, e por quem
 
 - **Coleta de preço real** — falta credencial de marketplace. O dono resolve. A Shopee é a aposta melhor: a Open API de afiliado resolve dado e link na mesma chave.
-- **Projeto Supabase na nuvem** — o dono cria; depois é `pnpm db:publica`. **Quando isso acontecer, a exceção da reescrita de migration fecha** e volta a valer a regra da seção 6.
+- ~~**Projeto Supabase na nuvem**~~ — **resolvido em 31/07/2026.** Projeto `radar-ofertas`, organização 4YU Systems, região São Paulo (`sa-east-1`), ref `fcdkczueohekmgaaacdr`. As 15 migrations foram aplicadas e conferidas contra o banco, tabela por tabela. As chaves vivem em `.env.producao`, fora do Git. **A exceção da reescrita de migration fechou junto** — vale a regra da seção 6.
+
+  O `.env` continua apontando para o banco **local**, que é onde o desenvolvimento acontece; a nuvem tem o schema e nenhum dado. Trocar o painel para ler a nuvem é decisão separada, e o gatilho é existir dado real lá.
 - **Segredos no GitHub** — dependem da nuvem existir.
 - **Redirecionador e subid** — dependem de domínio registrado.
 - **Colheita por conta de usuário do Telegram** — o dono tem número dedicado; falta gerar a string de sessão. Ela nunca entra no Git nem em mensagem.
