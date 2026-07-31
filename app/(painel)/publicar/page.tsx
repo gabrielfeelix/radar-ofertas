@@ -413,6 +413,17 @@ function CartaoDeEnvio({
             </Botao>
           </form>
         </div>
+        {/*
+          O botão é vermelho e some com o item da fila, o que o faz
+          parecer definitivo — e não é: ele cai em "Canceladas", no pé
+          da tela, com "devolver para a fila". Dizer isso aqui é mais
+          barato que um diálogo de confirmação, que custaria um toque
+          em todo mundo para proteger quem errou o dedo.
+        */}
+        <p className="mt-2 text-sm text-texto-fraco">
+          Cancelar não apaga: a publicação cai em <strong>Canceladas</strong>, no fim desta tela, e
+          volta para a fila num toque.
+        </p>
       </details>
     </article>
   );

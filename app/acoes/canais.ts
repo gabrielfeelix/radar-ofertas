@@ -10,6 +10,7 @@ import {
   type DadosDoCanal,
   type Plataforma,
 } from "@/lib/simulacao/loja";
+import { HORARIOS_SUGERIDOS, leHorarios } from "@/lib/horarios";
 
 /**
  * Ações da tela de canais.
@@ -22,7 +23,7 @@ import {
 
 export type ResultadoCanal =
   | { ok: true; canalId: string; token: string }
-  | { ok: false; campo: "nome" | "nichos" | "split" | "teto"; mensagem: string };
+  | { ok: false; campo: "nome" | "nichos" | "split" | "teto" | "horarios"; mensagem: string };
 
 export async function salvaCanal(
   _anterior: ResultadoCanal | null,
@@ -63,6 +64,25 @@ export async function salvaCanal(
     return { ok: false, campo: "split", mensagem: "Percentual negativo não existe." };
   }
 
+  // O campo de horário é texto livre de propósito — "07:30, 12:30 e
+  // 20:00" é como uma pessoa escreve, e `leHorarios` extrai o que
+  // reconhece. O buraco estava no que ela NÃO reconhece: "9h", "25:00"
+  // ou um dedo escorregado devolvem lista vazia, e o canal salvava
+  // quieto sem horário nenhum — que é um canal que nunca publica,
+  // parecendo configurado. Falha silenciosa, do tipo que a tela
+  // "Precisa de atenção" existe para combater.
+  const horariosBrutos = String(form.get("horarios") ?? "").trim();
+  if (leHorarios(horariosBrutos).length === 0) {
+    return {
+      ok: false,
+      campo: "horarios",
+      mensagem:
+        horariosBrutos === ""
+          ? `Sem horário, o canal não publica. Escreva como preferir, por exemplo "${HORARIOS_SUGERIDOS}".`
+          : `Não reconheci nenhum horário em "${horariosBrutos}". Use horas de 00:00 a 23:59, separadas por vírgula ou "e" — por exemplo "${HORARIOS_SUGERIDOS}".`,
+    };
+  }
+
   if (splitAudienciaPct + splitOperacaoPct > 100) {
     return {
       ok: false,
@@ -81,7 +101,7 @@ export async function salvaCanal(
     operador: String(form.get("operador") ?? "").trim() || "você",
     splitAudienciaPct,
     splitOperacaoPct,
-    horarios: String(form.get("horarios") ?? "").trim(),
+    horarios: horariosBrutos,
   };
 
   if (id === "") {

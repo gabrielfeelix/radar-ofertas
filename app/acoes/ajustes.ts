@@ -18,6 +18,37 @@ export type ResultadoAjuste =
   | { ok: false; mensagem: string };
 
 /**
+ * A faixa aceitável de cada limiar, e a unidade em que ela é dita.
+ *
+ * Existe porque "número maior ou igual a zero" deixava passar os dois
+ * extremos que quebram a curadoria em silêncio: **desconto mínimo 0%**
+ * carimba tudo — a curadoria vira repasse de oferta alheia, que é
+ * exatamente o que este projeto não é — e **desconto mínimo 90%**
+ * reprova tudo, e semanas depois alguém conclui que "o radar não acha
+ * nada". Nenhum dos dois dá erro; os dois só aparecem no resultado.
+ *
+ * Os limites são generosos de propósito. Isto não é opinião sobre o
+ * valor certo — é o cercado que separa calibragem de engano de digitação.
+ */
+const FAIXAS: Record<string, { min: number; max: number; unidade: string }> = {
+  dias_minimos_de_serie: { min: 3, max: 60, unidade: "dias" },
+  dias_para_afirmar: { min: 7, max: 90, unidade: "dias" },
+  janela_referencia_dias: { min: 7, max: 180, unidade: "dias" },
+  janela_minimo_dias: { min: 14, max: 365, unidade: "dias" },
+  desconto_minimo_pct: { min: 5, max: 80, unidade: "%" },
+  comissao_minima_centavos: { min: 1, max: 100_000, unidade: "centavos" },
+  avaliacao_minima: { min: 0, max: 5, unidade: "de 0 a 5" },
+  avaliacao_qtd_minima: { min: 0, max: 1_000, unidade: "avaliações" },
+  reputacao_minima: { min: 0, max: 1, unidade: "de 0 a 1" },
+  dias_recompra_mesmo_anuncio: { min: 1, max: 365, unidade: "dias" },
+  recorrencia_maxima_pct: { min: 5, max: 95, unidade: "%" },
+  tolerancia_alta_pct: { min: 0, max: 50, unidade: "%" },
+  horas_validade_oferta: { min: 1, max: 720, unidade: "horas" },
+  dias_resolucao_diaria: { min: 7, max: 365, unidade: "dias" },
+  teto_adiamentos: { min: 0, max: 20, unidade: "vezes" },
+};
+
+/**
  * Salva um limiar, global ou de um nicho.
  *
  * `nicho_id` nulo é o valor global; com nicho, é o que sobrescreve
@@ -39,6 +70,14 @@ export async function salvaLimiar(
   const valor = Number(bruto);
   if (!Number.isFinite(valor) || valor < 0) {
     return { ok: false, mensagem: "Valor precisa ser um número igual ou maior que zero." };
+  }
+
+  const faixa = FAIXAS[chave];
+  if (faixa && (valor < faixa.min || valor > faixa.max)) {
+    return {
+      ok: false,
+      mensagem: `${valor} está fora da faixa deste limiar: de ${faixa.min} a ${faixa.max} ${faixa.unidade}. Fora dela a curadoria para de decidir — ou aprova tudo, ou não aprova nada, e nos dois casos sem dar erro.`,
+    };
   }
 
   const db = supabaseServidor();

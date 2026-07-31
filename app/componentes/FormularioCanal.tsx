@@ -14,7 +14,7 @@ import { salvaCanal, type ResultadoCanal } from "@/app/acoes/canais";
 import { NICHOS, type CanalSimulado } from "@/lib/simulacao/loja";
 import { Botao } from "@/app/componentes/Botao";
 import { useFechaModal } from "@/app/componentes/Modal";
-import { foraDePico, HORARIOS_SUGERIDOS, PICOS } from "@/lib/horarios";
+import { foraDePico, HORARIOS_SUGERIDOS, leHorarios, PICOS } from "@/lib/horarios";
 
 /**
  * Formulário de canal — o mesmo para criar e para editar.
@@ -53,8 +53,15 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
   // pico, e o dono é quem sabe. O que não pode é ele não saber.
   const foraDosPicos = foraDePico(horarios);
 
+  // O campo aceita texto livre, e por isso precisa devolver o que
+  // entendeu. "9h" e "25:00" não são horário para `leHorarios`, e sem
+  // este eco a pessoa sai achando que configurou o que não configurou.
+  const horariosLidos = leHorarios(horarios);
+
+  const [plataforma, setPlataforma] = useState<string>(canal?.plataforma ?? "whatsapp");
+
   const dono = 100 - audiencia - operacao;
-  const erroDe = (campo: "nome" | "nichos" | "split" | "teto") =>
+  const erroDe = (campo: "nome" | "nichos" | "split" | "teto" | "horarios") =>
     resultado?.ok === false && resultado.campo === campo ? resultado.mensagem : null;
 
   return (
@@ -73,10 +80,25 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
           />
         </Campo>
 
-        <Campo rotulo="Plataforma" dica="Telegram publica sozinho. WhatsApp é sempre na mão.">
+        {/*
+          A dica antiga era "Telegram publica sozinho", e isso ainda
+          não é verdade: o envio automático precisa de um bot e do
+          chat_id do canal, que nenhum campo daqui pede — é trabalho da
+          Fase 2. Prometer o que não existe faz o dono criar o canal e
+          descobrir na hora errada, olhando um grupo mudo.
+        */}
+        <Campo
+          rotulo="Plataforma"
+          dica={
+            plataforma === "telegram"
+              ? "O envio automático pelo bot é da Fase 2. Até lá o Telegram sai na mão, igual ao WhatsApp."
+              : "O envio é sempre na mão: o painel monta a mensagem e abre o WhatsApp com ela pronta."
+          }
+        >
           <select
             name="plataforma"
-            defaultValue={canal?.plataforma ?? "whatsapp"}
+            value={plataforma}
+            onChange={(e) => setPlataforma(e.target.value)}
             className={classeDeCampo}
           >
             <option value="whatsapp">WhatsApp</option>
@@ -146,14 +168,16 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
         <Campo
           rotulo="Horários permitidos"
           dica={
-            foraDosPicos.length > 0
+            foraDosPicos.length > 0 || horariosLidos.length === 0
               ? undefined
-              : `Picos: ${PICOS.map((p) => `${p.inicio}–${p.fim}`).join(", ")}. Fuso de São Paulo.`
+              : `Entendi ${horariosLidos.join(", ")}. Picos: ${PICOS.map((p) => `${p.inicio}–${p.fim}`).join(", ")}. Fuso de São Paulo.`
           }
           erro={
-            foraDosPicos.length > 0
-              ? `${foraDosPicos.join(", ")} ${foraDosPicos.length === 1 ? "está fora" : "estão fora"} dos picos (${PICOS.map((p) => `${p.inicio}–${p.fim}`).join(", ")}). Fora deles o engajamento cai bastante.`
-              : null
+            horariosLidos.length === 0
+              ? `Não reconheci horário nenhum aqui, e canal sem horário não publica. Use horas de 00:00 a 23:59 — por exemplo "${HORARIOS_SUGERIDOS}".`
+              : foraDosPicos.length > 0
+                ? `Entendi ${horariosLidos.join(", ")}. ${foraDosPicos.join(", ")} ${foraDosPicos.length === 1 ? "está fora" : "estão fora"} dos picos (${PICOS.map((p) => `${p.inicio}–${p.fim}`).join(", ")}). Fora deles o engajamento cai bastante.`
+                : erroDe("horarios")
           }
         >
           <input
