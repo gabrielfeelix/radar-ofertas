@@ -27,11 +27,21 @@ jobs:
       - name: Instala o cliente do Postgres
         run: |
           set -euo pipefail
-          sudo apt-get update -qq
           # A versão do cliente precisa acompanhar a do servidor
-          # (Postgres 17, fixado em supabase/config.toml).
-          sudo apt-get install -y -qq postgresql-client-17 \
-            || sudo apt-get install -y -qq postgresql-client
+          # (Postgres 17, fixado em supabase/config.toml). O runner do
+          # Ubuntu 24.04 traz só o cliente 16, e o pg_dump se RECUSA a
+          # falar com um servidor mais novo — "aborting because of
+          # server version mismatch". Por isso o repositório oficial do
+          # Postgres entra antes: sem ele, o passo instala o 16 sem
+          # reclamar e o backup só quebra na hora do dump.
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+          echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          # Falha alto se vier outra versão, em vez de descobrir no dump.
+          pg_dump --version
 
       - name: Gera o dump
         env:
