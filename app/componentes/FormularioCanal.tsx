@@ -11,7 +11,7 @@ import {
 } from "@/app/componentes/Campo";
 
 import { salvaCanal, type ResultadoCanal } from "@/app/acoes/canais";
-import { NICHOS, type CanalSimulado } from "@/lib/simulacao/loja";
+import type { Canal } from "@/lib/distribuicao";
 import { Botao } from "@/app/componentes/Botao";
 import { useFechaModal } from "@/app/componentes/Modal";
 import { foraDePico, HORARIOS_SUGERIDOS, leHorarios, PICOS } from "@/lib/horarios";
@@ -29,7 +29,14 @@ import { foraDePico, HORARIOS_SUGERIDOS, leHorarios, PICOS } from "@/lib/horario
  * por semana. "8 por dia" não diz nada; "56 por semana" diz.
  */
 
-export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
+export function FormularioCanal({
+  canal,
+  nichos,
+}: {
+  canal?: Canal;
+  /** Os nichos que existem no banco. Sem eles o canal não roteia nada. */
+  nichos: { slug: string; nome: string }[];
+}) {
   const [resultado, acao, salvando] = useActionState<ResultadoCanal | null, FormData>(
     salvaCanal,
     null,
@@ -113,7 +120,7 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
         erro={erroDe("nichos")}
       >
         <div className="flex flex-wrap gap-3">
-          {NICHOS.map((nicho) => (
+          {nichos.map((nicho) => (
             <label
               key={nicho.slug}
               className="flex items-center gap-2 rounded-md border border-borda bg-superficie px-4 py-3 text-base"

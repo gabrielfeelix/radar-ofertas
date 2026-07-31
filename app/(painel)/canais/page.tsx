@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { alternaCanal } from "@/app/acoes/canais";
-import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { Cartao } from "@/app/componentes/Cartao";
@@ -9,13 +8,7 @@ import { Chip, ChipDePlataforma } from "@/app/componentes/Chip";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import { Modal } from "@/app/componentes/Modal";
 import { Identidade } from "@/app/componentes/Identidade";
-import {
-  canais,
-  nomeDoNicho,
-  parteDoDono,
-  vagasDeHoje,
-  type CanalSimulado,
-} from "@/lib/simulacao/loja";
+import { canais, nichosDisponiveis, parteDoDono, vagasDeHoje, type Canal } from "@/lib/distribuicao";
 
 /**
  * Canais — para onde as ofertas vão.
@@ -34,9 +27,10 @@ import {
 export const dynamic = "force-dynamic";
 
 export default async function Canais() {
-  const lista = canais();
+  const [lista, nichos] = await Promise.all([canais(), nichosDisponiveis()]);
   const ativos = lista.filter((c) => c.ativo);
   const capacidade = ativos.reduce((total, c) => total + c.tetoDiario, 0);
+  const vagas = await vagasDeHoje();
 
   return (
     <Pagina
@@ -50,7 +44,7 @@ export default async function Canais() {
           largura="larga"
           descricao="Todo canal aponta para um parceiro desde a primeira linha — e no começo esse parceiro é você mesmo."
         >
-          <FormularioCanal />
+          <FormularioCanal nichos={nichos} />
         </Modal>
       }
       kpis={[
@@ -66,30 +60,54 @@ export default async function Canais() {
         },
         {
           rotulo: "Vagas restantes hoje",
-          valor: `${vagasDeHoje()}`,
+          valor: `${vagas}`,
           nota: "o que ainda cabe",
         },
       ]}
     >
-      <AvisoSimulacao detalhe="Estes canais não existem. Nada é publicado neles, e a audiência é inventada." />
-
       {/*
         Grade, não empilhamento. Cartão de largura total deixava meia
         tela vazia entre o nome do canal, à esquerda, e as vagas, à
         direita — e obrigava a rolar para comparar dois canais, que é
         justamente o que esta tela existe para fazer.
       */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {lista.map((canal) => (
-          <CartaoDeCanal key={canal.id} canal={canal} />
-        ))}
-      </section>
+      {/*
+        Estado vazio que a simulação escondia: ela sempre tinha quatro
+        canais, então a tela nunca precisou dizer o que fazer quando não
+        há nenhum. Sem canal, aprovar é ato sem efeito — a aprovação
+        gera uma publicação por canal elegível, e não há nenhum.
+      */}
+      {lista.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-borda-forte p-8 text-center">
+          <p className="text-md font-bold tracking-titulo">Nenhum canal ainda.</p>
+          <p className="mx-auto mt-2 max-w-md text-base leading-longo text-texto-fraco">
+            Canal é para onde a oferta vai. Sem nenhum, aprovar não tem efeito: a aprovação gera uma
+            publicação por canal que aceita o nicho, e não existe nenhum para receber.
+          </p>
+          <div className="mt-5 flex justify-center">
+            <Modal
+              rotuloDoGatilho="Criar o primeiro canal"
+              titulo="Novo canal"
+              largura="larga"
+              descricao="Todo canal aponta para um parceiro desde a primeira linha — e no começo esse parceiro é você mesmo."
+            >
+              <FormularioCanal nichos={nichos} />
+            </Modal>
+          </div>
+        </div>
+      ) : (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {lista.map((canal) => (
+            <CartaoDeCanal key={canal.id} canal={canal} />
+          ))}
+        </section>
+      )}
 
     </Pagina>
   );
 }
 
-function CartaoDeCanal({ canal }: { canal: CanalSimulado }) {
+function CartaoDeCanal({ canal }: { canal: Canal }) {
   const vagas = Math.max(0, canal.tetoDiario - canal.publicadasHoje);
   const dono = parteDoDono(canal);
   const proprio = canal.splitAudienciaPct === 0 && canal.splitOperacaoPct === 0;
@@ -114,7 +132,7 @@ function CartaoDeCanal({ canal }: { canal: CanalSimulado }) {
             </Link>
           </h2>
           <p className="truncate text-sm text-texto-fraco">
-            {canal.nichos.map(nomeDoNicho).join(" · ")}
+            {canal.nichos.join(" · ")}
           </p>
         </div>
 

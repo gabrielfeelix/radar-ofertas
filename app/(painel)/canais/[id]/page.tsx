@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 
 import { alternaCanal } from "@/app/acoes/canais";
-import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
-import { buscaCanal, nomeDoNicho, parteDoDono, publicacoesDaFila } from "@/lib/simulacao/loja";
+import { buscaCanal, nichosDisponiveis, parteDoDono, vagasDoCanal } from "@/lib/distribuicao";
+import { publicacoesDoCanal } from "@/lib/publicacoes";
 
 /**
  * Canal — como este canal se comporta.
@@ -21,13 +21,16 @@ export const dynamic = "force-dynamic";
 
 export default async function Canal({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const canal = buscaCanal(id);
+  const canal = await buscaCanal(id);
 
   if (!canal) notFound();
 
-  const naFila = publicacoesDaFila().filter((p) => p.canal.id === canal.id);
-  const esperando = naFila.filter((p) => !p.enviadaEm && !p.cancelada).length;
-  const enviadas = naFila.filter((p) => p.enviadaEm).length;
+  const [nichos, contagem] = await Promise.all([
+    nichosDisponiveis(),
+    publicacoesDoCanal(canal.id),
+  ]);
+  const esperando = contagem.pendentes;
+  const enviadas = contagem.enviadasHoje;
   const dono = parteDoDono(canal);
 
   return (
@@ -36,7 +39,6 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
         trilha="Canais"
         titulo={canal.nome}
         subtitulo={`${canal.plataforma === "telegram" ? "Telegram" : "WhatsApp"} · ${canal.nichos
-          .map(nomeDoNicho)
           .join(", ")} · ${canal.audiencia.toLocaleString("pt-BR")} pessoas`}
         acoes={
           <form action={alternaCanal}>
@@ -49,8 +51,6 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
         }
         medida="media"
       >
-      <AvisoSimulacao detalhe="Canal simulado. Editar aqui muda a capacidade que a tela de aprovar mostra, e nada mais." />
-
       {!canal.ativo && (
         <p className="rounded-md border border-atencao-borda bg-atencao-fundo px-4 py-3 text-base text-atencao">
           Desligado: para de receber publicação agora, não amanhã. O histórico continua — é ele que
@@ -63,7 +63,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
         <Numero rotulo="Enviadas hoje" valor={enviadas} />
         <Numero
           rotulo="Vagas restantes"
-          valor={canal.ativo ? Math.max(0, canal.tetoDiario - canal.publicadasHoje) : 0}
+          valor={canal.ativo ? vagasDoCanal(canal) : 0}
         />
       </section>
 
@@ -73,7 +73,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
           Split, operador e teto são combinados com gente. Mudar aqui não reescreve o que já foi
           publicado.
         </p>
-        <FormularioCanal canal={canal} />
+        <FormularioCanal canal={canal} nichos={nichos} />
       </section>
 
       <section className="rounded-lg border border-borda bg-superficie-alt p-5">

@@ -9,7 +9,7 @@ import {
   criaCanal,
   type DadosDoCanal,
   type Plataforma,
-} from "@/lib/simulacao/loja";
+} from "@/lib/distribuicao";
 import { HORARIOS_SUGERIDOS, leHorarios } from "@/lib/horarios";
 
 /**
@@ -97,21 +97,26 @@ export async function salvaCanal(
     nichos,
     tetoDiario,
     audiencia: Number.isFinite(audiencia) ? Math.max(0, audiencia) : 0,
-    parceiro: String(form.get("parceiro") ?? "").trim() || "você",
-    operador: String(form.get("operador") ?? "").trim() || "você",
+    // Parceiro e operador saem do formulário como texto livre, e o
+    // banco os quer como referência a `parceiro` e `usuario`. Enquanto
+    // não existe cadastro de parceiro, o canal nasce sem vínculo e a
+    // tela mostra "você" — que é a verdade hoje.
     splitAudienciaPct,
     splitOperacaoPct,
     horarios: horariosBrutos,
   };
 
   if (id === "") {
-    const novoId = criaCanal(dados);
+    const novoId = await criaCanal(dados);
+    if (!novoId) {
+      return { ok: false, campo: "nome", mensagem: "Não consegui salvar o canal no banco." };
+    }
     revalidatePath("/canais");
     revalidatePath("/aprovar");
     return { ok: true, canalId: novoId, token: crypto.randomUUID() };
   }
 
-  atualizaCanal(id, dados);
+  await atualizaCanal(id, dados);
   revalidatePath("/canais");
   revalidatePath(`/canais/${id}`);
   revalidatePath("/aprovar");
@@ -129,7 +134,7 @@ export async function alternaCanal(form: FormData): Promise<void> {
   const id = String(form.get("canal_id") ?? "");
   if (id === "") return;
 
-  alternaCanalAtivo(id, String(form.get("ativo") ?? "") === "true");
+  await alternaCanalAtivo(id, String(form.get("ativo") ?? "") === "true");
 
   revalidatePath("/canais");
   revalidatePath(`/canais/${id}`);

@@ -138,6 +138,72 @@ export type AnuncioLinha = {
   atualizado_em: string;
 };
 
+/**
+ * Canal de distribuição (para onde a oferta vai).
+ *
+ * Nunca esteve aqui porque a tela de canais rodava sobre a simulação
+ * em memória. Entra em 31/07, quando o painel passou a ler só dado
+ * real.
+ *
+ * Os dois splits ficam separados de propósito: a mesma pessoa pode
+ * trazer a audiência e operar, ou só trazer a audiência. O que sobra
+ * dos dois é a parte do dono.
+ */
+export type CanalLinha = {
+  id: string;
+  operacao_id: string;
+  parceiro_id: string | null;
+  nome: string;
+  plataforma: string;
+  /** Obrigatório quando a plataforma é telegram (constraint do banco). */
+  telegram_chat_id: string | null;
+  membros_estimados: number | null;
+  /** O orçamento do dia. É o que vira "vagas hoje" na aprovação. */
+  posts_por_dia_max: number;
+  /** Horas inteiras, no fuso de São Paulo (regra 3.9). */
+  horarios_permitidos: number[];
+  split_audiencia_pct: number;
+  split_operacao_pct: number;
+  operador_id: string | null;
+  ativo: boolean;
+  ultima_publicacao_em: string | null;
+  criado_em: string;
+  atualizado_em: string;
+};
+
+/** Ligação canal ↔ nicho. É ela que roteia a oferta para o canal certo. */
+export type CanalNichoLinha = {
+  canal_id: string;
+  nicho_id: string;
+};
+
+/**
+ * Uma oferta enviada a um canal (migration 16).
+ *
+ * `subid` é único no banco, não só aqui: subid repetido não dá erro em
+ * lugar nenhum — ele atribui a venda ao canal errado em silêncio, e o
+ * parceiro descobre no extrato (regra 3.6).
+ */
+export type PublicacaoLinha = {
+  id: string;
+  operacao_id: string;
+  oferta_id: string;
+  canal_id: string;
+  /** Gerado pelo banco, 8 caracteres, sem 0/O/1/I/l. */
+  subid: string;
+  preco_na_fila_centavos: number;
+  /** A mensagem como saiu. Não se remonta depois: o modelo muda. */
+  mensagem: string | null;
+  estado: "pendente" | "enviada" | "cancelada" | "bloqueada";
+  /** Nunca some `fluxo` com `auto_declarada` no mesmo contador. */
+  origem: "fluxo" | "auto_declarada";
+  enviada_em: string | null;
+  enviada_por: string | null;
+  cancelada_em: string | null;
+  criado_em: string;
+  atualizado_em: string;
+};
+
 export type TipoLeituraFonte = "web_publica" | "conta_usuario";
 
 export type FonteDescobertaLinha = {
@@ -401,6 +467,12 @@ export type Banco = {
       >;
       modelo_mensagem: Tabela<ModeloMensagemLinha, "operacao_id" | "nome" | "corpo">;
       comporta_dia: Tabela<ComportaDiaLinha, "operacao_id" | "dia" | "comporta">;
+      canal: Tabela<CanalLinha, "operacao_id" | "nome" | "plataforma">;
+      canal_nicho: Tabela<CanalNichoLinha, "canal_id" | "nicho_id">;
+      publicacao: Tabela<
+        PublicacaoLinha,
+        "operacao_id" | "oferta_id" | "canal_id" | "preco_na_fila_centavos"
+      >;
     };
     Views: {
       anuncio_serie: { Row: AnuncioSerieLinha; Relationships: [] };
