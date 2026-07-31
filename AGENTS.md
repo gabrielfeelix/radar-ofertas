@@ -228,6 +228,8 @@ Depois disso, dois blocos que não são tela:
 | `docs/dados.md` | Schema, comportas e o modelo de segurança |
 | `docs/mercado.md` | Antes de falar de concorrência ou distribuição |
 | `docs/infra.md` | O que roda onde, quanto custa, e as dependências que expiram |
+| `docs/pesquisa-tecnica.md` | Antes de mexer em stack ou política de plataforma. O que está validado e o que está errado |
+| `docs/pesquisa-operacao.md` | Antes de mexer em cadência, horário, formato de mensagem ou canal. Como se toca um grupo de verdade |
 | `referencia-claude-deisgn/` | O protótipo, com as quatorze telas desenhadas. Abra antes de mexer em interface |
 
 ### Como rodar
