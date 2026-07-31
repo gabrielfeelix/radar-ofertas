@@ -16,7 +16,11 @@ O que fazer:
 
 1. Criar conta de afiliado no Mercado Livre, na Shopee e na Amazon.
 2. Gerar um link de afiliado com subid manual em cada programa.
-3. Fazer uma compra real barata por cada link.
+3. **Pedir a outra pessoa que compre** por cada link — cônjuge, amigo, alguém de confiança, na conta e no aparelho dela.
+
+   **Não compre você mesmo.** Compra própria por link de afiliado é violação de termo nos três programas: a Amazon proíbe explicitamente no contrato de operação, e Shopee e Mercado Livre têm regra equivalente contra autocompra. O risco não é só perder a comissão daquele pedido — é encerramento de conta, e a conta é o ativo. Além disso a comissão anulada estragaria o teste: o subid pode não aparecer no relatório justamente por a venda ter sido invalidada, e aí não se sabe se o problema é o subid ou a compra.
+
+   Você devolve o dinheiro à pessoa por fora. São uns R$20.
 4. Esperar o relatório e conferir se o subid aparece, íntegro, ligado ao pedido.
 5. Anotar em `docs/decisoes.md` o resultado por marketplace: suporta subid, tamanho máximo, formato aceito, em quantos dias apareceu no relatório.
 

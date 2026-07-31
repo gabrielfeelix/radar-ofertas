@@ -38,7 +38,11 @@ O adaptador `@opennextjs/cloudflare` chegou ao 1.0 em fevereiro de 2026 e virou 
 
 ### D-010 — apostar na Open API de afiliado da Shopee: **certa**
 
-A API é GraphQL, em `affiliate.shopee.com.br/graphql`, autenticada por HMAC-SHA256, e **gera link curto rastreável com subId pela via oficial**. Credencial sai do próprio painel de afiliado, sem porteiro.
+A API é GraphQL, em `affiliate.shopee.com.br/graphql`, autenticada por HMAC-SHA256, e **gera link curto rastreável com subId pela via oficial**.
+
+**Correção de 31/07:** a pesquisa original dizia que a credencial "sai do próprio painel de afiliado, sem porteiro". **Está errado.** O App ID e o Secret **não são autoatendimento**: é preciso abrir um chamado na Central de Ajuda do painel de afiliado, por e-mail, pedindo explicitamente a ativação da API, e a resposta leva **até duas semanas**. Só depois disso a seção "Open API" aparece no painel.
+
+Isso não derruba a D-010 — a via oficial continua sendo a única que não depende de raspagem, e continua resolvendo dado e link na mesma chave. O que muda é o **calendário**: o pedido da API tem que ser aberto no mesmo dia em que a conta de afiliado for aprovada, senão as duas esperas viram uma fila só.
 
 É exatamente o que a D-010 apostou: uma chave que resolve dado de produto e link rastreável de uma vez.
 

@@ -14,15 +14,17 @@ A ordem não é por facilidade: é por **quanto cada item destrava**, e o primei
 - **Domínio.** Ele serve ao redirecionador, que é o que encurta o link e grava o
   clique — trabalho da Fase 2. A prova de rastreio da Fase 0 usa o subid do
   próprio marketplace, num link gerado à mão. Você tem razão: não é agora.
-- **Instagram, TikTok, YouTube.** Não fazem o sistema funcionar; servem para
-  trazer audiência, que é outro problema.
-  **Com uma ressalva que atrapalha logo no primeiro passo:** os programas de
-  afiliado costumam pedir, no cadastro, **onde você vai divulgar**. A Amazon
-  exige listar site ou canal; a Shopee normalmente pergunta a rede ou o grupo. Um
-  grupo de WhatsApp costuma servir, e um perfil qualquer com alguma atividade
-  também. Não é audiência — é campo de formulário. Mas se você não tiver nada
-  para escrever ali, o cadastro trava, então vale ter um perfil ou grupo pronto
-  antes de começar.
+- ~~**Instagram, TikTok, YouTube.**~~ **Correção de 31/07: são necessários, e são
+  o primeiro passo.** Eu tinha dito que provavelmente não. A pesquisa desmente:
+  a **Shopee exige pelo menos um perfil ativo** em Instagram, TikTok, YouTube ou
+  Facebook, e recomenda que ele já tenha conteúdo publicado. O **Mercado Livre
+  exige presença digital** — Instagram, TikTok, YouTube ou blog — e faz **análise
+  manual da qualidade do canal**, que leva de 3 a 10 dias úteis.
+
+  Não é exigência de audiência: **não há mínimo de seguidores** em nenhum dos
+  dois. É exigência de existir um lugar público onde os links vão aparecer. Canal
+  de Telegram e grupo de WhatsApp **não constam** das listas aceitas, então não
+  dá para contar com eles.
 - **Cartão de crédito.** Nada nesta lista é pago. O Supabase gratuito basta, e as
   APIs de afiliado não cobram.
 
