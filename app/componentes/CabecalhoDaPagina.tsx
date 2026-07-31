@@ -30,6 +30,7 @@ export function Pagina({
   subtitulo,
   acoes,
   kpis,
+  contexto,
   medida = "larga",
   children,
 }: {
@@ -38,14 +39,45 @@ export function Pagina({
   subtitulo?: React.ReactNode;
   acoes?: React.ReactNode;
   kpis?: ItemDeKpi[];
+  /**
+   * A coluna da direita: o resumo do que está sendo decidido à
+   * esquerda. Ela existe para telas em que a medida do conteúdo é
+   * menor que a tela — sem ela, o que sobra à direita é sobra, e não
+   * respiro. Fica colada no rolar, porque o número que ela mostra é
+   * consultado no meio da lista, não no começo.
+   */
+  contexto?: React.ReactNode;
   medida?: keyof typeof MEDIDA;
   children: React.ReactNode;
 }) {
-  return (
-    <div className={`flex w-full flex-col gap-5 px-6 pt-6 pb-10 ${MEDIDA[medida]}`}>
+  // Com coluna de contexto, a medida do conteúdo continua valendo — o
+  // que muda é que ela passa a valer só para a coluna da esquerda, e a
+  // página inteira ganha o espaço das duas.
+  const larguraDaPagina = contexto && medida !== "cheia" ? MEDIDA.cheia : MEDIDA[medida];
+
+  const cabecalho = (
+    <>
       <CabecalhoDaPagina trilha={trilha} titulo={titulo} subtitulo={subtitulo} acoes={acoes} />
       {kpis && kpis.length > 0 && <Kpis itens={kpis} />}
-      {children}
+    </>
+  );
+
+  return (
+    // `mx-auto` centraliza o que sobra. Sem ele, a medida empurrava
+    // tudo para a esquerda e o resto da tela virava um vazio de um
+    // lado só — o que numa tela larga lê como página quebrada, não
+    // como margem.
+    <div className={`mx-auto flex w-full flex-col gap-5 px-6 pt-6 pb-10 ${larguraDaPagina}`}>
+      {cabecalho}
+
+      {contexto ? (
+        <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className={`flex min-w-0 flex-col gap-5 ${MEDIDA[medida]}`}>{children}</div>
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-20">{contexto}</aside>
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }

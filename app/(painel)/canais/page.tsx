@@ -5,7 +5,7 @@ import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { Cartao } from "@/app/componentes/Cartao";
-import { Chip } from "@/app/componentes/Chip";
+import { Chip, ChipDePlataforma } from "@/app/componentes/Chip";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import { Modal } from "@/app/componentes/Modal";
 import { Identidade } from "@/app/componentes/Identidade";
@@ -119,12 +119,7 @@ function CartaoDeCanal({ canal }: { canal: CanalSimulado }) {
         </div>
 
         <div className="flex flex-none flex-col items-end gap-1">
-          <Chip
-            corTexto="#fff"
-            corFundo={canal.plataforma === "telegram" ? "var(--color-telegram)" : "var(--color-whatsapp)"}
-          >
-            {canal.plataforma === "telegram" ? "Telegram" : "WhatsApp"}
-          </Chip>
+          <ChipDePlataforma plataforma={canal.plataforma} />
           {!canal.ativo && <Chip tom="neutro">desligado</Chip>}
         </div>
       </div>

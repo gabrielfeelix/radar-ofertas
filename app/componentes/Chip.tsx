@@ -98,3 +98,40 @@ export function EtiquetaDeLoja({
     </Chip>
   );
 }
+
+/**
+ * A etiqueta de plataforma — WhatsApp ou Telegram.
+ *
+ * Em **tinta**, não em cor cheia. O verde do WhatsApp e o azul do
+ * Telegram são marcas de terceiros, e entravam saturados ao lado do
+ * laranja da nossa: três marcas competindo na mesma linha, e a que
+ * perdia era a que devia guiar a tela.
+ *
+ * A cor não some — ela vira o ponto de 6px. É o suficiente para
+ * reconhecer a plataforma de relance, que é o trabalho da etiqueta, e
+ * pouco o bastante para não disputar com a ação da linha.
+ *
+ * Onde a cor CHEIA continua certa: o botão de publicar. Lá ela não é
+ * enfeite nem identificação — é a resposta a "para qual aplicativo
+ * este toque vai me levar" (`BotaoDePlataforma`).
+ */
+export function ChipDePlataforma({ plataforma }: { plataforma: string }) {
+  const telegram = plataforma === "telegram";
+
+  return (
+    <span
+      className="inline-flex items-center gap-2 rounded-sm px-2 py-0.5 text-xs font-bold whitespace-nowrap"
+      style={{
+        color: telegram ? "var(--color-telegram-texto)" : "var(--color-whatsapp-texto)",
+        background: telegram ? "var(--color-telegram-fundo)" : "var(--color-whatsapp-fundo)",
+      }}
+    >
+      <span
+        aria-hidden
+        className="size-2 flex-none rounded-circulo"
+        style={{ background: telegram ? "var(--color-telegram)" : "var(--color-whatsapp)" }}
+      />
+      {telegram ? "Telegram" : "WhatsApp"}
+    </span>
+  );
+}

@@ -202,6 +202,22 @@ de `/produtos`, rodapé da barra lateral e as três famílias de limiar.
 - **Altura da linha caiu de ~116px para ~79px**, o que põe as doze ofertas na
   mesma tela.
 
+**F2 e F5 — 31/07.** `Pagina` ganhou `mx-auto` (a medida empurrava tudo para a
+esquerda, e o resto virava vazio de um lado só) e a propriedade `contexto`, que
+abre a coluna de 320px colada no rolar. Duas telas já a usam, e nas duas ela
+resolve uma promessa que o topo não cumpria:
+
+- **`/ajustes/curadoria`** — o subtítulo diz que o efeito fica *ao lado* do
+  controle, e ele era uma faixa que rolava para fora da tela no primeiro limiar.
+- **`/publicar`** — "faltam 5 de 8" existe para dar noção de fim no meio do
+  trabalho, e sumia da vista no terceiro item.
+
+O chip de plataforma virou **tinta com ponto de cor** (`ChipDePlataforma`), com
+tokens próprios de fundo e texto. Verde e azul cheios ao lado do laranja eram
+três marcas competindo, e a que perdia era a nossa. O texto escurece porque o
+verde da marca do WhatsApp sobre fundo claro dá 3,0:1 — abaixo do mínimo. A cor
+cheia continua no botão de publicar, onde ela **é** a informação.
+
 **Ficou de fora, de propósito:** os atalhos de teclado (`A`, `R`, `D`). Eles
 exigem componente de cliente com noção de "linha ativa" e gestão de foco, e isso
 é trabalho de outra ordem de grandeza — a linha hoje é HTML puro com formulários

@@ -12,6 +12,7 @@ import {
 import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao, BotaoDePlataforma } from "@/app/componentes/Botao";
 import { BotaoWhatsApp } from "@/app/componentes/BotaoWhatsApp";
+import { Cartao, RotuloDeSecao } from "@/app/componentes/Cartao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { formataReais } from "@/lib/dinheiro";
 import { montaMensagem, type ModeloDeMensagem } from "@/lib/mensagem";
@@ -80,29 +81,27 @@ export default async function Publicar() {
             ? "Nada esperando envio."
             : "O WhatsApp abre com a mensagem pronta — você aperta enviar. O Telegram sai sozinho."
         }
+        /*
+          O quanto falta sai do topo e vira coluna, colada no rolar.
+
+          Ele era uma faixa acima da fila: no primeiro item já tinha
+          rolado para fora da tela, e "faltam 5 de 8" existe justamente
+          para dar noção de fim no meio do trabalho — no terceiro item
+          uma fila de oito parece infinita. Fora da vista, ele não
+          fazia o trabalho dele.
+        */
+        contexto={
+          total > 0 ? (
+            <ProgressoDoDia
+              feitas={feitas}
+              total={total}
+              pendentes={pendentes.length}
+              canceladas={canceladas.length}
+            />
+          ) : undefined
+        }
       >
         <AvisoSimulacao detalhe="Nada é publicado de verdade. O botão do WhatsApp abre o aplicativo com o texto, e o do Telegram só marca como enviado." />
-
-        {total > 0 && (
-          <section className="flex flex-col gap-2 rounded-lg border border-borda-sutil bg-superficie shadow-repouso px-5 py-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <p className="text-md font-extrabold tracking-titulo">
-                {pendentes.length === 0
-                  ? "Tudo publicado"
-                  : `Faltam ${pendentes.length} de ${total}`}
-              </p>
-              <p className="text-sm text-texto-fraco">
-                {feitas} {feitas === 1 ? "enviada" : "enviadas"}
-              </p>
-            </div>
-            <span className="h-2 rounded-xs bg-preenchimento" aria-hidden>
-              <span
-                className="block h-2 rounded-xs bg-marca"
-                style={{ width: `${Math.round((feitas / total) * 100)}%` }}
-              />
-            </span>
-          </section>
-        )}
 
         {total === 0 && (
           <div className="rounded-lg border border-dashed border-borda-forte p-8 text-center">
@@ -209,6 +208,67 @@ export default async function Publicar() {
  * as vagas acabam, o resto espera amanhã, e é melhor saber disso antes
  * de publicar do que depois de explicar ao parceiro.
  */
+/**
+ * O quanto falta, na coluna da direita.
+ *
+ * A medida que importa aqui não é quanto já saiu — é **quanto falta**,
+ * porque é ela que responde "dá para terminar antes do café esfriar?".
+ * Por isso o número grande é o que resta, e o que já foi feito vira
+ * linha de apoio.
+ */
+function ProgressoDoDia({
+  feitas,
+  total,
+  pendentes,
+  canceladas,
+}: {
+  feitas: number;
+  total: number;
+  pendentes: number;
+  canceladas: number;
+}) {
+  const pct = Math.round((feitas / total) * 100);
+
+  return (
+    <Cartao espaco="md" className="flex flex-col gap-4">
+      <RotuloDeSecao>a fila de hoje</RotuloDeSecao>
+
+      <div className="flex flex-col gap-1">
+        <p className="text-3xl leading-titulo font-extrabold tabular-nums tracking-titulo">
+          {pendentes === 0 ? "Tudo publicado" : pendentes}
+        </p>
+        {pendentes > 0 && (
+          <p className="text-base text-texto-fraco">
+            {pendentes === 1 ? "esperando envio" : "esperando envio"}, de {total}
+          </p>
+        )}
+      </div>
+
+      <span className="flex h-2 overflow-hidden rounded-xs bg-preenchimento" aria-hidden>
+        <span className="block h-2 bg-marca" style={{ width: `${pct}%` }} />
+      </span>
+
+      <dl className="flex flex-col gap-2 text-base">
+        <div className="flex items-baseline justify-between gap-3">
+          <dt className="text-texto-fraco">enviadas</dt>
+          <dd className="font-bold tabular-nums">{feitas}</dd>
+        </div>
+        {canceladas > 0 && (
+          <div className="flex items-baseline justify-between gap-3">
+            <dt className="text-texto-fraco">canceladas</dt>
+            <dd className="font-bold tabular-nums">{canceladas}</dd>
+          </div>
+        )}
+      </dl>
+
+      <p className="border-t border-borda-sutil pt-3 text-sm leading-longo text-texto-fraco">
+        O WhatsApp abre com a mensagem pronta e você aperta enviar. O Telegram sai em lote, num
+        toque por canal.
+      </p>
+    </Cartao>
+  );
+}
+
 function GrupoDoCanal({
   canal,
   itens,
