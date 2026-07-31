@@ -184,7 +184,32 @@ Shopee". A tela *Precisa de atenção* passa a mostrar a coleta como concluída.
 > tamanho máximo e formato aceito da etiqueta são metade das respostas da Fase 0,
 > e essa metade sai de graça, sem esperar relatório.
 
-## 4b. Mercado Livre (API de itens)
+## 4b. Mercado Livre (API) — ✅ FUNCIONANDO desde 31/07/2026
+
+> **O caminho é indireto, e ninguém o encontra sozinho.** O ML fechou
+> `GET /items/{id}` e `GET /sites/MLB/search` com `403 PolicyAgent` —
+> para todo mundo, com ou sem token, e há uma fila de reclamações
+> públicas de outros desenvolvedores. **A rota que funciona é pelo
+> produto de catálogo:**
+>
+> | Endpoint | |
+> |---|---|
+> | `highlights/MLB/category/{cat}` | ids de PRODUTO mais vendidos ✅ |
+> | `products/search?q=` | ids de PRODUTO por palavra ✅ |
+> | `products/{id}` | nome, fotos, atributos ✅ |
+> | `products/{id}/items` | **PREÇO**, por vendedor ✅ |
+> | `items/{id}` | fechado ⛔ e desnecessário |
+>
+> **Exige a permissão "Publicação e sincronização" na aplicação** — sem
+> ela tudo volta a dar 403, inclusive `highlights`. E o escopo mora no
+> **token**, gravado na hora da autorização: mexeu na permissão,
+> **refaça a autorização**, senão o token velho carrega o escopo velho
+> e nada muda.
+>
+> O coletor é `scripts/coleta-mercado-livre.mjs`. Ele grava o refresh
+> token rotacionado sozinho, o que fecha o defeito conhecido.
+
+## 4c. Como a aplicação foi criada
 
 **Destrava:** a segunda fonte de preço. Importa mais do que parece: **a série
 histórica de preço só pode ser construída sobre Mercado Livre e Shopee**, porque
