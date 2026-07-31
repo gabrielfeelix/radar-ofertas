@@ -119,6 +119,8 @@ Duas regras vivem no banco, não no coletor: um ponto por anúncio por dia mante
 
 `posts_por_dia_max` é o **orçamento do dia**. Aprovar 30 ofertas em 3 canais gera 90 publicações contra a soma dos tetos — e sem esse número visível na aprovação, o dono aprova de graça e descobre o custo depois.
 
+`plataforma` aceita `whatsapp` e `telegram`, e hoje `whatsapp` significa **grupo** — é o que o `wa.me` alcança. O Canal do WhatsApp é uma terceira superfície e entra como **terceiro valor**, nunca como booleano ao lado (D-031). Não construa agora: é Fase 2, e muda o fluxo de publicação junto.
+
 ### fonte_descoberta e mencao
 Colheita (D-012). A fonte tem `nicho_id`, e **o produto colhido herda esse nicho** — sem isso a colheita produz milhares de produtos não roteáveis.
 

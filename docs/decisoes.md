@@ -541,3 +541,36 @@ Cache offline é exatamente o tipo de coisa que alguém liga achando que é melh
 **Mudaria se:** a Amazon sair do sistema. Para Mercado Livre e Shopee a restrição não existe.
 
 ---
+
+## D-031 · Canal do WhatsApp é uma terceira superfície — registrada, não construída
+**Data:** 2026-07-31
+
+`canal.plataforma` aceita hoje dois valores, e a restrição está escrita na migration:
+
+```sql
+constraint canal_plataforma_valida check (plataforma in ('whatsapp', 'telegram'))
+```
+
+O mercado usa **três** superfícies, não duas:
+
+| Superfície | Limite | Natureza |
+|---|---|---|
+| Grupo do WhatsApp | 1.024 membros | bidirecional, conversa, alta conversão |
+| **Canal do WhatsApp** | sem limite | unidirecional, vitrine, seguidor não vê seguidor |
+| Canal do Telegram | sem limite | unidirecional, escala |
+
+**A decisão agora é só esta: quando o terceiro valor entrar, ele é um valor novo em `plataforma` — nunca um booleano `é_canal` pendurado no lado.** Booleano parece mais barato e é onde a modelagem apodrece: `plataforma` deixa de responder "para onde isto vai" e passa a exigir que quem lê saiba combinar duas colunas.
+
+**Por que não construir agora:** é Fase 2, e não é renomear valor. Três coisas mudam junto:
+
+- **O fluxo de publicação.** `BotaoWhatsApp` abre `https://wa.me/?text=…`, que é a folha de compartilhamento — ela lista conversas e grupos, **não** lista canais. Postar em Canal é ação dentro do painel de administrador do próprio canal. O botão que temos não serve, e não existe substituto oficial equivalente.
+- **O que `membros_estimados` significa.** Seguidor de canal não é membro de grupo: não conversa, não é contável do mesmo jeito, e o teto de 1.024 some.
+- **A cadência.** Sem conversa no meio, o ruído percebido por post é outro, e o teto de 5–8 do grupo não é transferível sem observação.
+
+**Relação com a D-011,** que decidiu "Canal, não grupo" em 27/07: a intenção continua de pé — o teto de 1.024 é teto de receita, e grupo expõe telefone de membro. O que a pesquisa de 28/07 acrescentou é que a operação madura costuma rodar **as duas** com papéis diferentes, começando no grupo e migrando ao passar de ~500 membros. Então a D-011 não vira "erramos": vira "o destino é canal, o começo provavelmente é grupo, e o banco precisa saber dizer qual dos dois".
+
+**O que já está certo e não precisa mexer:** `posts_por_dia_max`, `horarios_permitidos` e os splits são iguais nas três superfícies.
+
+**Mudaria se:** o WhatsApp abrir API oficial de publicação em Canal — aí o Canal vira o caso automatizado, como o Telegram, e sobe na fila.
+
+---

@@ -137,7 +137,7 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 ## 9. Estado atual
 
-Atualizado em 28/07/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+Atualizado em 31/07/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
 
 **Fase 0 em andamento** (contas de afiliado e prova de subid: trabalho manual do dono), com a base da Fase 1 construída em paralelo. As duas não conflitam — o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
@@ -151,7 +151,7 @@ A tela nunca fala com a simulação: ela chama uma ação em `app/acoes/`, que h
 
 ### Pronto e verificado
 
-**Banco** — 12 migrations em `supabase/migrations/`, reescritas do zero em 27/07 (exceção deliberada, com o banco vazio). `operacao_id` em toda tabela, papel como lista, nicho como entidade, limiar herdando por nicho, contador de reprovação por comporta e registro de execução das rotinas.
+**Banco** — 15 migrations em `supabase/migrations/`, **todas aplicadas no local** (as 12 primeiras reescritas do zero em 27/07, exceção deliberada, com o banco vazio). `operacao_id` em toda tabela, papel como lista, nicho como entidade, limiar herdando por nicho, contador de reprovação por comporta e registro de execução das rotinas.
 
 **Motor de curadoria** — `avalia_anuncios` é *a regra*, numa implementação só. 13 cenários verificados. 3.000 anúncios com 600 mil pontos em 1,4 s. Nenhuma tela recalcula regra.
 
@@ -209,7 +209,7 @@ pnpm usuario:cria "voce@exemplo.com" "Seu Nome" dono
 | Falta de variedade mata o grupo, e ordenar por nota piorava | `lib/variedade.ts`, com teste |
 | Os horários que sugeríamos estavam fora dos picos | `lib/horarios.ts`, com teste |
 
-**Ainda em aberto da pesquisa:** Canal do WhatsApp como terceira superfície (hoje `plataforma` só conhece grupo e Telegram), e escrever no roadmap que **30 ofertas aprovadas ≠ 30 publicações por canal** — a confusão é fácil e o teto por canal já existe.
+**Fechado em 31/07:** o Canal do WhatsApp virou a **D-031** — terceira superfície, entra como terceiro valor de `canal.plataforma` e nunca como booleano ao lado, e é decisão de Fase 2 porque muda o fluxo de publicação junto (o `wa.me` não alcança Canal). A distinção **30 aprovadas ≠ 30 publicações por canal** e a referência de receita (90 dias → R$ 800/mês; 12 meses → R$ 5–15 mil/mês) já estão no `docs/roadmap.md`, nas Fases 1 e 2.
 
 **Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15), a máquina de estados da simulação (27), as regras da mensagem (35), a intercalação por variedade (14) e os horários de pico (30). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
 
@@ -228,23 +228,36 @@ Depois disso, dois blocos que não são tela:
 
 ### Pendências desta sessão — leia antes de tocar em qualquer coisa
 
-**Duas migrations estão escritas e NÃO aplicadas.** O Docker caiu no meio da sessão de 28/07 e não deu para aplicar:
+**As migrations 14 e 15 foram aplicadas em 31/07.** `npx supabase migration list --local` mostra as 15 casadas. Conferido no banco, não só no log: o modelo `Padrão` começa com `#publi · {loja}` na primeira linha, `anuncio.imagem_url` e `imagem_obtida_em` existem, e `expurga_imagens_expiradas` roda.
 
-- `20260728140000_identificacao_publicitaria.sql` — corrige o modelo já gravado
-- `20260728150000_expira_imagem.sql` — `anuncio.imagem_url`, expurgo e a rotina diária recriada
-
-Para aplicar:
+**Nunca use `pnpm db:reset` para aplicar migration.** Ele não aplica — apaga e recria o banco inteiro. Foi assim que os dados colhidos se perderam em 28/07: 6 produtos, 6 anúncios, 3 fontes e 35 menções. O que aplica é:
 
 ```
 pnpm db:sobe
 npx supabase migration up --local
 ```
 
-**Nunca use `pnpm db:reset` para isso.** Ele não aplica — apaga e recria o banco inteiro. Foi assim que os dados colhidos se perderam nesta sessão: 6 produtos, 6 anúncios, 3 fontes e 35 menções. As fontes foram recadastradas (como misto, que é o estado correto); o catálogo se refaz rodando a colheita.
+**`pnpm db:tipos` era uma armadilha e foi desarmado em 31/07.** `lib/supabase/tipos.ts` é **escrito à mão**, com comentário em cada campo explicando o porquê, e traz apelidos (`Banco`, `*Linha`) que a aplicação inteira importa. O script sobrescrevia esse arquivo com a saída crua do gerador — ~25 erros de tipo em cadeia, e a explicação de cada campo perdida. Agora ele escreve em `lib/supabase/tipos-gerados.ts`, que é referência descartável e está no `.gitignore`. **Coluna nova continua entrando no arquivo à mão**, até o projeto Supabase da nuvem existir.
 
-**As telas desta rodada não foram conferidas no navegador**, pelo mesmo motivo. Tipo, lint e os 135 testes passam. Falta olhar: o aviso de identificação publicitária em `/ajustes/modelos`, o aviso de variedade em `/publicar`, e o erro de horário fora de pico no formulário de canal. **Abra e clique antes de dizer que está pronto** — foi o que achou os dois defeitos da rodada anterior.
+**Falta a conferência visual das três telas.** Neste ambiente não deu para abrir navegador: não há Chromium no WSL, e o Chrome do Windows não é alcançável por CDP (o loopback do Windows não responde do WSL e o firewall barra a interface de rede). O que **está** verificado, por HTTP com sessão real:
 
-**Conta local de teste:** `gabriel@local.test`. A senha morre no próximo `db:reset`; crie a sua com `pnpm usuario:cria`.
+- as 14 telas respondem 200, sem erro de execução no HTML — é a classe de defeito da constante exportada de `"use server"` da rodada anterior
+- o modelo salvo passa na regra 3.10, que é o que faz o aviso de `/ajustes/modelos` ficar corretamente oculto
+
+O que **não** está verificado, e é exatamente onde os defeitos da rodada anterior moraram: os três avisos só aparecem em condição ruim, que se produz digitando. Precisa de olho humano, uns dois minutos:
+
+| Onde | Como fazer aparecer | O que tem de acontecer |
+|---|---|---|
+| `/ajustes/modelos` | apague o `#publi · {loja}` da primeira linha | faixa vermelha, e o salvar bloqueado |
+| `/ajustes/modelos` | mova o `#publi` para a última linha | o outro texto: "a identificação está escondida" |
+| formulário de canal (`/canais`) | troque um horário para `18:00` | aviso de fora de pico, citando 07–09, 12–13, 19–22 |
+| `/publicar` | fila com dois itens seguidos do mesmo nicho | aviso de variedade no cabeçalho do canal |
+
+E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm verifica` não vê layout.
+
+**Conta local de teste:** `gabriel@local.test`, papel `dono`. A senha foi redefinida em 31/07 e está fora do Git — se precisar, redefina de novo pelo Studio (`http://127.0.0.1:54323`) ou crie a sua com `pnpm usuario:cria`.
+
+**O catálogo local continua vazio** desde o `db:reset` de 28/07. As 3 fontes estão recadastradas como misto; o catálogo se refaz rodando a colheita.
 
 ### Bloqueado, e por quem
 
@@ -260,7 +273,7 @@ npx supabase migration up --local
 | Arquivo | Quando |
 |---|---|
 | `docs/plano.md` | Antes de escolher o que construir. Tem a ordem, o porquê, e o limite da exceção da D-026 |
-| `docs/decisoes.md` | Antes de propor qualquer mudança. D-001 a D-026, mais a revisão das telas e as pendências |
+| `docs/decisoes.md` | Antes de propor qualquer mudança. D-001 a D-031, mais a revisão das telas e as pendências |
 | `docs/telas.md` | Especificação funcional de cada tela |
 | `docs/design.md` | Tokens, a casca, o sistema de botões e onde está o protótipo |
 | `docs/dados.md` | Schema, comportas e o modelo de segurança |

@@ -4,10 +4,15 @@
  * Só está aqui o que a aplicação usa. Tabela que ainda não tem
  * tela não entra: tipo sem uso envelhece sem que ninguém perceba.
  *
- * Quando o projeto Supabase da nuvem existir, isto pode passar a
- * ser gerado:
+ * **Não sobrescreva este arquivo com o gerador.** Ele traz `Banco` e
+ * os apelidos `*Linha`, que a aplicação inteira importa e que a saída
+ * crua não tem — sobrescrever custa ~25 erros de tipo em cadeia, além
+ * da explicação de cada campo. `pnpm db:tipos` escreve em
+ * `tipos-gerados.ts` justamente por isso: serve para comparar, e a
+ * coluna nova vem para cá à mão.
  *
- *   pnpm db:tipos
+ * Quando o projeto Supabase da nuvem existir, dá para reavaliar se
+ * vale passar a gerar.
  */
 
 /**

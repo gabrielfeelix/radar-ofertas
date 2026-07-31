@@ -21,7 +21,7 @@
     "db:status": "supabase status",
     "db:publica": "supabase db push",
     "usuario:cria": "node --env-file=.env scripts/cria-usuario.mjs",
-    "db:tipos": "supabase gen types typescript --local > lib/supabase/tipos.ts",
+    "db:tipos": "supabase gen types typescript --local > lib/supabase/tipos-gerados.ts && echo 'Gerado em lib/supabase/tipos-gerados.ts, que é referência descartável. lib/supabase/tipos.ts é escrito à mão: copie o campo novo para lá à mão.'",
     "funcoes:serve": "supabase functions serve"
   },
   "dependencies": {

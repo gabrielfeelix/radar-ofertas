@@ -54,6 +54,10 @@ desktop.ini
 *.swp
 *.swo
 
+# Referência descartável do gerador de tipos. O arquivo de verdade,
+# lib/supabase/tipos.ts, é escrito à mão e não pode ser sobrescrito.
+lib/supabase/tipos-gerados.ts
+
 # Dados locais e exportações
 *.csv
 !docs/exemplos/*.csv

@@ -38,7 +38,7 @@ O que construir:
 - Página de cadastro por link colado. **Feito.**
 - Motor de validação: `oferta`, `parametro`, `comissao_categoria`, as duas comportas e a nota. **Feito.**
 - Coletor diário de preço, com fontes plugáveis por marketplace. **Feito, esperando credencial.**
-- Colheita de canais de terceiros, alimentando o catálogo (D-012).
+- Colheita de canais de terceiros, alimentando o catálogo (D-012). **Feito**, com as duas telas; os links `shp.ee` continuam devolvendo 404 para requisição de servidor e só se resolvem com a credencial da Open API.
 - Agendamento por GitHub Actions: coleta, detecção de ofertas e expurgo. **Feito.** (Era `pg_cron` neste plano; a D-015 trocou, e a pesquisa de 28/07 confirmou o motivo — projeto pausado pausa `pg_cron` em silêncio.)
 - Nada de design elaborado. Uma tabela feia serve.
 
@@ -90,6 +90,8 @@ O que construir:
 - Bot de Telegram publicando sozinho pela API oficial.
 - Importação manual de relatório de comissão por CSV. **Sem API de marketplace.**
 
+**Decidir nesta fase, antes de o primeiro canal existir:** grupo ou Canal do WhatsApp. São superfícies diferentes — o Canal não tem teto de 1.024 e não expõe telefone, mas o `wa.me` que o painel usa hoje não alcança Canal. `canal.plataforma` ganha um **terceiro valor** quando isso for resolvido, nunca um booleano ao lado. O porquê inteiro está na D-031.
+
 **Concluída quando:** uma comissão confirmada foi rastreada da publicação até o relatório, passando pelo clique.
 
 ---
@@ -126,9 +128,11 @@ Antes desta fase, prepare: histórico de resultado por canal, receita por 100 me
 
 ## Fora de escopo até a Fase 4, sem exceção
 
-Extensão de navegador, IA escrevendo as mensagens, integração com APIs oficiais dos marketplaces, aplicativo mobile, cadastro de membros de grupo, gráfico bonito de histórico de preço, arquitetura multi-workspace de SaaS.
+Extensão de navegador, IA escrevendo as mensagens, aplicativo mobile, cadastro de membros de grupo, gráfico bonito de histórico de preço, arquitetura multi-workspace de SaaS.
 
 Tudo isso é bom. Nada disso traz a primeira venda.
+
+**Integração com API oficial de marketplace saiu desta lista** (D-010, confirmada pela pesquisa de 28/07). Era considerada luxo de fase avançada; é o contrário. A via oficial é a única que não depende de raspagem frágil, e a Shopee publica a dela abertamente, com credencial saindo do próprio painel de afiliado. É trabalho de **Fase 1**.
 
 ---
 
