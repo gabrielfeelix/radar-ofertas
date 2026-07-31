@@ -154,7 +154,25 @@ Shopee". A tela *Precisa de atenção* passa a mostrar a coleta como concluída.
 
 ---
 
-## 4. Mercado Livre (API de itens)
+## 4. Mercado Livre — ✅ conta de afiliado APROVADA em 31/07/2026
+
+> **Aprovação foi instantânea**, e isso desmente o que a pesquisa dizia: os guias
+> falavam em análise manual de 3 a 10 dias úteis e em exigência de canal de
+> divulgação. Nenhum dos dois aconteceu — não houve campo de rede social no
+> cadastro e o painel abriu na hora.
+>
+> A explicação provável é **histórico de conta**: a conta do dono no Mercado
+> Livre já tem compras e tempo de casa, que é o lastro que a análise procura.
+> Quem chega sem histórico provavelmente cai na análise que os guias descrevem.
+>
+> **Perfil de afiliado:** `fega6031503`.
+>
+> O painel traz **"Gerador de links"** e **"Administrar etiquetas"** — e é aí que
+> mora o subid do Mercado Livre. Vale abrir os dois **antes** da compra de teste:
+> tamanho máximo e formato aceito da etiqueta são metade das respostas da Fase 0,
+> e essa metade sai de graça, sem esperar relatório.
+
+## 4b. Mercado Livre (API de itens)
 
 **Destrava:** a segunda fonte de preço. Importa mais do que parece: **a série
 histórica de preço só pode ser construída sobre Mercado Livre e Shopee**, porque
