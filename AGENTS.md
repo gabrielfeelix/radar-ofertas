@@ -199,7 +199,19 @@ pnpm usuario:cria "voce@exemplo.com" "Seu Nome" dono
 
 **Auditoria de tela** — `pnpm verifica` não vê layout. Dois defeitos desta rodada passaram por tipo, lint e teste e só apareceram abrindo o navegador: 97 botões sem `cursor: pointer`, e uma constante exportada de arquivo `"use server"`, que quebra em execução. **Antes de dizer que uma tela está pronta, abra e clique.**
 
-**Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15) e a máquina de estados da simulação (27). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
+**Pesquisa de 28/07, e o que ela mudou.** Duas pesquisas, em `docs/pesquisa-tecnica.md` e `docs/pesquisa-operacao.md`. Quatro decisões saíram validadas (regra das 24h, D-015, D-016, D-010) e cinco coisas viraram trabalho:
+
+| O quê | Onde ficou |
+|---|---|
+| Link de afiliado é publicidade e precisa ser identificado | **regra 3.10**, validada no servidor, com teste |
+| Imagem tem regra mais dura que preço, e não estava aplicada | migration 15, D-029 |
+| PWA não pode cachear tela com preço | D-030 |
+| Falta de variedade mata o grupo, e ordenar por nota piorava | `lib/variedade.ts`, com teste |
+| Os horários que sugeríamos estavam fora dos picos | `lib/horarios.ts`, com teste |
+
+**Ainda em aberto da pesquisa:** Canal do WhatsApp como terceira superfície (hoje `plataforma` só conhece grupo e Telegram), e escrever no roadmap que **30 ofertas aprovadas ≠ 30 publicações por canal** — a confusão é fácil e o teto por canal já existe.
+
+**Testes** — `pnpm testa` cobre leitor de link (14), identificador de canal (15), a máquina de estados da simulação (27), as regras da mensagem (35), a intercalação por variedade (14) e os horários de pico (30). Sem banco, sem rede. `pnpm verifica` roda tipos, lint e testes.
 
 **Automação** — CI a cada push, rotina diária e backup semanal em `.github/workflows/`.
 
