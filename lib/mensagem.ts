@@ -55,6 +55,42 @@ export const VARIAVEIS = [
 ] as const;
 
 /**
+ * Como se identifica publicidade, e onde isso pode aparecer.
+ *
+ * Regra 3.10. Link de afiliado gera comissão, e conteúdo remunerado é
+ * publicidade — o CONAR é explícito em dizer que remuneração por
+ * performance não muda isso, e a própria Shopee repete a regra para os
+ * afiliados dela.
+ *
+ * `#ad` está fora de propósito: a orientação é que termo em inglês não
+ * é reconhecido pelo público brasileiro, e identificação que ninguém
+ * entende não identifica nada.
+ */
+export const IDENTIFICACOES = ["#publi", "#publicidade", "#parceriapaga", "#conteúdopago"];
+
+/**
+ * Onde a identificação ainda conta como "de imediato".
+ *
+ * O CONAR pede que a natureza publicitária apareça sem a pessoa
+ * precisar rolar a tela ou abrir o "mais". Numa mensagem curta de
+ * oferta, isso quer dizer as primeiras linhas — não a última, depois
+ * do link, onde o costume do mercado a esconde.
+ */
+const LINHAS_VISIVEIS = 3;
+
+export function temIdentificacaoPublicitaria(corpo: string): boolean {
+  const texto = corpo.toLowerCase();
+  return IDENTIFICACOES.some((marca) => texto.includes(marca));
+}
+
+/** A identificação existe, mas só depois do que a pessoa lê de cara. */
+export function identificacaoEstaEscondida(corpo: string): boolean {
+  if (!temIdentificacaoPublicitaria(corpo)) return false;
+  const inicio = corpo.split("\n").slice(0, LINHAS_VISIVEIS).join("\n").toLowerCase();
+  return !IDENTIFICACOES.some((marca) => inicio.includes(marca));
+}
+
+/**
  * Frases que afirmam mínimo histórico sem poder.
  *
  * A checagem é grosseira de propósito: ela não tenta entender a frase,

@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { afirmaMinimoSemLastro } from "@/lib/mensagem";
+import {
+  afirmaMinimoSemLastro,
+  identificacaoEstaEscondida,
+  temIdentificacaoPublicitaria,
+} from "@/lib/mensagem";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 
 /**
@@ -52,6 +56,27 @@ export async function salvaModelo(
       campo: "corpo",
       mensagem:
         "Falta {lastro}. É ele que troca de redação conforme a série — sem ele, a honestidade sobre o preço some do texto.",
+    };
+  }
+
+  // Regra 3.10. Link de afiliado gera comissão, e conteúdo remunerado
+  // é publicidade — CONAR, CDC e a própria Shopee. Recusa, não aviso:
+  // a Shopee pode pedir suspensão do conteúdo de quem não cumpre.
+  if (!temIdentificacaoPublicitaria(corpo)) {
+    return {
+      ok: false,
+      campo: "corpo",
+      mensagem:
+        "Falta a identificação de publicidade. Link de afiliado gera comissão, e isso é publicidade — use #publi, #publicidade, #parceriapaga ou #conteúdopago.",
+    };
+  }
+
+  if (identificacaoEstaEscondida(corpo)) {
+    return {
+      ok: false,
+      campo: "corpo",
+      mensagem:
+        "A identificação existe, mas está longe demais do começo. Ela precisa aparecer de imediato, nas primeiras linhas — no rodapé, depois do link, não conta.",
     };
   }
 

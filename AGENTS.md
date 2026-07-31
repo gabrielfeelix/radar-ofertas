@@ -53,6 +53,8 @@ Se você acha que outra tecnologia é melhor, escreva a sugestão em `docs/decis
 
 **3.9 Datas em UTC, exibição em America/Sao_Paulo.** Todo `timestamptz` gravado em UTC. Conversão só na exibição. Horários de publicação configurados por canal são no fuso de São Paulo.
 
+**3.10 Toda mensagem publicada identifica que é publicidade.** Link de afiliado gera comissão, e conteúdo remunerado é publicidade — o CONAR, o CDC e a própria Shopee dizem isso com todas as letras. A identificação usa `#publi`, `#publicidade`, `#parceriapaga` ou `#conteúdopago`, **aparece de imediato** (nunca escondida no fim, em letra pequena ou perdida entre hashtags), e `#ad` não conta: não é reconhecida pelo público brasileiro. Marcar o perfil da loja também não basta. A Shopee pode pedir suspensão do conteúdo de quem não cumpre. Detalhe e fontes em `docs/pesquisa-operacao.md`.
+
 ---
 
 ## 4. Fase atual e escopo

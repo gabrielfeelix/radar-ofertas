@@ -15,12 +15,16 @@ import type { ModeloMensagemLinha } from "@/lib/supabase/tipos";
  */
 const RESERVA: ModeloDeMensagem = {
   corpo: [
+    // A identificação vem antes do produto, e não no rodapé: a regra
+    // 3.10 pede que ela apareça sem a pessoa precisar rolar.
+    "#publi · {loja}",
+    "",
     "🔥 {produto}",
     "",
     "De {preco_antes} por {preco} (−{desconto}%)",
     "{lastro}",
     "",
-    "{loja} · {vendedor}",
+    "{vendedor}",
     "👉 {link}",
   ].join("\n"),
   lastroCom: "Menor preço em {janela} dias.",

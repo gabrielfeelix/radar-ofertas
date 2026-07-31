@@ -9,7 +9,10 @@ import { Cartao, RotuloDeSecao } from "@/app/componentes/Cartao";
 import {
   afirmaMinimoSemLastro,
   EXEMPLO,
+  identificacaoEstaEscondida,
+  IDENTIFICACOES,
   previa,
+  temIdentificacaoPublicitaria,
   VARIAVEIS,
   type ModeloDeMensagem,
 } from "@/lib/mensagem";
@@ -52,6 +55,12 @@ export function FormularioModelo({
   // no servidor; isto aqui é só não deixar chegar lá sem saber.
   const violaAoVivo = afirmaMinimoSemLastro(lastroSem);
 
+  // Regra 3.10, conferida enquanto se digita. São dois problemas
+  // diferentes: não ter identificação, e tê-la onde ninguém lê.
+  const semIdentificacao = !temIdentificacaoPublicitaria(corpo);
+  const identificacaoEscondida = identificacaoEstaEscondida(corpo);
+  const impedeSalvar = violaAoVivo || semIdentificacao || identificacaoEscondida;
+
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <form action={acao} className="flex flex-col gap-5">
@@ -70,6 +79,26 @@ export function FormularioModelo({
             className={`${classeDeCampo} resize-y leading-longo`}
           />
         </Campo>
+
+        {(semIdentificacao || identificacaoEscondida) && (
+          <p
+            role="alert"
+            className="rounded-md border border-perigo-borda bg-perigo-fundo px-3 py-2 text-sm leading-longo text-perigo"
+          >
+            {semIdentificacao ? (
+              <>
+                <strong>Falta dizer que é publicidade.</strong> Link de afiliado gera comissão, e
+                conteúdo remunerado é publicidade — CONAR, CDC e a própria Shopee. Use{" "}
+                {IDENTIFICACOES.join(", ")}.
+              </>
+            ) : (
+              <>
+                <strong>A identificação está escondida.</strong> Ela precisa aparecer nas primeiras
+                linhas, sem a pessoa rolar a tela. No rodapé, depois do link, não conta.
+              </>
+            )}
+          </p>
+        )}
 
         <Cartao tom="apagado" espaco="sm">
           <RotuloDeSecao>o que dá para usar</RotuloDeSecao>
@@ -143,7 +172,7 @@ export function FormularioModelo({
           {resultado?.ok === true && (
             <span className="mr-auto text-sm font-semibold text-sucesso">salvo</span>
           )}
-          <Botao type="submit" variante="primaria" disabled={salvando || violaAoVivo}>
+          <Botao type="submit" variante="primaria" disabled={salvando || impedeSalvar}>
             {salvando ? "Salvando…" : "Salvar modelo"}
           </Botao>
         </AcoesDoFormulario>
