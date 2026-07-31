@@ -624,6 +624,8 @@ export type PublicacaoSimulada = {
   ofertaId: string;
   canal: CanalSimulado;
   produto: string;
+  /** O nicho da oferta. A fila usa para não publicar oito iguais seguidas. */
+  nicho: string;
   url: string;
   /**
    * O que a mensagem precisa saber, e não a mensagem pronta.
@@ -684,6 +686,7 @@ export function publicacoesDaFila(): PublicacaoSimulada[] {
         ofertaId: oferta.id,
         canal,
         produto: oferta.produto,
+        nicho: oferta.nicho,
         url: oferta.url,
         dadosDaMensagem: {
           produto: oferta.produto,

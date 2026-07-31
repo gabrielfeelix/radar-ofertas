@@ -15,6 +15,7 @@ import { BotaoWhatsApp } from "@/app/componentes/BotaoWhatsApp";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { formataReais } from "@/lib/dinheiro";
 import { montaMensagem, type ModeloDeMensagem } from "@/lib/mensagem";
+import { intercalaPorVariedade, repeticoesSeguidas } from "@/lib/variedade";
 import { modeloGlobal } from "@/lib/modelo";
 import {
   publicacoesDaFila,
@@ -221,6 +222,26 @@ function GrupoDoCanal({
   const cabemHoje = Math.min(vagas, itens.length);
   const paraAmanha = itens.length - cabemHoje;
 
+  /*
+    A ordem sai daqui, e não da nota. Ofertas parecidas pontuam
+    parecido — desconto, comissão e reputação andam juntos dentro do
+    mesmo nicho e faixa de preço — então ordenar por nota agrupa o
+    semelhante justamente no topo. Oito variações da mesma coisa em
+    sequência é uma das cinco causas de morte de um grupo
+    (`docs/pesquisa-operacao.md`).
+
+    Nada é descartado: só muda a ordem em que sai.
+  */
+  const paraVariedade = itens.map((p) => ({
+    grupo: p.nicho,
+    precoCentavos: p.precoNaFilaCentavos,
+    publicacao: p,
+  }));
+  const emOrdem = intercalaPorVariedade(paraVariedade).map((x) => x.publicacao);
+  const aindaRepetidas = repeticoesSeguidas(
+    emOrdem.slice(0, cabemHoje).map((p) => ({ grupo: p.nicho, precoCentavos: p.precoNaFilaCentavos })),
+  );
+
   return (
     <section className="rounded-lg border border-borda bg-superficie">
       <header className="flex flex-wrap items-center gap-3 border-b border-borda bg-superficie-alt px-5 py-3">
@@ -250,6 +271,24 @@ function GrupoDoCanal({
       )}
 
       {/*
+        Quando não deu para variar, isso é dito. Não é defeito do
+        sistema — é o catálogo do dia sendo monótono. Sem o aviso, o
+        dono olha oito ofertas parecidas em sequência e conclui que a
+        ordenação está quebrada, quando ela está mostrando a verdade.
+      */}
+      {aindaRepetidas > 0 && (
+        <p className="border-b border-borda-sutil px-5 py-3 text-sm text-texto-fraco">
+          A ordem intercala nicho e faixa de preço, mas{" "}
+          <strong className="font-semibold text-texto-medio">
+            {aindaRepetidas} {aindaRepetidas === 1 ? "publicação sai" : "publicações saem"} parecida
+            {aindaRepetidas === 1 ? "" : "s"} com a anterior
+          </strong>{" "}
+          — não há variedade suficiente na fila de hoje. Repetir o mesmo assunto em sequência é uma
+          das razões que fazem membro silenciar o grupo.
+        </p>
+      )}
+
+      {/*
         Telegram em lote: o robô publica sozinho pela API oficial, e um
         bloco resolve o canal inteiro num toque. Não fere a regra do
         WhatsApp — ela restringe só o WhatsApp.
@@ -270,7 +309,7 @@ function GrupoDoCanal({
       )}
 
       <ul className="flex flex-col">
-        {itens.map((publicacao, indice) => (
+        {emOrdem.map((publicacao, indice) => (
           <li key={publicacao.id} className="border-b border-borda-sutil last:border-0">
             <CartaoDeEnvio publicacao={publicacao} cabeHoje={indice < cabemHoje} modelo={modelo} />
           </li>
