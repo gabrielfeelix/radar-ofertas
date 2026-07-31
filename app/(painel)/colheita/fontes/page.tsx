@@ -77,7 +77,10 @@ export default async function Fontes() {
         {
           rotulo: "Descartadas",
           valor: `${descartadas}`,
-          nota: mencoes > 0 ? `${Math.round((descartadas / mencoes) * 100)}% do total` : "—",
+          // Sem menção lida, não existe percentual — e travessão solto
+          // de legenda é ruído com cara de dado faltando. Some.
+          nota:
+            mencoes > 0 ? `${Math.round((descartadas / mencoes) * 100)}% do total` : undefined,
           cor: descartadas > 0 ? "text-atencao" : undefined,
         },
       ]}
