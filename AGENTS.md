@@ -151,7 +151,9 @@ Dia longo, quatro frentes. Ordem de leitura para quem chega agora: esta lista, d
 
 **3. Seis agentes de QA usaram o painel como gente.** Trinta e poucos achados, quatro reais e corrigidos: horário de canal salvava vazio em silêncio, a tela prometia que o Telegram publica sozinho (não publica, é Fase 2), limiar de curadoria aceitava qualquer número, e o cancelar de publicação não dizia que é reversível. O resto foi rejeitado com motivo — vale ler o commit `1d015a1` antes de reabrir qualquer um deles.
 
-**4. O sistema saiu da máquina local.** Projeto Supabase criado e migrations aplicadas. Ver "Bloqueado, e por quem" logo abaixo, que mudou bastante.
+**4. O sistema saiu da máquina local.** Projeto Supabase criado e migrations aplicadas, e o painel publicado. Ver "Bloqueado, e por quem" logo abaixo, que mudou bastante.
+
+**5. A simulação começou a sair do painel, e isto está pela metade.** Decisão do dono no fim do dia: *"agora estamos parando de brincar de mockup"*. Encerra a exceção da D-026. **Canais já lê o banco; Aprovar e Publicar ainda são simuladas.** O passo a passo do que falta, na ordem, está em `docs/tirar-a-simulacao.md` — leia antes de tocar em qualquer uma das duas. Para saber onde parou: `grep -rln "simulacao/loja" app lib testes`.
 
 ### Contas e credenciais — onde estamos
 
@@ -321,6 +323,8 @@ E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm veri
 | `docs/mercado.md` | Antes de falar de concorrência ou distribuição |
 | `docs/infra.md` | O que roda onde, quanto custa, e as dependências que expiram |
 | `docs/credenciais.md` | O trabalho que só o dono faz: contas de afiliado, compra de teste, Supabase na nuvem, chaves de marketplace e Telegram |
+| `docs/tirar-a-simulacao.md` | **Antes de mexer em Aprovar ou Publicar.** O que já saiu da simulação, o que falta e em que ordem |
+| `docs/refino-visual.md` | Antes de mexer em interface. O diagnóstico visual e as frentes, com o que ficou de fora |
 | `docs/pesquisa-tecnica.md` | Antes de mexer em stack ou política de plataforma. O que está validado e o que está errado |
 | `docs/pesquisa-operacao.md` | Antes de mexer em cadência, horário, formato de mensagem ou canal. Como se toca um grupo de verdade |
 | `referencia-claude-deisgn/` | O protótipo, com as quatorze telas desenhadas. Abra antes de mexer em interface |
