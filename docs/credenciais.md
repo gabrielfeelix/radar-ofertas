@@ -22,9 +22,18 @@ A ordem não é por facilidade: é por **quanto cada item destrava**, e o primei
   manual da qualidade do canal**, que leva de 3 a 10 dias úteis.
 
   Não é exigência de audiência: **não há mínimo de seguidores** em nenhum dos
-  dois. É exigência de existir um lugar público onde os links vão aparecer. Canal
-  de Telegram e grupo de WhatsApp **não constam** das listas aceitas, então não
-  dá para contar com eles.
+  dois. É exigência de existir um lugar público onde os links vão aparecer.
+
+  **Segunda correção, feita na prática:** o Mercado Livre aprovou **na hora, sem
+  pedir canal nenhum** — provavelmente porque a conta do dono já tem histórico de
+  compras, que é o lastro que a análise procura. Então a exigência de rede social
+  é real na Shopee e **não foi exigida** no ML para conta com histórico. Quem
+  chegar com conta nova provavelmente cai na análise que os guias descrevem — e
+  isso vale para o parceiro da Fase 3.
+
+  A Amazon aceita canal do Telegram público como site declarado. **Não declare
+  convite de grupo de WhatsApp**: o revisor não consegue abrir, e o contrato dela
+  é mais rígido com canal fechado que o dos outros dois.
 - **Cartão de crédito.** Nada nesta lista é pago. O Supabase gratuito basta, e as
   APIs de afiliado não cobram.
 
@@ -49,8 +58,11 @@ sem divisão de receita não existe modelo.
 3. **Gere um link de teste com subid manual** em cada programa. O subid é um
    campo livre — use algo reconhecível, tipo `teste01`. Cada programa chama isso
    de um jeito: *SubID*, *tag de rastreamento*, *identificador personalizado*.
-4. **Compre alguma coisa barata** por cada link, de verdade, com dinheiro seu.
-   Compra de teste tem que ser compra: simulação não aparece em relatório.
+4. **Peça a outra pessoa que compre** alguma coisa barata por cada link, na conta
+   e no aparelho dela. Compra de teste tem que ser compra de verdade — simulação
+   não aparece em relatório —, mas **não pode ser sua**: autocompra por link de
+   afiliado é violação de termo nos três programas, e o risco é encerramento de
+   conta. Você devolve o dinheiro por fora.
 5. **Espere o relatório** e confira, por marketplace:
    - o subid apareceu?
    - apareceu **íntegro**, ou foi cortado/alterado?
@@ -252,9 +264,9 @@ leva dois minutos e não custa nada.
 > 7490-1/04 apareceria fora da lista permitida. **Precisa de contador antes de
 > repassar dinheiro a terceiro**, que é o que a Fase 3 faz.
 >
-> **Confira uma coisa no painel:** em *Sua Conta de Associado*, o campo
-> **"Situação Fiscal Atual do Brasil"** precisa estar **Completo**. Enquanto
-> estiver *Incompleto*, a comissão acumula e não é paga.
+> **Situação fiscal:** enviada em 31/07, com status **Enviado** — a Amazon ainda
+> revisa. Se voltar como pendente, resolver na hora: comissão acumula e não é
+> paga enquanto o questionário tributário não for aceito.
 
 ### Por que ela era para ficar por último
 

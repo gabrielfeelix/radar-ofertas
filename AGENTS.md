@@ -141,6 +141,41 @@ Atualizado em 31/07/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 **Fase 0 em andamento** (contas de afiliado e prova de subid: trabalho manual do dono), com a base da Fase 1 construída em paralelo. As duas não conflitam — o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
+### O que a sessão de 31/07/2026 mudou
+
+Dia longo, quatro frentes. Ordem de leitura para quem chega agora: esta lista, depois `docs/credenciais.md` (o que existe de conta e o que falta), depois `docs/refino-visual.md` (o estado da interface).
+
+**1. O projeto passou a se ver.** `pnpm telas` fotografa as treze telas logadas em 2×, dentro de `.telas/` (fora do Git), e **falha se alguma soltar erro de execução no navegador**. Foi o que finalmente fechou o buraco de `pnpm verifica` não enxergar layout. Rode e **olhe as fotos** depois de mexer em interface.
+
+**2. Refino visual, cinco frentes das seis planejadas** (`docs/refino-visual.md`). Duas elevações em repouso substituindo a regra antiga de "nada de sombra"; número de indicador em 32px com rótulo sobrescrito; a fila de `/aprovar` virou lista de decisão com série de preço na linha e o laranja aparecendo numa linha por vez; `Pagina` ganhou `mx-auto` e a coluna de contexto de 320px; chip de plataforma em tinta. Ficou de fora, de propósito: os atalhos de teclado da fila, e a F4 (micro-gráficos) por não haver pergunta esperando resposta.
+
+**3. Seis agentes de QA usaram o painel como gente.** Trinta e poucos achados, quatro reais e corrigidos: horário de canal salvava vazio em silêncio, a tela prometia que o Telegram publica sozinho (não publica, é Fase 2), limiar de curadoria aceitava qualquer número, e o cancelar de publicação não dizia que é reversível. O resto foi rejeitado com motivo — vale ler o commit `1d015a1` antes de reabrir qualquer um deles.
+
+**4. O sistema saiu da máquina local.** Projeto Supabase criado e migrations aplicadas. Ver "Bloqueado, e por quem" logo abaixo, que mudou bastante.
+
+### Contas e credenciais — onde estamos
+
+Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
+
+| O quê | Estado em 31/07 | Falta |
+|---|---|---|
+| **Supabase nuvem** | ✅ `radar-ofertas`, São Paulo, ref `fcdkczueohekmgaaacdr`, 15 migrations aplicadas | nada |
+| **Mercado Livre — afiliado** | ✅ aprovado na hora, `fega6031503` | ler "Administrar etiquetas" para descobrir o formato do subid |
+| **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
+| **Shopee — afiliado** | ⏳ cadastro enviado, até 3 dias úteis | esperar e-mail |
+| **Shopee — Open API** | ⛔ bloqueado | exige o ID de afiliado, que só existe depois de aprovar. **Depois disso, até 2 semanas** |
+| **Mercado Livre — API de itens** | ⛔ não começou | é em `developers.mercadolivre.com.br`, separado do afiliado. **É o caminho mais curto para dado real** |
+| **Canais** | ✅ `t.me/radarpet` (público) e grupo de WhatsApp | audiência |
+
+**Duas correções que a prática impôs à pesquisa**, e que valem para quem for planejar prazo:
+
+- As esperas da Shopee são **em série**, não em paralelo: cadastro, depois API. A pesquisa técnica dizia que a credencial saía do painel sem porteiro — não sai.
+- A compra de teste da Fase 0 **não pode ser feita pelo dono**. Autocompra é violação de termo nos três programas, e o risco é encerramento de conta. Tem que ser outra pessoa, na conta dela. O roadmap já foi corrigido.
+
+**Marca:** o dono adotou `radar4yu` como identificador na Amazon, ligando o produto (Radar) à empresa (4YU). Se isso virar marca guarda-chuva, encosta no domínio do redirecionador da Fase 2 — os dois precisam combinar.
+
+**Fiscal, e não é detalhe:** as contas estão no **CPF**, porque não há CNPJ. A D-011 já registrava divergência sobre afiliado digital caber no MEI. **Precisa de contador antes da Fase 3**, que é quando o sistema repassa dinheiro a terceiro.
+
 ### Como este projeto trabalha hoje
 
 **Interface primeiro, backend plugado depois (D-026, decisão do dono em 28/07).** O que falta para as telas de decisão terem dado real não é código: é credencial de marketplace, domínio e canal com audiência — nada disso sob controle de quem escreve o sistema. Então as telas são construídas sobre uma **operação simulada** em `lib/simulacao/loja.ts`, vão à mão de testadores nesse estado, e o backend entra ação por ação depois. Leia a D-026 antes de propor voltar à ordem antiga.
@@ -263,12 +298,14 @@ E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm veri
 
 ### Bloqueado, e por quem
 
-- **Coleta de preço real** — falta credencial de marketplace. O dono resolve. A Shopee é a aposta melhor: a Open API de afiliado resolve dado e link na mesma chave.
+- **Coleta de preço real** — falta credencial de marketplace, e o caminho mais curto **mudou em 31/07**. A Shopee continua sendo a melhor chave (resolve dado e link de uma vez), mas ela está a cerca de três semanas de distância: cadastro em análise, e a API só pode ser pedida depois de aprovado, levando até duas semanas a mais. **O Mercado Livre virou o atalho:** a conta de afiliado já está aprovada, e a API de itens só depende de criar uma aplicação em `developers.mercadolivre.com.br` — nada de fila de aprovação. Quem retomar isto: comece por ela.
+- **Segredos gerados** — ✅ `COLETA_SEGREDO` e `SAL_HASH_IP` existem no `.env`. O sal **nunca muda** depois que a coleta começar, senão a contagem de clique único quebra para sempre.
 - ~~**Projeto Supabase na nuvem**~~ — **resolvido em 31/07/2026.** Projeto `radar-ofertas`, organização 4YU Systems, região São Paulo (`sa-east-1`), ref `fcdkczueohekmgaaacdr`. As 15 migrations foram aplicadas e conferidas contra o banco, tabela por tabela. As chaves vivem em `.env.producao`, fora do Git. **A exceção da reescrita de migration fechou junto** — vale a regra da seção 6.
 
   O `.env` continua apontando para o banco **local**, que é onde o desenvolvimento acontece; a nuvem tem o schema e nenhum dado. Trocar o painel para ler a nuvem é decisão separada, e o gatilho é existir dado real lá.
-- **Segredos no GitHub** — dependem da nuvem existir.
-- **Redirecionador e subid** — dependem de domínio registrado.
+- **Segredos no GitHub** — a nuvem já existe, então isto deixou de estar bloqueado: falta subir as chaves de `.env.producao` como segredos do repositório para as rotinas agendadas alcançarem o banco.
+- **Redirecionador e subid** — dependem de domínio registrado. Se `radar4yu` virar a marca, o domínio deve combinar.
+- **Prova do subid (Fase 0)** — **já dá para começar**, sem esperar a Shopee: Mercado Livre e Amazon geram link com subid hoje. Falta gerar os links de teste e **pedir a outra pessoa que compre** (autocompra é violação de termo).
 - **Colheita por conta de usuário do Telegram** — o dono tem número dedicado; falta gerar a string de sessão. Ela nunca entra no Git nem em mensagem.
 - **Links `shp.ee`** — o encurtador da Shopee devolve 404 para requisição de servidor, com ou sem User-Agent de navegador. Canal que só publica `shp.ee` rende zero, e a tela de menções mostra isso. Resolve junto com a credencial da Open API. **Não invente contorno** — simular navegador é raspagem com outro nome.
 
