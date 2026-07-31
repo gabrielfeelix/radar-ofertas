@@ -162,8 +162,11 @@ A **string de sessão do Telegram** merece nota à parte: ela equivale à conta 
 | **Token de afiliado do Mercado Livre** | `ML_REFRESH_TOKEN` tem validade e precisa ser renovado | o coletor pula a loja e informa — visível, mas só para quem olha |
 | **Sessão de usuário do Telegram** | a string de sessão pode ser invalidada pelo próprio Telegram | a colheita de grupo fechado para de trazer link |
 | **Credencial da Open API da Shopee** | chave com validade a confirmar quando ela existir | idem |
+| **API da Amazon** | **já expirou.** A PA-API v5 foi retirada em **15/05/2026** e devolve 403; não aceita cliente novo | não é sintoma futuro, é fato: qualquer plano de coletor da Amazon precisa nascer na **Creators API**, que tem autenticação, endpoint e formato diferentes. Ver `docs/pesquisa-tecnica.md` |
 
 Hoje existe **um remendo e uma superfície**: a tela `/atencao` conta os dias que faltam para o agendador dormir, lendo a data do último commit do próprio `.git`. Isso avisa, mas não resolve — e não cobre os outros quatro.
+
+**Uma anotação que não é de temporizador, mas é do mesmo tipo — limite de terceiro que só aparece na hora errada:** o Worker da Cloudflare tem **3 MiB no plano gratuito** e 10 MiB no pago, e aplicação Next.js chega perto disso com facilidade. O OpenNext também exige KV para o cache de página e R2 para estático acima de 25 MiB. É o primeiro lugar onde a hospedagem gratuita quebra.
 
 **Não decidir agora, de propósito.** Cada caminho possível — segundo agendador externo, commit automático de manutenção, monitor que pinga de fora, renovação automática de token — muda o desenho da infraestrutura, e desenhar isso no meio das telas é trocar duas coisas ao mesmo tempo. **Rever quando as telas terminarem**, junto, como um problema só: *como o sistema percebe que uma dependência externa venceu, e como ele avisa antes de parar.*
 

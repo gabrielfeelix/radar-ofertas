@@ -184,6 +184,13 @@ A rotina diária — coleta, expurgo, expiração, compactação e detecção �
 
 ---
 
+**Revisado em 28/07/2026, depois da pesquisa técnica.** O argumento de disponibilidade **caducou**: em 2026 o `pg_cron` vem habilitado em todos os planos do Supabase, inclusive o gratuito. Não é mais preciso pedir nada a ninguém.
+
+O motivo que sobra é o que sempre importou, e é mais forte do que estava escrito aqui: **com `pg_cron`, projeto pausado ou fora do ar pausa todo agendamento em silêncio.** É a mesma falha silenciosa que a tela "Precisa de atenção" existe para combater — e o agendador é justamente o lugar onde ela custa mais caro, porque um dia sem coleta é um buraco permanente na série de preço.
+
+Agendador externo falha visível: o GitHub Actions manda e-mail. A decisão continua de pé, com o motivo certo.
+
+
 ## D-016 · Painel na Cloudflare via OpenNext, não Cloudflare Pages — corrige a D-004
 **Data:** 2026-07-27
 
@@ -498,5 +505,39 @@ Forçar a escolha produzia o segundo. Um aviso âmbar ao lado de "sem nicho" pio
 **Classificar é em lote, e isso não é conforto.** É o único trabalho manual por item do sistema. Um canal genérico entrega dezenas de produtos por dia — de um em um, ninguém faz na segunda semana, e o catálogo para de crescer sem ninguém ter decidido isso.
 
 **Os 6 produtos hoje marcados como "pet" continuam marcados.** Corrigir dado existente é decisão do dono, não efeito colateral de mudança de tela.
+
+---
+
+## D-029 · Imagem de produto: link, nunca arquivo, e com prazo
+**Data:** 2026-07-28
+
+`anuncio.imagem_url` guarda o **link** para a imagem na loja, com `imagem_obtida_em` ao lado, e `expurga_imagens_expiradas` o apaga quando passa da retenção daquela loja. Nunca se guarda o arquivo da imagem.
+
+**Motivo:** a política da Amazon é mais dura com imagem do que com preço, e nós aplicávamos metade dela.
+
+> "You will not store or cache Product Advertising Content consisting of an image, but you may store a link to Product Advertising Content consisting of an image for up to 24 hours."
+
+O preço tinha `expurga_precos_expirados` desde a primeira migration. A imagem não tinha nada — `produto.imagem_url`, sem prazo e sem regra por loja.
+
+**Por que no anúncio e não no produto:** a política é da loja, e loja é atributo do anúncio. O mesmo produto pode ter anúncio na Shopee (imagem pode ficar) e na Amazon (não pode). Com a URL no produto, não há como expirar uma sem apagar a outra.
+
+**Reusa `cache_preco_max_horas` de propósito.** É a mesma política que limita os dois. Duas colunas separadas conviveriam com valores diferentes, e a divergência só apareceria numa notificação da Amazon.
+
+**Era inofensivo hoje e deixaria de ser amanhã:** não existe coleta de imagem ainda, mas o componente de interface já está pronto para receber a foto, e a pesquisa de operação mostrou que **imagem é item de conversão** — *"links soltos sem contexto visual têm taxa de clique muito mais baixa"*. Ou seja, ela vai ser construída, e cedo.
+
+---
+
+## D-030 · O PWA não pode cachear tela com preço de marketplace
+**Data:** 2026-07-28
+
+Quando existir service worker (D-018), ele **exclui as telas que mostram preço**. Cache offline vale para casca, navegação e telas de configuração, não para oferta.
+
+**Motivo:** cláusula da política da Amazon que não estava anotada em lugar nenhum.
+
+> "If your application includes a client application, the client application may not store or cache Product Advertising Content."
+
+Cache offline é exatamente o tipo de coisa que alguém liga achando que é melhoria, meses depois, sem reler política de afiliado. Está escrito **antes** de existir service worker para que a decisão já esteja tomada quando a tentação aparecer.
+
+**Mudaria se:** a Amazon sair do sistema. Para Mercado Livre e Shopee a restrição não existe.
 
 ---

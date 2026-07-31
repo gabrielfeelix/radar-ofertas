@@ -125,6 +125,10 @@ export type AnuncioLinha = {
   vendas_estimadas: number | null;
   ativo: boolean;
   ultima_coleta_em: string | null;
+  /** LINK para a imagem na loja, nunca a imagem. Expira pela política dela. */
+  imagem_url: string | null;
+  /** Quando o link foi obtido. Sem isto não há como saber a idade dele. */
+  imagem_obtida_em: string | null;
   criado_em: string;
   atualizado_em: string;
 };

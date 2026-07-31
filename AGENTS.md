@@ -39,7 +39,11 @@ Se você acha que outra tecnologia é melhor, escreva a sugestão em `docs/decis
 
 **3.2 Nunca automatize o envio no WhatsApp.** Nada de biblioteca não oficial, leitura de QR Code ou simulação de WhatsApp Web. Isso viola os termos e derruba o número, que é o ativo do parceiro. O WhatsApp é sempre: gerar o texto, abrir `wa.me` com a mensagem pronta, humano aperta enviar. **Telegram sim, pode postar sozinho** pela API oficial.
 
-**3.3 Preço da Amazon não vira histórico.** A política de associados da Amazon permite guardar preço em cache por no máximo 24 horas. Portanto: não construa série histórica de preço da Amazon, não exiba comparação histórica de Amazon, e descarte pontos de preço da Amazon com mais de 24 horas. Histórico de preço é construído em cima de **Mercado Livre e Shopee**. A Amazon entra como fonte de oferta pontual.
+**3.3 Preço da Amazon não vira histórico — e imagem é ainda mais restrita.** A política de associados permite guardar preço em cache por no máximo 24 horas. Portanto: não construa série histórica de preço da Amazon, não exiba comparação histórica de Amazon, e descarte pontos de preço da Amazon com mais de 24 horas. Histórico de preço é construído em cima de **Mercado Livre e Shopee**. A Amazon entra como fonte de oferta pontual.
+
+**Imagem tem regra própria, e mais dura:** *"You will not store or cache Product Advertising Content consisting of an image, but you may store a link to it for up to 24 hours."* Ou seja: **nunca guarde o arquivo da imagem** — só o link, e ele expira igual ao preço (`anuncio.imagem_url`, expurgado por `expurga_imagens_expiradas`). ASIN e SKU, ao contrário, podem ficar para sempre: é o que permite reencontrar o produto depois de expurgar o resto.
+
+**E o painel é PWA (D-018):** *"If your application includes a client application, the client application may not store or cache Product Advertising Content."* Service worker guardando tela com preço da Amazon viola isso. Cache offline, quando existir, exclui as telas que mostram preço.
 
 **3.4 Nunca afirme "menor preço histórico" sem lastro.** Enquanto a série de preços de um anúncio tiver menos de 14 dias, a mensagem não pode falar em desconto histórico. Use a redação honesta: *"menor preço que observamos desde DD/MM"*. Mentir sobre preço queima o grupo e é o erro que mata os concorrentes.
 
