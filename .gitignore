@@ -67,3 +67,5 @@ relatorios/
 
 # Capturas de tela de conferência
 .telas/
+.vercel
+.env*

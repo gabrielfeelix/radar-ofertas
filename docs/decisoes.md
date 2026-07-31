@@ -574,3 +574,33 @@ O mercado usa **três** superfícies, não duas:
 **Mudaria se:** o WhatsApp abrir API oficial de publicação em Canal — aí o Canal vira o caso automatizado, como o Telegram, e sobe na fila.
 
 ---
+
+## D-032 · Vercel Hobby agora, com prazo para sair
+**Data:** 2026-07-31
+
+O painel está publicado na **Vercel, plano Hobby**, na conta `4-yu`. Isso
+**contraria a seção 2 do `AGENTS.md`**, que manda hospedar em Cloudflare Workers
+com OpenNext (D-016) e diz, com todas as letras, para não usar o plano gratuito
+da Vercel.
+
+**Motivo da exceção:** ver o sistema no ar hoje, sem gastar a sessão configurando
+adaptador. Decisão do dono, tomada com o conflito explicado na tela.
+
+**O que exatamente é o problema:** o termo do plano Hobby proíbe uso comercial, e
+um painel que opera links de afiliado é uso comercial. O risco não é multa — é
+**suspensão da conta**, e a conta é a mesma dos outros aplicativos da 4YU.
+
+**O que reduz o risco enquanto durar:** a *Deployment Protection* da Vercel está
+**ligada**, então o painel só abre para quem tem acesso à conta. Enquanto ele não
+for público e não houver publicação real saindo dali, é ambiente de teste — que é
+o que o plano Hobby permite.
+
+**Prazo, e é o que faz disto dívida e não desleixo:** sair da Vercel Hobby **antes
+da primeira publicação real em canal com audiência**. Nesse dia, uma de duas:
+
+1. **Cloudflare Workers com OpenNext**, como a D-016 decidiu — gratuito, permite
+   uso comercial, e o limite de 3 MiB do Worker precisa ser medido antes.
+2. **Vercel Pro**, US$ 20/mês, se a fricção do adaptador custar mais que isso.
+
+**Mudaria se:** a Vercel passar a permitir uso comercial no plano gratuito, o que
+não deve acontecer.
