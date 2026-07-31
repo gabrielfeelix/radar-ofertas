@@ -40,8 +40,12 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client-17
+          # E o caminho absoluto, porque instalar o 17 NÃO basta: o
+          # runner já traz o 16 e é ele que ganha no PATH, então
+          # `pg_dump` continuaria sendo 16.14 mesmo com o 17 instalado.
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
           # Falha alto se vier outra versão, em vez de descobrir no dump.
-          pg_dump --version
+          /usr/lib/postgresql/17/bin/pg_dump --version
 
       - name: Gera o dump
         env:
