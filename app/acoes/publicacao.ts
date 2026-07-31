@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  buscaPublicacao,
   cancelaPublicacao,
   desfazCancelamento,
   desfazEnvio,
@@ -10,7 +11,8 @@ import {
   marcaEnviada,
   publicacoesDaFila,
   vagasDoCanal,
-} from "@/lib/simulacao/loja";
+} from "@/lib/publicacoes";
+import { usuarioAtual } from "@/lib/sessao";
 
 /**
  * Ações da fila de publicação.
@@ -21,7 +23,10 @@ import {
  * registrar que o envio aconteceu.
  *
  * No Telegram é diferente — a API oficial permite postar sozinho, e
- * é o que a ação de lote vai fazer quando existir bot de verdade.
+ * é o que a ação de lote vai fazer quando existir bot de verdade. Hoje
+ * ela também só registra: publicar de verdade é Fase 2.
+ *
+ * Desde 31/07 o registro é no banco, em `publicacao`.
  */
 
 /** Registra o envio feito pelo fluxo — o operador passou pelo botão. */
@@ -29,7 +34,7 @@ export async function registraEnvio(form: FormData): Promise<void> {
   const id = String(form.get("publicacao_id") ?? "");
   if (id === "") return;
 
-  const publicacao = publicacoesDaFila().find((p) => p.id === id);
+  const publicacao = await buscaPublicacao(id);
   if (!publicacao) return;
 
   // Preço morto queima o canal na mesma proporção que preço falso.
@@ -38,9 +43,10 @@ export async function registraEnvio(form: FormData): Promise<void> {
   if (publicacao.precoAgoraCentavos !== publicacao.precoNaFilaCentavos) return;
 
   // Teto é limite real, não sugestão.
-  if (vagasDoCanal(publicacao.canal.id) <= 0) return;
+  if ((await vagasDoCanal(publicacao.canal.id)) <= 0) return;
 
-  marcaEnviada(id, "fluxo");
+  const usuario = await usuarioAtual();
+  await marcaEnviada(id, "fluxo", undefined, usuario?.id);
   revalidatePath("/publicar");
   revalidatePath("/canais");
 }
@@ -54,19 +60,20 @@ export async function registraEnvio(form: FormData): Promise<void> {
  */
 export async function publicaLoteTelegram(form: FormData): Promise<void> {
   const canalAlvo = String(form.get("canal_id") ?? "");
+  const usuario = await usuarioAtual();
 
-  for (const publicacao of publicacoesDaFila()) {
+  // O teto é recontado a cada item, e não lido uma vez antes do laço:
+  // cada envio consome uma vaga, e um teto lido de véspera deixaria o
+  // botão que existe para poupar toque ser justamente o que estoura o
+  // combinado com o parceiro.
+  for (const publicacao of await publicacoesDaFila()) {
     if (publicacao.canal.plataforma !== "telegram") continue;
     if (canalAlvo !== "" && publicacao.canal.id !== canalAlvo) continue;
     if (publicacao.enviadaEm || publicacao.cancelada) continue;
     if (publicacao.precoAgoraCentavos !== publicacao.precoNaFilaCentavos) continue;
+    if ((await vagasDoCanal(publicacao.canal.id)) <= 0) continue;
 
-    // O teto do canal é limite real, e o lote respeita. Sem isto, o
-    // botão que existe para poupar toque seria justamente o que
-    // estoura o combinado com o parceiro.
-    if (vagasDoCanal(publicacao.canal.id) <= 0) continue;
-
-    marcaEnviada(publicacao.id, "fluxo");
+    await marcaEnviada(publicacao.id, "fluxo", undefined, usuario?.id);
   }
 
   revalidatePath("/publicar");
@@ -86,24 +93,26 @@ export async function registraEnvioAutoDeclarado(form: FormData): Promise<void> 
   const id = String(form.get("publicacao_id") ?? "");
   if (id === "") return;
 
-  marcaEnviada(id, "auto_declarada");
+  const usuario = await usuarioAtual();
+  await marcaEnviada(id, "auto_declarada", undefined, usuario?.id);
   revalidatePath("/publicar");
+  revalidatePath("/canais");
 }
 
 export async function desfazEnvioDaPublicacao(form: FormData): Promise<void> {
-  desfazEnvio(String(form.get("publicacao_id") ?? ""));
+  await desfazEnvio(String(form.get("publicacao_id") ?? ""));
   revalidatePath("/publicar");
   revalidatePath("/canais");
 }
 
 export async function cancelaEnvio(form: FormData): Promise<void> {
-  cancelaPublicacao(String(form.get("publicacao_id") ?? ""));
+  await cancelaPublicacao(String(form.get("publicacao_id") ?? ""));
   revalidatePath("/publicar");
 }
 
 /** Cancelar também tem volta: é decisão interna, nada saiu daqui. */
 export async function desfazCancelamentoDaPublicacao(form: FormData): Promise<void> {
-  desfazCancelamento(String(form.get("publicacao_id") ?? ""));
+  await desfazCancelamento(String(form.get("publicacao_id") ?? ""));
   revalidatePath("/publicar");
 }
 
@@ -120,7 +129,7 @@ export async function devolveOfertaParaAprovacao(form: FormData): Promise<void> 
   const ofertaId = String(form.get("oferta_id") ?? "");
   if (ofertaId === "") return;
 
-  devolveParaAprovacao(ofertaId);
+  await devolveParaAprovacao(ofertaId);
 
   revalidatePath("/publicar");
   revalidatePath("/aprovar");

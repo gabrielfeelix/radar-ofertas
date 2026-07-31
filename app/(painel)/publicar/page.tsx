@@ -9,7 +9,6 @@ import {
   publicaLoteTelegram,
   registraEnvioAutoDeclarado,
 } from "@/app/acoes/publicacao";
-import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao, BotaoDePlataforma } from "@/app/componentes/Botao";
 import { BotaoWhatsApp } from "@/app/componentes/BotaoWhatsApp";
 import { Cartao, RotuloDeSecao } from "@/app/componentes/Cartao";
@@ -18,12 +17,8 @@ import { formataReais } from "@/lib/dinheiro";
 import { montaMensagem, type ModeloDeMensagem } from "@/lib/mensagem";
 import { intercalaPorVariedade, repeticoesSeguidas } from "@/lib/variedade";
 import { modeloGlobal } from "@/lib/modelo";
-import {
-  publicacoesDaFila,
-  vagasDoCanal,
-  type CanalSimulado,
-  type PublicacaoSimulada,
-} from "@/lib/simulacao/loja";
+import { vagasDoCanal, type Canal } from "@/lib/distribuicao";
+import { publicacoesDaFila, type Publicacao } from "@/lib/publicacoes";
 
 /**
  * Publicar — a fila de envio.
@@ -51,7 +46,7 @@ export default async function Publicar() {
   // pode ficar sem mensagem só porque o Docker está parado.
   const modelo = await modeloGlobal();
 
-  const todas = publicacoesDaFila();
+  const todas = await publicacoesDaFila();
   const pendentes = todas.filter((p) => !p.enviadaEm && !p.cancelada);
   const enviadas = todas.filter((p) => p.enviadaEm);
   const canceladas = todas.filter((p) => p.cancelada);
@@ -60,7 +55,7 @@ export default async function Publicar() {
   const prontas = pendentes.filter((p) => p.precoAgoraCentavos === p.precoNaFilaCentavos);
 
   // Agrupa preservando a ordem em que as publicações entraram.
-  const porCanal = new Map<string, { canal: CanalSimulado; itens: PublicacaoSimulada[] }>();
+  const porCanal = new Map<string, { canal: Canal; itens: Publicacao[] }>();
   for (const publicacao of prontas) {
     const grupo = porCanal.get(publicacao.canal.id) ?? { canal: publicacao.canal, itens: [] };
     grupo.itens.push(publicacao);
@@ -101,7 +96,6 @@ export default async function Publicar() {
           ) : undefined
         }
       >
-        <AvisoSimulacao detalhe="Nada é publicado de verdade. O botão do WhatsApp abre o aplicativo com o texto, e o do Telegram só marca como enviado." />
 
         {total === 0 && (
           <div className="rounded-lg border border-dashed border-borda-forte p-8 text-center">
@@ -274,11 +268,11 @@ function GrupoDoCanal({
   itens,
   modelo,
 }: {
-  canal: CanalSimulado;
-  itens: PublicacaoSimulada[];
+  canal: Canal;
+  itens: Publicacao[];
   modelo: ModeloDeMensagem;
 }) {
-  const vagas = vagasDoCanal(canal.id);
+  const vagas = vagasDoCanal(canal);
   const cabemHoje = Math.min(vagas, itens.length);
   const paraAmanha = itens.length - cabemHoje;
 
@@ -384,7 +378,7 @@ function CartaoDeEnvio({
   cabeHoje,
   modelo,
 }: {
-  publicacao: PublicacaoSimulada;
+  publicacao: Publicacao;
   cabeHoje: boolean;
   modelo: ModeloDeMensagem;
 }) {
@@ -497,7 +491,7 @@ function CartaoDeEnvio({
  * "cancelar" como saída seria dar a ele um veto disfarçado. O botão
  * devolve a oferta para a aprovação, com o preço de agora.
  */
-function CartaoBloqueado({ publicacao }: { publicacao: PublicacaoSimulada }) {
+function CartaoBloqueado({ publicacao }: { publicacao: Publicacao }) {
   const subiu = publicacao.precoAgoraCentavos > publicacao.precoNaFilaCentavos;
 
   return (

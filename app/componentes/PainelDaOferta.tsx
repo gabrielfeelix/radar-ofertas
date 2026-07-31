@@ -5,15 +5,7 @@ import { adiaOferta, aprovaOferta, rejeitaOferta } from "@/app/acoes/curadoria";
 import { Botao } from "@/app/componentes/Botao";
 import { EtiquetaDeLoja } from "@/app/componentes/Chip";
 import { formataReais } from "@/lib/dinheiro";
-import {
-  COR_DA_LOJA,
-  MOTIVOS_DE_REJEICAO,
-  NOME_DA_LOJA,
-  canaisElegiveis,
-  nomeDoNicho,
-  serieDePrecos,
-  type OfertaSimulada,
-} from "@/lib/simulacao/loja";
+import { MOTIVOS_DE_REJEICAO, type Oferta } from "@/lib/ofertas";
 
 /**
  * Painel de detalhe da oferta — "esta aqui eu quero olhar".
@@ -33,9 +25,11 @@ import {
  * fica onde a exceção mora.
  */
 
-export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
-  const canais = canaisElegiveis(oferta.nicho);
-  const serie = serieDePrecos(oferta);
+export function PainelDaOferta({ oferta }: { oferta: Oferta }) {
+  // Canais e série chegam dentro da oferta desde 31/07: contra o banco,
+  // resolvê-los aqui seria mais uma consulta por painel aberto.
+  const canais = oferta.canais;
+  const serie = oferta.serie;
 
   return (
     <>
@@ -71,12 +65,12 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
           <h2 className="text-lg font-bold leading-titulo tracking-titulo">{oferta.produto}</h2>
           <p className="mt-2 flex items-center gap-2">
             <EtiquetaDeLoja
-              nome={NOME_DA_LOJA[oferta.loja]}
-              corTexto={COR_DA_LOJA[oferta.loja].texto}
-              corFundo={COR_DA_LOJA[oferta.loja].fundo}
+              nome={oferta.loja.nome}
+              corTexto={oferta.loja.corTexto}
+              corFundo={oferta.loja.corFundo}
             />
             <span className="text-sm text-texto-fraco">
-              {oferta.vendedor} · nicho {nomeDoNicho(oferta.nicho)}
+              {oferta.vendedor} · nicho {oferta.nichoNome}
             </span>
           </p>
         </div>
@@ -214,7 +208,7 @@ export function PainelDaOferta({ oferta }: { oferta: OfertaSimulada }) {
             ))}
             {canais.length === 0 && (
               <p className="text-sm text-atencao">
-                Nenhum canal aceita {nomeDoNicho(oferta.nicho)}. Aprovar aqui seria ato sem efeito —
+                Nenhum canal aceita {oferta.nichoNome}. Aprovar aqui seria ato sem efeito —
                 cadastre um canal com esse nicho antes.
               </p>
             )}

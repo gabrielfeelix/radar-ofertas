@@ -1,6 +1,6 @@
 import "server-only";
 
-import { canais } from "@/lib/simulacao/loja";
+import { canais } from "@/lib/distribuicao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type { AnuncioSerieLinha, SaudeOperacaoLinha } from "@/lib/supabase/tipos";
 
@@ -73,13 +73,10 @@ export async function montaTrilhaDeArranque(): Promise<{
   const rotinaRodou = bancoNoAr && banco.saude.ultima_coleta !== null;
   const anuncios = banco?.anuncios ?? 0;
   const comLastro = banco?.comLastro ?? 0;
-  // Canal simulado não conta como canal. Esta é a tela que responde
-  // "o que ainda não existe" — dar por pronto um passo que só existe
-  // na simulação é exatamente a mentira que ela deveria evitar.
-  const canaisSimulados = canais().filter((c) => c.ativo).length;
-  // Enquanto `canal` não existir no banco, canal de verdade é zero.
-  // Quando a tabela entrar, este número passa a vir dela.
-  const canaisReais: number = 0;
+  // Desde 31/07 o canal é do banco, então este número é o de verdade —
+  // antes ele vinha da simulação e a trilha tinha de descartá-lo, para
+  // não dar por pronto um passo que só existia em memória.
+  const canaisReais = (await canais()).filter((c) => c.ativo).length;
 
   const temDominio = enderecoDeVerdade(process.env.URL_BASE_REDIRECIONADOR);
 
@@ -148,7 +145,7 @@ export async function montaTrilhaDeArranque(): Promise<{
       situacao:
         canaisReais > 0
           ? `${canaisReais} ${canaisReais === 1 ? "canal ativo" : "canais ativos"}.`
-          : `Nenhum canal de verdade. Os ${canaisSimulados} da tela de canais são da operação simulada.`,
+          : "Nenhum canal cadastrado. Aprovar oferta sem canal não gera publicação nenhuma.",
       quem: "você",
       acao: { rotulo: "Ver os canais", href: "/canais" },
     },

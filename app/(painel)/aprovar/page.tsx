@@ -7,29 +7,22 @@ import {
   desfazDecisaoDaOferta,
   rejeitaOferta,
 } from "@/app/acoes/curadoria";
-import { AvisoSimulacao } from "@/app/componentes/AvisoSimulacao";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { EtiquetaDeLoja } from "@/app/componentes/Chip";
 import { PainelDaOferta } from "@/app/componentes/PainelDaOferta";
 import { Sparkline } from "@/app/componentes/Sparkline";
 import { formataReais } from "@/lib/dinheiro";
+import { vagasDeHoje, type Canal } from "@/lib/distribuicao";
 import {
-  COR_DA_LOJA,
   MOTIVOS_DE_REJEICAO,
-  NOME_DA_LOJA,
   buscaOferta,
-  canaisElegiveis,
   funilDeHoje,
-  nomeDoNicho,
   ofertasDaFila,
+  ofertasDecididasHoje,
   publicacoesSeAprovarTudo,
-  serieDePrecos,
-  todasAsOfertas,
-  vagasDeHoje,
-  type CanalSimulado,
-  type OfertaSimulada,
-} from "@/lib/simulacao/loja";
+  type Oferta,
+} from "@/lib/ofertas";
 
 /**
  * Aprovar — a tela onde o produto acontece.
@@ -56,20 +49,26 @@ export default async function Aprovar({
   const { ordem: ordemBruta, oferta: ofertaAberta } = await searchParams;
   const ordem: Ordem = ordemBruta === "comissao" ? "comissao" : "nota";
 
-  const fila = [...ofertasDaFila()].sort((a, b) =>
+  // Uma leitura só do banco para as duas listas e os dois KPIs. O
+  // `ofertasDaFila` já vem ordenado por nota; a ordem por comissão é
+  // reordenação da mesma lista, não outra consulta.
+  const [fila0, decididas, publicacoes, vagas] = await Promise.all([
+    ofertasDaFila(),
+    ofertasDecididasHoje(),
+    publicacoesSeAprovarTudo(),
+    vagasDeHoje(),
+  ]);
+
+  const fila = [...fila0].sort((a, b) =>
     ordem === "comissao"
       ? b.comissaoEstimadaCentavos - a.comissaoEstimadaCentavos
       : b.nota - a.nota,
   );
-
-  const decididas = todasAsOfertas().filter((o) => o.status !== "nova");
-  const publicacoes = publicacoesSeAprovarTudo();
-  const vagas = vagasDeHoje();
   const estouro = publicacoes - vagas;
 
   // O painel é rota, não estado: sobrevive a recarregar, o botão
   // voltar fecha, e o endereço pode ser mandado para outra pessoa.
-  const detalhe = ofertaAberta ? buscaOferta(ofertaAberta) : undefined;
+  const detalhe = ofertaAberta ? await buscaOferta(ofertaAberta) : undefined;
 
   return (
     <>
@@ -106,8 +105,6 @@ export default async function Aprovar({
           },
         ]}
       >
-        <AvisoSimulacao />
-
         {fila.length === 0 ? (
           <FilaVazia decididas={decididas.length} />
         ) : (
@@ -136,11 +133,7 @@ export default async function Aprovar({
             </div>
 
             {fila.map((oferta) => (
-              <LinhaDeOferta
-                key={oferta.id}
-                oferta={oferta}
-                canais={canaisElegiveis(oferta.nicho)}
-              />
+              <LinhaDeOferta key={oferta.id} oferta={oferta} canais={oferta.canais} />
             ))}
 
             <p className="px-5 py-3 text-sm text-texto-fraco">
@@ -172,7 +165,7 @@ export default async function Aprovar({
   );
 }
 
-function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: CanalSimulado[] }) {
+function LinhaDeOferta({ oferta, canais }: { oferta: Oferta; canais: Canal[] }) {
   // Aprovar com todos os canais no teto não é erro — a publicação
   // espera amanhã, porque o teto é combinado com o parceiro. Mas
   // precisa estar dito antes, senão o dono aprova achando que sai
@@ -207,12 +200,12 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
           <p className="truncate text-base font-semibold tracking-titulo">{oferta.produto}</p>
           <div className="flex flex-wrap items-center gap-2">
             <EtiquetaDeLoja
-              nome={NOME_DA_LOJA[oferta.loja]}
-              corTexto={COR_DA_LOJA[oferta.loja].texto}
-              corFundo={COR_DA_LOJA[oferta.loja].fundo}
+              nome={oferta.loja.nome}
+              corTexto={oferta.loja.corTexto}
+              corFundo={oferta.loja.corFundo}
             />
             <span className="text-xs text-texto-fraco">
-              {nomeDoNicho(oferta.nicho)} · {oferta.diasDeSerie} dias de série ·{" "}
+              {oferta.nichoNome} · {oferta.diasDeSerie} dias de série ·{" "}
               {canais.length} {canais.length === 1 ? "canal" : "canais"}
             </span>
             {/*
@@ -251,7 +244,7 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
         linha de texto ("34 dias de série") e decisões diferentes.
       */}
       <Sparkline
-        serie={serieDePrecos(oferta)}
+        serie={oferta.serie}
         referencia={oferta.precoReferenciaCentavos}
         rotulo={`Preço de ${oferta.produto} nos últimos ${Math.min(oferta.diasDeSerie, 30)} dias`}
       />
@@ -370,7 +363,7 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
  * que permite varrer trinta linhas com o olho. As parcelas ficam no
  * diagnóstico, onde há espaço para explicá-las.
  */
-function AnelDaNota({ oferta }: { oferta: OfertaSimulada }) {
+function AnelDaNota({ oferta }: { oferta: Oferta }) {
   const circunferencia = 100.5;
   const preenchido = (oferta.nota / 100) * circunferencia;
   const cor = oferta.nota >= 70 ? "#1B8A4E" : oferta.nota >= 50 ? "#F16A0D" : "#B4740A";
@@ -395,7 +388,7 @@ function AnelDaNota({ oferta }: { oferta: OfertaSimulada }) {
   );
 }
 
-function LinhaDecidida({ oferta }: { oferta: OfertaSimulada }) {
+function LinhaDecidida({ oferta }: { oferta: Oferta }) {
   const rotulo =
     oferta.status === "aprovada"
       ? `aprovada · ${oferta.canaisEscolhidos.length} ${oferta.canaisEscolhidos.length === 1 ? "canal" : "canais"}`
@@ -434,11 +427,9 @@ function LinhaDecidida({ oferta }: { oferta: OfertaSimulada }) {
  * conclusão errada de que o sistema quebrou, que é o caminho para
  * afrouxar parâmetro até a curadoria virar carimbo.
  */
-function FilaVazia({ decididas }: { decididas: number }) {
-  const total = todasAsOfertas().length;
-
+async function FilaVazia({ decididas }: { decididas: number }) {
   const cores = ["#1B76B8", "#F16A0D", "#9AA0AA"];
-  const funil = funilDeHoje();
+  const funil = await funilDeHoje();
   const maior = Math.max(...funil.map((f) => f.n), 1);
 
   return (
@@ -449,7 +440,7 @@ function FilaVazia({ decididas }: { decididas: number }) {
 
       {decididas > 0 ? (
         <p className="text-base text-texto-fraco">
-          Você decidiu as {total} ofertas de hoje. As aprovadas estão esperando na fila de
+          Você decidiu as {decididas} ofertas de hoje. As aprovadas estão esperando na fila de
           publicação.
         </p>
       ) : (

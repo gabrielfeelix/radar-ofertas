@@ -139,6 +139,27 @@ export type AnuncioLinha = {
 };
 
 /**
+ * Um ponto da série de preço: o menor preço do dia, por anúncio.
+ *
+ * Entra aqui em 31/07, quando a fila de aprovação passou a ler o banco
+ * e a série virou dado de tela — antes disso ela era gerada por
+ * `lib/simulacao/loja.ts`, e o painel de detalhe desenhava um número
+ * inventado a partir do id da oferta.
+ *
+ * `dia_local` existe porque o "dia" aqui é o dia de quem opera, no fuso
+ * de São Paulo, e não o dia UTC (regra 3.9).
+ */
+export type PrecoPontoLinha = {
+  id: number;
+  anuncio_id: string;
+  preco_centavos: number;
+  /** Falso quando o anúncio existe mas está esgotado. */
+  disponivel: boolean;
+  coletado_em: string;
+  dia_local: string;
+};
+
+/**
  * Canal de distribuição (para onde a oferta vai).
  *
  * Nunca esteve aqui porque a tela de canais rodava sobre a simulação
@@ -456,6 +477,7 @@ export type Banco = {
         AnuncioLinha,
         "operacao_id" | "produto_id" | "marketplace_id" | "url_original" | "sku_externo"
       >;
+      preco_ponto: Tabela<PrecoPontoLinha, "anuncio_id" | "preco_centavos">;
       oferta: Tabela<OfertaLinha, "operacao_id" | "anuncio_id">;
       fonte_descoberta: Tabela<FonteDescobertaLinha, "operacao_id" | "identificador">;
       mencao: Tabela<MencaoLinha, "operacao_id" | "fonte_id" | "post_externo_id" | "url_bruta">;

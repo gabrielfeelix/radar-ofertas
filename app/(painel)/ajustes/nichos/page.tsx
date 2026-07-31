@@ -6,7 +6,7 @@ import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioNicho } from "@/app/componentes/FormularioNicho";
 import { Modal } from "@/app/componentes/Modal";
 import { formataLimiar, montaQuadroDaCuradoria } from "@/lib/curadoria";
-import { canais } from "@/lib/simulacao/loja";
+import { canais } from "@/lib/distribuicao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type { NichoLinha, ProdutoLinha } from "@/lib/supabase/tipos";
 
@@ -43,7 +43,7 @@ export default async function Nichos() {
   }
 
   const { nichos, produtos } = dados;
-  const listaDeCanais = canais();
+  const listaDeCanais = await canais();
 
   const semNicho = produtos.filter((p) => p.nicho_id === null).length;
 

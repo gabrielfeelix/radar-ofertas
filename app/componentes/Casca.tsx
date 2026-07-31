@@ -10,7 +10,8 @@ import { montaTrilhaDeArranque } from "@/lib/arranque";
 import { montaQuadroDeAtencao } from "@/lib/atencao";
 import type { UsuarioDaSessao } from "@/lib/sessao";
 import { supabaseServidor } from "@/lib/supabase/servidor";
-import { ofertasDaFila, publicacoesDaFila } from "@/lib/simulacao/loja";
+import { ofertasDaFila } from "@/lib/ofertas";
+import { publicacoesDaFila } from "@/lib/publicacoes";
 
 /**
  * A casca do painel: barra lateral, barra superior e o miolo.
@@ -57,8 +58,9 @@ async function montaNavegacao(): Promise<{
   resumo: ResumoDaBarra[];
   rotina: EstadoDaRotina;
 }> {
-  const naFila = ofertasDaFila().length;
-  const aPublicar = publicacoesDaFila().filter((p) => !p.enviadaEm && !p.cancelada).length;
+  const [fila, publicacoes] = await Promise.all([ofertasDaFila(), publicacoesDaFila()]);
+  const naFila = fila.length;
+  const aPublicar = publicacoes.filter((p) => !p.enviadaEm && !p.cancelada).length;
 
   const banco = await leDoBanco();
   // A contagem do menu é a mesma da tela: se divergirem, o dono

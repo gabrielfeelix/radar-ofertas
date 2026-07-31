@@ -2,7 +2,8 @@ import "server-only";
 
 import { readFileSync } from "node:fs";
 
-import { canais, publicacoesDaFila } from "@/lib/simulacao/loja";
+import { canais } from "@/lib/distribuicao";
+import { publicacoesDaFila } from "@/lib/publicacoes";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import type { SaudeOperacaoLinha } from "@/lib/supabase/tipos";
 
@@ -178,7 +179,7 @@ export async function montaQuadroDeAtencao(): Promise<QuadroDeAtencao> {
   }
 
   // --- Canais (operação simulada, por enquanto) -----------------
-  alertas.push(...alertasDosCanais(agora));
+  alertas.push(...(await alertasDosCanais(agora)));
 
   // --- A armadilha do agendador ---------------------------------
   const agendador = alertaDoAgendador(agora);
@@ -259,10 +260,10 @@ function descreveRotina(
  * aconteceu, ou o canal está morto. Não é prova de nada — é o sinal
  * certo, no lugar certo.
  */
-function alertasDosCanais(agora: Date): Alerta[] {
+async function alertasDosCanais(agora: Date): Promise<Alerta[]> {
   const alertas: Alerta[] = [];
 
-  const esquecidos = canais().filter((canal) => {
+  const esquecidos = (await canais()).filter((canal) => {
     if (!canal.ativo || !canal.ultimaPublicacaoEm) return false;
     const dias = (agora.getTime() - new Date(canal.ultimaPublicacaoEm).getTime()) / 86_400_000;
     return dias >= DIAS_SEM_PUBLICAR;
@@ -282,7 +283,7 @@ function alertasDosCanais(agora: Date): Alerta[] {
     });
   }
 
-  const autoDeclaradas = publicacoesDaFila().filter((p) => p.origem === "auto_declarada");
+  const autoDeclaradas = (await publicacoesDaFila()).filter((p) => p.origem === "auto_declarada");
   if (autoDeclaradas.length > 0) {
     alertas.push({
       id: "auto-declaradas",

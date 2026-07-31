@@ -6,9 +6,10 @@ import { leHorarios } from "@/lib/horarios";
 /**
  * Os canais de distribuição, lidos do banco.
  *
- * Substitui a parte de canal de `lib/simulacao/loja.ts`, que vivia em
- * memória do servidor. Tirar a simulação do painel é decisão do dono,
- * de 31/07: *"quero ver só o que for de verdade"*.
+ * Foi o primeiro dos três módulos a substituir a operação simulada que
+ * vivia em memória do servidor, em 31/07 — decisão do dono: *"quero ver
+ * só o que for de verdade"*. Os outros dois são `lib/ofertas.ts` e
+ * `lib/publicacoes.ts`, e com eles a simulação deixou de existir.
  *
  * A forma dos dados é a mesma que as telas já consumiam. Isso é
  * exatamente o que a D-026 prometia quando aceitou a simulação: a tela
