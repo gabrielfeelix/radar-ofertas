@@ -102,8 +102,17 @@ export function BarraLateral({
         ))}
       </nav>
 
+      {/*
+        Rodapé de verdade, não texto solto no fim da coluna.
+
+        Ele já ficava colado embaixo (`mt-auto`), e sem moldura o que se
+        via era um buraco de uns 400px no meio da barra com três linhas
+        perdidas no pé — a captura de tela deixou isso evidente. Com
+        borda no topo, fundo próprio e respiro, o mesmo espaço passa a
+        ler como "a navegação acabou aqui, isto é outra coisa".
+      */}
       {resumo.length > 0 && (
-        <div className="mt-auto flex flex-col gap-2 px-5">
+        <div className="mt-auto flex flex-col gap-2 border-t border-borda-sutil bg-superficie-alt px-5 py-4">
           <p className="text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">
             Colheita de hoje
           </p>

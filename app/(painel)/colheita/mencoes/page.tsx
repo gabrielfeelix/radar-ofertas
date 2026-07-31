@@ -102,7 +102,7 @@ export default async function Mencoes({
             : "Nada com esse resultado."}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-borda bg-superficie">
+        <div className="overflow-x-auto rounded-lg border border-borda-sutil bg-superficie shadow-repouso">
           <table className="w-full text-left text-base">
             <thead className="border-b border-borda bg-superficie-alt text-xs font-semibold uppercase tracking-eyebrow text-texto-fraco">
               <tr>

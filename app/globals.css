@@ -8,7 +8,11 @@
 
 @theme {
   /* ---------- Superfície e borda ---------- */
-  --color-fundo: #f5f6f8;
+  /* Um tom mais escuro que o original (#f5f6f8), e por um motivo de
+     contraste, não de gosto: com a elevação em repouso, o branco do
+     cartão precisa ter contra o quê flutuar. Fundo quase branco anula
+     a sombra e devolve tudo à mesma camada. */
+  --color-fundo: #eff1f4;
   --color-superficie: #ffffff;
   --color-superficie-alt: #fafafb;
   --color-preenchimento: #f3f4f6;
@@ -71,6 +75,11 @@
   --text-lg: 1.0625rem; /* 17px */
   --text-xl: 1.25rem; /* 20px */
   --text-2xl: 1.5rem; /* 24px */
+  /* Só para número que é a resposta da tela: valor de KPI e de coluna
+     de contexto. A escala servia bem ao texto e era pequena para dado —
+     o olho precisa pousar no valor antes de ler o rótulo, e isso é
+     contraste de tamanho, não de peso. Nunca use em texto corrido. */
+  --text-3xl: 2rem; /* 32px */
 
   --leading-titulo: 1.2;
   --leading-padrao: 1.45;
@@ -103,6 +112,26 @@
   --shadow-marca: 0 1px 2px rgba(241, 106, 13, 0.35);
   --shadow-gaveta: -20px 0 60px rgba(20, 22, 26, 0.18);
   --shadow-modal: 0 30px 70px rgba(20, 22, 26, 0.28);
+
+  /* Elevação em repouso, acrescentada em 31/07 depois da primeira
+     passada com captura de tela.
+
+     A regra antiga — "nada de sombra em elemento que não flutua" —
+     nasceu contra sombra decorativa espalhada sem critério, e disso
+     ela continua protegendo. O que ela não previu é que, sem NENHUMA
+     elevação, cartão, faixa de indicadores, tabela e aviso ficam todos
+     na mesma camada, separados só por uma borda de 1px que quase não
+     se enxerga. O painel fica com cara de esboço.
+
+     São duas, e nomeadas pelo estado, não pelo tamanho: `repouso` é o
+     objeto parado, `erguido` é o objeto sob o cursor ou selecionado.
+     Onde há sombra, a borda desce para `borda-sutil` — borda forte e
+     sombra juntas é o que devolve a aparência de esboço pelo outro
+     lado. */
+  --shadow-repouso:
+    0 1px 2px rgba(20, 22, 26, 0.04), 0 1px 3px rgba(20, 22, 26, 0.06);
+  --shadow-erguido:
+    0 4px 12px rgba(20, 22, 26, 0.08), 0 1px 3px rgba(20, 22, 26, 0.04);
 }
 
 /* =============================================================

@@ -249,7 +249,7 @@ function TabelaDeProdutos({
   }
 
   return (
-    <div className="rounded-lg border border-borda bg-superficie">
+    <div className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso">
       <div className="hidden grid-cols-[minmax(180px,1fr)_130px_90px_120px_100px] items-center gap-4 border-b border-borda bg-superficie-alt px-5 py-3 text-xs font-bold uppercase tracking-eyebrow text-texto-fraco lg:grid">
         <span>Produto</span>
         <span>Nicho</span>
@@ -371,7 +371,7 @@ function TabelaDeAnuncios({
   );
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-borda bg-superficie">
+    <div className="overflow-x-auto rounded-lg border border-borda-sutil bg-superficie shadow-repouso">
       <table className="w-full min-w-3xl text-left text-base">
         <thead className="border-b border-borda bg-superficie-alt text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">
           <tr>

@@ -156,7 +156,7 @@ export default async function SemNicho() {
             fim da página obriga a rolar até lá depois de decidir, e a
             decisão foi tomada lá em cima.
           */}
-          <div className="sticky bottom-0 mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-borda bg-superficie px-5 py-4 shadow-modal">
+          <div className="sticky bottom-0 mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-borda-sutil bg-superficie shadow-repouso px-5 py-4 shadow-modal">
             <span className="text-base font-semibold">Classificar as marcadas como</span>
             <select name="nicho_id" required defaultValue="" className={`${classeDeCampo} w-auto`}>
               <option value="" disabled>

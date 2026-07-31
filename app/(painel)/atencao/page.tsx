@@ -110,7 +110,7 @@ function CartaoDeAlerta({ alerta }: { alerta: Alerta }) {
   const cor = CORES[alerta.severidade];
 
   return (
-    <article className="flex items-stretch overflow-hidden rounded-lg border border-borda bg-superficie">
+    <article className="flex items-stretch overflow-hidden rounded-lg border border-borda-sutil bg-superficie shadow-repouso">
       {/*
         O número à esquerda é o tamanho do problema. Ele fica maior que
         o título de propósito: "3 lojas" e "40 lojas" pedem reações
@@ -196,7 +196,7 @@ function TudoEmDia({
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 rounded-lg border border-borda bg-superficie p-10 text-center">
+    <div className="flex flex-col items-center gap-3 rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-10 text-center">
       <span
         className="flex size-14 items-center justify-center rounded-circulo border-2 border-sucesso-borda bg-sucesso-fundo text-xl text-sucesso"
         aria-hidden

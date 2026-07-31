@@ -14,7 +14,13 @@
  */
 
 const TOM = {
-  normal: "border-borda bg-superficie",
+  /* Borda sutil **e** sombra de repouso: a borda sozinha desenhava um
+     retângulo, a sombra sozinha some contra o fundo claro. Juntas, e
+     ambas fracas, é o que faz o olho ler "objeto" em vez de "moldura". */
+  normal: "border-borda-sutil bg-superficie shadow-repouso",
+  /* O que existe e não participa — canal desligado, loja desativada —
+     não flutua: fica no plano do fundo, com borda visível para não
+     desaparecer. É a diferença entre "parado" e "ausente". */
   apagado: "border-borda bg-superficie-alt",
 } as const;
 

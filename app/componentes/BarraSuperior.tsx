@@ -1,5 +1,6 @@
 import { sai } from "@/app/acoes/sessao";
 import { Botao } from "@/app/componentes/Botao";
+import { BuscaGlobal } from "@/app/componentes/BuscaGlobal";
 import { Identidade } from "@/app/componentes/Identidade";
 import type { UsuarioDaSessao } from "@/lib/sessao";
 
@@ -33,19 +34,7 @@ export function BarraSuperior({
 }) {
   return (
     <header className="sticky top-0 z-10 hidden items-center gap-5 border-b border-borda bg-superficie px-6 py-3 lg:flex">
-      <form
-        action="/produtos"
-        className="flex max-w-96 flex-1 items-center gap-3 rounded-md border border-borda bg-fundo px-4 py-3"
-      >
-        <span className="size-3 flex-none rounded-circulo border-2 border-texto-apagado" aria-hidden />
-        <input
-          type="search"
-          name="q"
-          placeholder="Buscar no catálogo"
-          aria-label="Buscar no catálogo"
-          className="min-w-0 flex-1 bg-transparent text-base text-texto outline-none placeholder:text-texto-fraco"
-        />
-      </form>
+      <BuscaGlobal />
 
       <div className="ml-auto flex items-center gap-4">
         <FaixaDaRotina rotina={rotina} />

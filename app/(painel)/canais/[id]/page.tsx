@@ -67,7 +67,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
         />
       </section>
 
-      <section className="rounded-lg border border-borda bg-superficie p-5">
+      <section className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-5">
         <h2 className="mb-1 text-lg font-bold tracking-titulo">Como este canal funciona</h2>
         <p className="mb-5 text-base text-texto-fraco">
           Split, operador e teto são combinados com gente. Mudar aqui não reescreve o que já foi
@@ -99,7 +99,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
 
 function Numero({ rotulo, valor }: { rotulo: string; valor: number }) {
   return (
-    <div className="rounded-lg border border-borda bg-superficie p-5">
+    <div className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-5">
       <p className="text-xs font-semibold uppercase tracking-eyebrow text-texto-fraco">{rotulo}</p>
       <p className="text-2xl font-extrabold tabular-nums tracking-titulo">{valor}</p>
     </div>

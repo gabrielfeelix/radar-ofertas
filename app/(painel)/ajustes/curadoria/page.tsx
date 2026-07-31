@@ -2,11 +2,55 @@ import Link from "next/link";
 
 import { removeExcecao } from "@/app/acoes/ajustes";
 import { Botao } from "@/app/componentes/Botao";
+import { RotuloDeSecao } from "@/app/componentes/Cartao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { CampoDeLimiar } from "@/app/componentes/CampoDeLimiar";
 import { Modal } from "@/app/componentes/Modal";
 import { formataLimiar, montaQuadroDaCuradoria, type Limiar } from "@/lib/curadoria";
 import type { NichoLinha } from "@/lib/supabase/tipos";
+
+/**
+ * As três perguntas que a curadoria faz, e quais limiares respondem
+ * cada uma.
+ *
+ * A ordem dentro de cada família vai do que se mexe mais para o que se
+ * mexe menos. Limiar que não estiver listado aqui não some da tela: cai
+ * na última família, que é onde ele fica visível até alguém decidir a
+ * casa dele.
+ */
+const FAMILIAS: { titulo: string; porque: string; chaves: string[] }[] = [
+  {
+    titulo: "quando um preço vira oferta",
+    porque: "O que separa queda de verdade de oscilação normal e de promoção de etiqueta.",
+    chaves: [
+      "desconto_minimo_pct",
+      "recorrencia_maxima_pct",
+      "janela_referencia_dias",
+      "janela_minimo_dias",
+    ],
+  },
+  {
+    titulo: "quando dá para confiar no que vemos",
+    porque:
+      "Série curta e vendedor sem reputação fazem o desconto ser o que a loja diz que é, não o que nós observamos.",
+    chaves: [
+      "dias_minimos_de_serie",
+      "dias_para_afirmar",
+      "avaliacao_minima",
+      "reputacao_minima",
+    ],
+  },
+  {
+    titulo: "o que paga o espaço, e o que cansa o grupo",
+    porque:
+      "Oferta que rende pouco não paga o post; oferta repetida ou velha cobra caro na paciência de quem lê.",
+    chaves: [
+      "comissao_minima_centavos",
+      "dias_recompra_mesmo_anuncio",
+      "horas_validade_oferta",
+    ],
+  },
+];
 
 /**
  * Rigor da curadoria — o único lugar dos limiares.
@@ -97,13 +141,51 @@ export default async function Curadoria() {
           detecção em diante.
         </p>
 
-        <ul className="flex flex-col gap-3">
-          {limiares.map((limiar) => (
-            <li key={limiar.chave}>
-              <CartaoDoLimiar limiar={limiar} nichos={nichos} dias={dias} />
-            </li>
-          ))}
-        </ul>
+        {/*
+          Em famílias, e não numa pilha só.
+
+          Eram onze cartões idênticos empilhados, cada um com o seu
+          botão de salvar — na captura de tela a página vira uma coluna
+          de retângulos iguais, sem nenhum lugar onde o olho descanse, e
+          quem procura "aquele limiar do preço" lê os onze títulos.
+
+          A divisão não é estética: são as três perguntas diferentes que
+          a curadoria faz. Um limiar de série responde "dá para confiar
+          no que vejo?", e um de recorrência responde "isto cansa o
+          grupo?" — misturá-los é o que faz alguém apertar o desconto
+          quando o problema era repetição.
+        */}
+        {FAMILIAS.map((familia, indice) => {
+          const daFamilia = limiares.filter((l) => familia.chaves.includes(l.chave));
+
+          // Limiar novo, ainda sem família, entra na última em vez de
+          // sumir da tela. Some seria pior que ficar no lugar errado:
+          // um limiar invisível continua reprovando oferta.
+          if (indice === FAMILIAS.length - 1) {
+            const semFamilia = limiares.filter(
+              (l) => !FAMILIAS.some((f) => f.chaves.includes(l.chave)),
+            );
+            daFamilia.push(...semFamilia);
+          }
+
+          if (daFamilia.length === 0) return null;
+
+          return (
+            <section key={familia.titulo} className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1">
+                <RotuloDeSecao>{familia.titulo}</RotuloDeSecao>
+                <p className="text-base text-texto-fraco">{familia.porque}</p>
+              </div>
+              <ul className="flex flex-col gap-3">
+                {daFamilia.map((limiar) => (
+                  <li key={limiar.chave}>
+                    <CartaoDoLimiar limiar={limiar} nichos={nichos} dias={dias} />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          );
+        })}
 
         <p className="text-sm text-texto-fraco">
           Os nichos e as exceções deles ficam em{" "}
@@ -129,7 +211,7 @@ function CartaoDoLimiar({
   const semExcecao = nichos.filter((n) => !limiar.excecoes.some((e) => e.nichoId === n.id));
 
   return (
-    <article className="rounded-lg border border-borda bg-superficie p-5">
+    <article className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-5">
       <div className="flex flex-wrap items-start gap-5">
         <div className="min-w-0 flex-1">
           <h2 className="text-md font-bold tracking-titulo">{limiar.rotulo}</h2>

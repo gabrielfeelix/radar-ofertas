@@ -161,15 +161,26 @@ O padding de seção do protótipo, `16px 24px 40px`, já estava na grade e fica
 
 ## Sombra
 
-Três, e são de elevação real — nada de sombra decorativa em elemento que não flutua.
+Cinco, e nenhuma é decorativa — cada uma diz em que camada a coisa está.
 
 | Token | Valor | Uso |
 |---|---|---|
+| `--shadow-repouso` | `0 1px 2px rgba(20,22,26,.04), 0 1px 3px rgba(20,22,26,.06)` | Cartão, faixa de indicadores, tabela |
+| `--shadow-erguido` | `0 4px 12px rgba(20,22,26,.08), 0 1px 3px rgba(20,22,26,.04)` | Item sob o cursor, item selecionado |
 | `--sombra-marca` | `0 1px 2px rgba(241,106,13,.35)` | Botão primário, **sempre** |
 | `--sombra-gaveta` | `-20px 0 60px rgba(20,22,26,.18)` | Painel lateral |
 | `--sombra-modal` | `0 30px 70px rgba(20,22,26,.28)` | Diálogo |
 
 A sombra do primário estava em 2 dos 10 botões. Ou em todos, ou em nenhum — escolhi todos, porque ela é o que separa a ação principal do resto num fundo claro.
+
+**As duas primeiras chegaram em 31/07, e substituem uma regra que estava aqui:** *"nada de sombra em elemento que não flutua"*. Ela nasceu certa, contra sombra espalhada sem critério, e o que ela não previu foi o efeito de **zero** elevação: com `pnpm telas` na mão deu para ver que cartão, indicadores, tabela e aviso ficavam todos na mesma camada, separados só por uma borda de 1px que quase não se enxerga. O painel lia como esboço.
+
+A regra nova é mais estreita e continua fechando a porta que a antiga fechava: **elevação nomeada pelo estado do objeto — parado ou erguido — e nunca pelo gosto de quem escreve a tela.** Só o `Cartao` e as superfícies de página as usam; componente nenhum inventa sombra própria.
+
+Duas coisas andaram junto, e sem elas a sombra não aparece:
+
+- **O fundo escureceu um tom** (`#f5f6f8` → `#eff1f4`). Sombra fraca sobre fundo quase branco não existe.
+- **Onde há sombra, a borda desce para `borda-sutil`.** Borda forte com sombra devolve a aparência de esboço pelo outro lado.
 
 ---
 

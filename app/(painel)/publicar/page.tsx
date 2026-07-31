@@ -84,7 +84,7 @@ export default async function Publicar() {
         <AvisoSimulacao detalhe="Nada é publicado de verdade. O botão do WhatsApp abre o aplicativo com o texto, e o do Telegram só marca como enviado." />
 
         {total > 0 && (
-          <section className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie px-5 py-4">
+          <section className="flex flex-col gap-2 rounded-lg border border-borda-sutil bg-superficie shadow-repouso px-5 py-4">
             <div className="flex items-baseline justify-between gap-3">
               <p className="text-md font-extrabold tracking-titulo">
                 {pendentes.length === 0
@@ -243,7 +243,7 @@ function GrupoDoCanal({
   );
 
   return (
-    <section className="rounded-lg border border-borda bg-superficie">
+    <section className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso">
       <header className="flex flex-wrap items-center gap-3 border-b border-borda bg-superficie-alt px-5 py-3">
         <span
           className={`size-2 rounded-circulo ${

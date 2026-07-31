@@ -65,7 +65,7 @@ export default async function Arranque() {
         subtitulo="A ordem em que a operação sai do zero. Cada passo destrava o seguinte — e esta tela some quando todos estiverem prontos."
         medida="media"
       >
-        <section className="flex flex-col gap-2 rounded-lg border border-borda bg-superficie px-5 py-4">
+        <section className="flex flex-col gap-2 rounded-lg border border-borda-sutil bg-superficie shadow-repouso px-5 py-4">
           <div className="flex items-baseline justify-between gap-3">
             <p className="text-md font-extrabold tracking-titulo">
               {completa ? "Operação completa" : `${feitos} de ${passos.length} prontos`}

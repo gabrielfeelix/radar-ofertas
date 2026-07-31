@@ -113,7 +113,7 @@ export default async function Aprovar({
           // rejeição, aberta de dentro da linha. Menu que aparece pela
           // metade transforma a ação mais sensível da tela em
           // tentativa e erro.
-          <div className="rounded-lg border border-borda bg-superficie">
+          <div className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso">
             <div className="hidden grid-cols-[minmax(150px,1fr)_112px_84px_56px_96px_auto] items-center gap-4 border-b border-borda bg-superficie-alt px-5 py-3 text-xs font-bold uppercase tracking-eyebrow text-texto-fraco lg:grid">
               <span>Produto</span>
               <span>Preço</span>
@@ -276,7 +276,7 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
           <summary className="inline-flex cursor-pointer list-none items-center rounded-md border border-borda-forte bg-superficie px-3 py-2 text-sm font-semibold text-texto-medio hover:bg-fundo">
             Rejeitar
           </summary>
-          <div className="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-borda bg-superficie p-3 shadow-modal">
+          <div className="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-3 shadow-modal">
             <p className="mb-2 px-2 text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">
               por quê?
             </p>
@@ -386,7 +386,7 @@ function FilaVazia({ decididas }: { decididas: number }) {
   const maior = Math.max(...funil.map((f) => f.n), 1);
 
   return (
-    <div className="flex max-w-3xl flex-col gap-5 rounded-lg border border-borda bg-superficie p-8">
+    <div className="flex max-w-3xl flex-col gap-5 rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-8">
       <h2 className="text-xl font-extrabold tracking-titulo">
         {decididas > 0 ? "Fila zerada." : "Nenhuma oferta hoje."}
       </h2>

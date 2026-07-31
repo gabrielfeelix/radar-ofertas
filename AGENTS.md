@@ -197,7 +197,9 @@ Conta nasce por script enquanto a tela de convite (Fase 3) não existe:
 pnpm usuario:cria "voce@exemplo.com" "Seu Nome" dono
 ```
 
-**Auditoria de tela** — `pnpm verifica` não vê layout. Dois defeitos desta rodada passaram por tipo, lint e teste e só apareceram abrindo o navegador: 97 botões sem `cursor: pointer`, e uma constante exportada de arquivo `"use server"`, que quebra em execução. **Antes de dizer que uma tela está pronta, abra e clique.**
+**Auditoria de tela** — agora existe `pnpm telas`: ele entra com a conta local, fotografa as treze telas em 2× dentro de `.telas/` (fora do Git) e **falha se alguma soltar erro de execução no navegador**. Rode depois de mexer em interface e **olhe as fotos** — foi assim que o refino visual de 31/07 achou a busca duplicada em `/produtos` e o buraco na barra lateral. Ele não substitui clicar: estado que só aparece ao digitar continua precisando de gente.
+
+`pnpm verifica` não vê layout. Dois defeitos desta rodada passaram por tipo, lint e teste e só apareceram abrindo o navegador: 97 botões sem `cursor: pointer`, e uma constante exportada de arquivo `"use server"`, que quebra em execução. **Antes de dizer que uma tela está pronta, abra e clique.**
 
 **Pesquisa de 28/07, e o que ela mudou.** Duas pesquisas, em `docs/pesquisa-tecnica.md` e `docs/pesquisa-operacao.md`. Quatro decisões saíram validadas (regra das 24h, D-015, D-016, D-010) e cinco coisas viraram trabalho:
 

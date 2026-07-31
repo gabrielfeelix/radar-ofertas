@@ -109,12 +109,44 @@ export function Kpis({ itens }: { itens: ItemDeKpi[] }) {
       {itens.map((kpi) => (
         <div
           key={kpi.rotulo}
-          className="flex min-w-40 flex-none flex-col gap-1 rounded-lg border border-borda bg-superficie px-4 py-3"
+          className="flex min-w-44 flex-none flex-col gap-2 rounded-lg border border-borda-sutil bg-superficie px-5 py-4 shadow-repouso"
         >
-          <p className="text-sm font-semibold text-texto-fraco">{kpi.rotulo}</p>
-          <p className="text-2xl font-extrabold tabular-nums tracking-titulo">{kpi.valor}</p>
-          {kpi.nota && (
-            <p className={`text-xs font-semibold ${kpi.cor ?? "text-texto-fraco"}`}>{kpi.nota}</p>
+          {/*
+            O rótulo desce a sobrescrito — pequeno, em maiúsculas, com
+            entreletra aberta — e o valor sobe para 32px. A ordem de
+            leitura que se quer é valor primeiro, rótulo depois, e o
+            que produz essa ordem é contraste de tamanho. Com rótulo e
+            valor em pesos parecidos, o olho lia a caixa da esquerda
+            para a direita, como texto, e o número virava só mais uma
+            palavra.
+          */}
+          <p className="text-xs font-bold tracking-eyebrow text-texto-fraco uppercase">
+            {kpi.rotulo}
+          </p>
+          {/*
+            Sem dado, o traço não vira número grande.
+
+            Três indicadores vazios mostravam três travessões de 32px,
+            que é a forma mais chamativa possível de não dizer nada — e
+            a explicação verdadeira ("o motor ainda não rodou") ficava
+            de miúda embaixo. Quando não há valor, quem sobe é a
+            explicação, e o traço fica do tamanho do que ele informa.
+          */}
+          {kpi.valor === "—" ? (
+            <p className="text-md leading-padrao font-semibold text-texto-fraco">
+              {kpi.nota ?? "sem dado ainda"}
+            </p>
+          ) : (
+            <>
+              <p className="text-3xl leading-titulo font-extrabold tabular-nums tracking-titulo">
+                {kpi.valor}
+              </p>
+              {kpi.nota && (
+                <p className={`text-sm font-semibold ${kpi.cor ?? "text-texto-fraco"}`}>
+                  {kpi.nota}
+                </p>
+              )}
+            </>
           )}
         </div>
       ))}
