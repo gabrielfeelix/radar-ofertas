@@ -12,6 +12,7 @@ import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { EtiquetaDeLoja } from "@/app/componentes/Chip";
 import { PainelDaOferta } from "@/app/componentes/PainelDaOferta";
+import { Sparkline } from "@/app/componentes/Sparkline";
 import { formataReais } from "@/lib/dinheiro";
 import {
   COR_DA_LOJA,
@@ -23,6 +24,7 @@ import {
   nomeDoNicho,
   ofertasDaFila,
   publicacoesSeAprovarTudo,
+  serieDePrecos,
   todasAsOfertas,
   vagasDeHoje,
   type CanalSimulado,
@@ -114,12 +116,22 @@ export default async function Aprovar({
           // metade transforma a ação mais sensível da tela em
           // tentativa e erro.
           <div className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso">
-            <div className="hidden grid-cols-[minmax(150px,1fr)_112px_84px_56px_96px_auto] items-center gap-4 border-b border-borda bg-superficie-alt px-5 py-3 text-xs font-bold uppercase tracking-eyebrow text-texto-fraco lg:grid">
+            {/*
+              A grade mudou em 31/07, com as capturas de tela na mão.
+
+              Preço, desconto e comissão eram três colunas soltas com
+              uns 200px de vazio entre elas — o olho atravessava a
+              linha inteira para juntar três números que só fazem
+              sentido lidos juntos. Agora são um bloco só, alinhado à
+              direita, e a coluna que sobrou virou a série de preço,
+              que é o dado que realmente decide e antes só existia
+              dentro do painel.
+            */}
+            <div className="hidden grid-cols-[minmax(150px,1fr)_96px_52px_180px_auto] items-center gap-4 border-b border-borda bg-superficie-alt px-5 py-3 text-xs font-bold uppercase tracking-eyebrow text-texto-fraco lg:grid">
               <span>Produto</span>
-              <span>Preço</span>
-              <span>Desconto</span>
+              <span>30 dias</span>
               <span>Nota</span>
-              <span className="text-right">Comissão</span>
+              <span className="text-right">Preço e comissão</span>
               <span className="text-right">Decisão</span>
             </div>
 
@@ -168,7 +180,7 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
   const vagas = canais.reduce((total, c) => total + Math.max(0, c.tetoDiario - c.publicadasHoje), 0);
 
   return (
-    <article className="relative grid grid-cols-1 gap-4 border-b border-borda-sutil px-5 py-4 last:border-0 hover:bg-superficie-alt lg:grid-cols-[minmax(150px,1fr)_112px_84px_56px_96px_auto] lg:items-center">
+    <article className="group relative grid grid-cols-1 gap-4 border-b border-borda-sutil px-5 py-3 last:border-0 hover:bg-superficie-alt lg:grid-cols-[minmax(150px,1fr)_96px_52px_180px_auto] lg:items-center">
       {/*
         A linha inteira abre o detalhe. É uma camada por cima, e não
         um <a> em volta de tudo, porque botão dentro de link é HTML
@@ -189,7 +201,7 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
           inicial sobre cor derivada do nome faz o mesmo trabalho: o
           mesmo produto tem sempre a mesma cor.
         */}
-        <Identidade nome={oferta.produto} forma="caixa" tamanho="lg" />
+        <Identidade nome={oferta.produto} forma="caixa" tamanho="md" />
 
         <div className="flex min-w-0 flex-col gap-1">
           <p className="truncate text-base font-semibold tracking-titulo">{oferta.produto}</p>
@@ -233,25 +245,40 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
         </div>
       </div>
 
-      <div className="flex flex-col leading-titulo">
-        <span className="text-md font-bold tracking-titulo tabular-nums">
-          {formataReais(oferta.precoAtualCentavos)}
-        </span>
-        <span className="text-xs text-texto-fraco line-through tabular-nums">
-          {formataReais(oferta.precoReferenciaCentavos)}
-        </span>
-      </div>
-
-      <div>
-        <span className="rounded-sm bg-marca-fundo px-3 py-1 text-sm font-bold text-marca-texto tabular-nums">
-          −{oferta.descontoPct}%
-        </span>
-      </div>
+      {/*
+        A forma da série, do tamanho de um polegar. Cair depois de meses
+        parado e cair depois de subir na semana passada são a mesma
+        linha de texto ("34 dias de série") e decisões diferentes.
+      */}
+      <Sparkline
+        serie={serieDePrecos(oferta)}
+        referencia={oferta.precoReferenciaCentavos}
+        rotulo={`Preço de ${oferta.produto} nos últimos ${Math.min(oferta.diasDeSerie, 30)} dias`}
+      />
 
       <AnelDaNota oferta={oferta} />
 
-      <div className="text-base font-bold tabular-nums lg:text-right">
-        {formataReais(oferta.comissaoEstimadaCentavos)}
+      {/* Os três números que se leem juntos, num bloco só. */}
+      <div className="flex flex-col items-start gap-1 leading-titulo lg:items-end">
+        <div className="flex items-baseline gap-2">
+          <span className="text-md font-bold tracking-titulo tabular-nums">
+            {formataReais(oferta.precoAtualCentavos)}
+          </span>
+          <span className="text-xs text-texto-fraco line-through tabular-nums">
+            {formataReais(oferta.precoReferenciaCentavos)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="rounded-sm bg-marca-fundo px-2 py-1 text-xs font-bold text-marca-texto tabular-nums">
+            −{oferta.descontoPct}%
+          </span>
+          <span
+            className="text-sm font-semibold text-texto-fraco tabular-nums"
+            title="Comissão estimada desta publicação"
+          >
+            {formataReais(oferta.comissaoEstimadaCentavos)}
+          </span>
+        </div>
       </div>
 
       {/*
@@ -260,9 +287,38 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
         toque mais frequente da tela.
       */}
       <div className="relative z-10 flex flex-wrap items-center gap-2 lg:justify-end">
+        {/*
+          O "Aprovar" só fica laranja na linha em que o cursor (ou o
+          foco do teclado) está.
+
+          Doze linhas × um botão cheio davam doze blocos laranja
+          empilhados, formando uma faixa vertical que puxava o olho
+          para a borda direita — longe do produto, que é o que se está
+          decidindo. E a marca que aparece doze vezes na mesma tela não
+          destaca nada: ela vira o fundo.
+
+          O botão continua sempre visível e sempre clicável, inclusive
+          no toque, onde não existe cursor. O que muda é só o peso.
+
+          Em repouso ele NÃO fica igual ao "Rejeitar": leva o laranja
+          em tinta — fundo claro da marca, texto escuro dela. Deixá-los
+          idênticos até o cursor chegar tirava a hierarquia da tela
+          inteira em quem só olha, e ler qual é o botão do "sim" não
+          pode depender de passar o mouse.
+        */}
         <form action={aprovaOferta}>
           <input type="hidden" name="oferta_id" value={oferta.id} />
-          <Botao type="submit" variante="primaria" tamanho="sm" disabled={canais.length === 0}>
+          <Botao
+            type="submit"
+            variante="secundaria"
+            tamanho="sm"
+            disabled={canais.length === 0}
+            className={
+              canais.length === 0
+                ? ""
+                : "border-marca-borda bg-marca-fundo text-marca-texto group-hover:border-marca group-hover:bg-marca group-hover:text-white group-hover:shadow-marca group-focus-within:border-marca group-focus-within:bg-marca group-focus-within:text-white"
+            }
+          >
             Aprovar
           </Botao>
         </form>
@@ -276,7 +332,7 @@ function LinhaDeOferta({ oferta, canais }: { oferta: OfertaSimulada; canais: Can
           <summary className="inline-flex cursor-pointer list-none items-center rounded-md border border-borda-forte bg-superficie px-3 py-2 text-sm font-semibold text-texto-medio hover:bg-fundo">
             Rejeitar
           </summary>
-          <div className="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-3 shadow-modal">
+          <div className="absolute right-0 z-20 mt-2 w-72 rounded-lg border border-borda-sutil bg-superficie p-3 shadow-modal">
             <p className="mb-2 px-2 text-xs font-bold uppercase tracking-eyebrow text-texto-fraco">
               por quê?
             </p>

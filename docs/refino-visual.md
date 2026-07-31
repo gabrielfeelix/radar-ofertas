@@ -183,6 +183,33 @@ referências o número-chave vive entre 32 e 40px. Proposta: um `--text-3xl` de
 
 ---
 
+## 6b. O que já foi feito
+
+**F1, F6 e os consertos da seção 5 — 31/07.** Duas elevações nomeadas pelo
+estado (`repouso`, `erguido`), fundo um tom mais escuro para a sombra existir,
+borda sutil onde há sombra. Rótulo de indicador virou sobrescrito e o valor
+subiu para 32px; indicador sem dado mostra a frase, não o traço. Busca duplicada
+de `/produtos`, rodapé da barra lateral e as três famílias de limiar.
+
+**F3 — 31/07.** A fila virou lista de decisão:
+
+- **Sparkline de 30 dias na linha** (`app/componentes/Sparkline.tsx`), com a
+  mediana tracejada. A informação que decide a oferta estava só dentro do painel.
+- **Preço, desconto e comissão viraram um bloco só**, alinhado à direita. Eram
+  três colunas soltas com ~200px de vazio entre números que só se leem juntos.
+- **O laranja saiu de doze botões cheios.** "Aprovar" fica em tinta da marca em
+  repouso e vira laranja cheio na linha sob o cursor ou com foco de teclado.
+- **Altura da linha caiu de ~116px para ~79px**, o que põe as doze ofertas na
+  mesma tela.
+
+**Ficou de fora, de propósito:** os atalhos de teclado (`A`, `R`, `D`). Eles
+exigem componente de cliente com noção de "linha ativa" e gestão de foco, e isso
+é trabalho de outra ordem de grandeza — a linha hoje é HTML puro com formulários
+de servidor, e vale manter assim até haver quem use a tela todo dia para dizer
+se o atalho faz falta.
+
+---
+
 ## 7. Ordem sugerida
 
 1. **F1 (elevação)** — duas linhas de token, efeito nas treze telas

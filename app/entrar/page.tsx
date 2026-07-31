@@ -41,7 +41,7 @@ export default async function Entrar({
           <span className="text-lg font-extrabold tracking-titulo">Radar</span>
         </div>
 
-        <div className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-6 shadow-modal">
+        <div className="rounded-lg border border-borda-sutil bg-superficie p-6 shadow-modal">
           <h1 className="text-lg font-extrabold tracking-titulo">Entrar</h1>
           <p className="mt-1 mb-5 text-base text-texto-fraco">
             Este painel é interno. A conta é criada por convite.
