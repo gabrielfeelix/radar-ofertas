@@ -226,6 +226,26 @@ Depois disso, dois blocos que não são tela:
 - **Plugar o backend** nas telas de decisão, uma ação por vez.
 - **Dependências de temporizador de terceiro** — estão anotadas em `docs/infra.md`, para serem resolvidas juntas quando as telas terminarem. Agendador do GitHub, pausa do Supabase, token do Mercado Livre, sessão do Telegram, credencial da Shopee: todas o mesmo problema, algo fora do nosso controle expira e o sistema para em silêncio.
 
+### Pendências desta sessão — leia antes de tocar em qualquer coisa
+
+**Duas migrations estão escritas e NÃO aplicadas.** O Docker caiu no meio da sessão de 28/07 e não deu para aplicar:
+
+- `20260728140000_identificacao_publicitaria.sql` — corrige o modelo já gravado
+- `20260728150000_expira_imagem.sql` — `anuncio.imagem_url`, expurgo e a rotina diária recriada
+
+Para aplicar:
+
+```
+pnpm db:sobe
+npx supabase migration up --local
+```
+
+**Nunca use `pnpm db:reset` para isso.** Ele não aplica — apaga e recria o banco inteiro. Foi assim que os dados colhidos se perderam nesta sessão: 6 produtos, 6 anúncios, 3 fontes e 35 menções. As fontes foram recadastradas (como misto, que é o estado correto); o catálogo se refaz rodando a colheita.
+
+**As telas desta rodada não foram conferidas no navegador**, pelo mesmo motivo. Tipo, lint e os 135 testes passam. Falta olhar: o aviso de identificação publicitária em `/ajustes/modelos`, o aviso de variedade em `/publicar`, e o erro de horário fora de pico no formulário de canal. **Abra e clique antes de dizer que está pronto** — foi o que achou os dois defeitos da rodada anterior.
+
+**Conta local de teste:** `gabriel@local.test`. A senha morre no próximo `db:reset`; crie a sua com `pnpm usuario:cria`.
+
 ### Bloqueado, e por quem
 
 - **Coleta de preço real** — falta credencial de marketplace. O dono resolve. A Shopee é a aposta melhor: a Open API de afiliado resolve dado e link na mesma chave.

@@ -39,12 +39,18 @@ O que construir:
 - Motor de validação: `oferta`, `parametro`, `comissao_categoria`, as duas comportas e a nota. **Feito.**
 - Coletor diário de preço, com fontes plugáveis por marketplace. **Feito, esperando credencial.**
 - Colheita de canais de terceiros, alimentando o catálogo (D-012).
-- Agendamento por `pg_cron`: coleta, detecção de ofertas e expurgo.
+- Agendamento por GitHub Actions: coleta, detecção de ofertas e expurgo. **Feito.** (Era `pg_cron` neste plano; a D-015 trocou, e a pesquisa de 28/07 confirmou o motivo — projeto pausado pausa `pg_cron` em silêncio.)
 - Nada de design elaborado. Uma tabela feia serve.
 
 Meta operacional: **catálogo na casa de alguns milhares de anúncios de pet, coletando preço diariamente**, e a taxa de aprovação da curadoria estabilizada num patamar que sustente 30 ofertas por dia.
 
 **Concluída quando:** a detecção automática aprova 30 ou mais ofertas por dia, por uma semana seguida, sem afrouxar nenhum parâmetro.
+
+> **30 ofertas aprovadas ≠ 30 publicações num grupo.** A confusão é fácil e cara, porque a pesquisa de operação diz o oposto com os mesmos números: *"postar 30+ ofertas por dia mata o engajamento em uma semana"*.
+>
+> Não há contradição. A aprovação alimenta **todos** os canais elegíveis, e cada um tem o próprio teto — 5 a 8 por dia no WhatsApp é o consenso do mercado. Trinta ofertas aprovadas com quatro canais de teto 8 são 32 vagas somadas, não 30 posts num grupo.
+>
+> O teto por canal (`canal.teto_diario`) e a capacidade visível na tela de aprovação existem exatamente para essa distinção não depender de ninguém lembrar dela.
 
 Custo: R$0 até o Supabase passar de 500 MB.
 
@@ -55,6 +61,23 @@ Ponto de atenção: acompanhe a **taxa de aprovação** que `detecta_ofertas` de
 ---
 
 ## Fase 2 — Primeiro grupo, do próprio dono
+
+### O que esperar de dinheiro, e em quanto tempo
+
+Referência levantada em 28/07 (`docs/pesquisa-operacao.md`), para calibrar expectativa antes de a frustração aparecer:
+
+| Marco | Membros | Resultado |
+|---|---|---|
+| 90 dias | 300+ ativos | clique de **15–25% por post**, comissão a partir de **R$ 800/mês** |
+| 12 meses | 800+ | **20–40 vendas/dia**, **R$ 5 mil a R$ 15 mil/mês** |
+
+Afiliado Shopee iniciante, nos três primeiros meses: **R$ 200 a R$ 1.500/mês**.
+
+**O primeiro dinheiro relevante leva cerca de 90 dias** — e isso corre junto com a rampa da série de preço, não depois dela. As duas esperas se sobrepõem, o que é sorte nossa.
+
+A taxa de clique de 15–25% é muito acima de e-mail ou rede social. É o argumento do canal fechado: quem está lá pediu para estar.
+
+---
 
 O grupo é do dono, com 50 a 100 conhecidos. **Não é para dar lucro.** É para atravessar o ciclo completo uma vez e ter a primeira comissão confirmada na mão, com dado real para negociar com parceiro depois.
 
