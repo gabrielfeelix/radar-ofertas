@@ -64,3 +64,6 @@ lib/supabase/tipos-gerados.ts
 *.sqlite
 *.db
 relatorios/
+
+# Capturas de tela de conferência
+.telas/

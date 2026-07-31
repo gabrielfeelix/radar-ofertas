@@ -14,7 +14,6 @@
     "lint": "eslint",
     "testa": "node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON testes/links.mjs && node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON testes/canais.mjs && node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON testes/simulacao.mjs && node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON testes/mensagem.mjs && node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON testes/variedade.mjs && node --experimental-strip-types --disable-warning=ExperimentalWarning --disable-warning=MODULE_TYPELESS_PACKAGE_JSON testes/horarios.mjs",
     "verifica": "tsc --noEmit && eslint && pnpm testa",
-
     "db:sobe": "supabase start",
     "db:desce": "supabase stop",
     "db:reset": "supabase db reset",
@@ -22,7 +21,8 @@
     "db:publica": "supabase db push",
     "usuario:cria": "node --env-file=.env scripts/cria-usuario.mjs",
     "db:tipos": "supabase gen types typescript --local > lib/supabase/tipos-gerados.ts && echo 'Gerado em lib/supabase/tipos-gerados.ts, que é referência descartável. lib/supabase/tipos.ts é escrito à mão: copie o campo novo para lá à mão.'",
-    "funcoes:serve": "supabase functions serve"
+    "funcoes:serve": "supabase functions serve",
+    "telas": "node --env-file=.env scripts/captura-telas.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.3",
@@ -39,6 +39,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
+    "playwright": "^1.62.1",
     "supabase": "2.109.1",
     "tailwindcss": "^4",
     "typescript": "^5"
