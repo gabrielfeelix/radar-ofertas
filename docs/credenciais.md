@@ -234,7 +234,29 @@ leva dois minutos e não custa nada.
 
 ---
 
-## 6. Amazon — deixe por último, e saiba por quê
+## 6. Amazon — ✅ conta criada em 31/07/2026
+
+> **ID de Associado: `radar4yu-20`.** Já está no `.env`, em `AFILIADO_AMAZON`.
+> Informações fiscais preenchidas com **CPF**.
+>
+> **Prazo em curso: 27/01/2027.** Se nenhum link levar a um pedido em 180 dias, a
+> conta e o acesso à Central de Associados são revogados. O dono decidiu
+> cadastrar mesmo assim, com o argumento de que quatro meses sem três vendas
+> significaria que o projeto não anda — e nesse caso a conta é o menor dos
+> problemas. Argumento aceito.
+>
+> **Pendência fiscal registrada:** a conta está no CPF porque ainda não há CNPJ.
+> Migrar para pessoa jurídica, ou abrir outra conta no CNPJ, fica para quando a
+> empresa existir. Isso conversa com a nota da D-011 sobre enquadramento — há
+> divergência entre fontes sobre afiliado digital caber no MEI, e o CNAE
+> 7490-1/04 apareceria fora da lista permitida. **Precisa de contador antes de
+> repassar dinheiro a terceiro**, que é o que a Fase 3 faz.
+>
+> **Confira uma coisa no painel:** em *Sua Conta de Associado*, o campo
+> **"Situação Fiscal Atual do Brasil"** precisa estar **Completo**. Enquanto
+> estiver *Incompleto*, a comissão acumula e não é paga.
+
+### Por que ela era para ficar por último
 
 A API que servia para isto, a **PA-API v5, foi aposentada em 15/05/2026**. Não
 aceita cliente novo. A substituta é a **Creators API**, com autenticação e
