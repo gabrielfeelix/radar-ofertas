@@ -281,6 +281,7 @@ E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm veri
 | `docs/dados.md` | Schema, comportas e o modelo de segurança |
 | `docs/mercado.md` | Antes de falar de concorrência ou distribuição |
 | `docs/infra.md` | O que roda onde, quanto custa, e as dependências que expiram |
+| `docs/credenciais.md` | O trabalho que só o dono faz: contas de afiliado, compra de teste, Supabase na nuvem, chaves de marketplace e Telegram |
 | `docs/pesquisa-tecnica.md` | Antes de mexer em stack ou política de plataforma. O que está validado e o que está errado |
 | `docs/pesquisa-operacao.md` | Antes de mexer em cadência, horário, formato de mensagem ou canal. Como se toca um grupo de verdade |
 | `referencia-claude-deisgn/` | O protótipo, com as quatorze telas desenhadas. Abra antes de mexer em interface |
