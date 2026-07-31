@@ -14,6 +14,7 @@ import { salvaCanal, type ResultadoCanal } from "@/app/acoes/canais";
 import { NICHOS, type CanalSimulado } from "@/lib/simulacao/loja";
 import { Botao } from "@/app/componentes/Botao";
 import { useFechaModal } from "@/app/componentes/Modal";
+import { foraDePico, HORARIOS_SUGERIDOS, PICOS } from "@/lib/horarios";
 
 /**
  * Formulário de canal — o mesmo para criar e para editar.
@@ -46,6 +47,11 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
   const [audiencia, setAudiencia] = useState(canal?.splitAudienciaPct ?? 0);
   const [operacao, setOperacao] = useState(canal?.splitOperacaoPct ?? 0);
   const [teto, setTeto] = useState(canal?.tetoDiario ?? 6);
+  const [horarios, setHorarios] = useState(canal?.horarios ?? HORARIOS_SUGERIDOS);
+
+  // Aviso, não impedimento: pode haver motivo para publicar fora do
+  // pico, e o dono é quem sabe. O que não pode é ele não saber.
+  const foraDosPicos = foraDePico(horarios);
 
   const dono = 100 - audiencia - operacao;
   const erroDe = (campo: "nome" | "nichos" | "split" | "teto") =>
@@ -131,15 +137,31 @@ export function FormularioCanal({ canal }: { canal?: CanalSimulado }) {
           />
         </Campo>
 
+        {/*
+          O exemplo antigo era "09:00 e 18:00", e as 18h estão fora dos
+          três picos de engajamento. Sugestão errada em campo de
+          exemplo é pior que campo vazio: vira o padrão de quem não tem
+          opinião formada.
+        */}
         <Campo
           rotulo="Horários permitidos"
-          dica="Fuso de São Paulo, ainda que tudo seja gravado em UTC."
+          dica={
+            foraDosPicos.length > 0
+              ? undefined
+              : `Picos: ${PICOS.map((p) => `${p.inicio}–${p.fim}`).join(", ")}. Fuso de São Paulo.`
+          }
+          erro={
+            foraDosPicos.length > 0
+              ? `${foraDosPicos.join(", ")} ${foraDosPicos.length === 1 ? "está fora" : "estão fora"} dos picos (${PICOS.map((p) => `${p.inicio}–${p.fim}`).join(", ")}). Fora deles o engajamento cai bastante.`
+              : null
+          }
         >
           <input
             name="horarios"
             type="text"
-            defaultValue={canal?.horarios}
-            placeholder="09:00 e 18:00"
+            value={horarios}
+            onChange={(e) => setHorarios(e.target.value)}
+            placeholder={HORARIOS_SUGERIDOS}
             className={classeDeCampo}
           />
         </Campo>
