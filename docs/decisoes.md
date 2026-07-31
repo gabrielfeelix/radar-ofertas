@@ -578,7 +578,12 @@ O mercado usa **três** superfícies, não duas:
 ## D-032 · Vercel Hobby agora, com prazo para sair
 **Data:** 2026-07-31
 
-O painel está publicado na **Vercel, plano Hobby**, na conta `4-yu`. Isso
+O painel está publicado na **Vercel, plano Hobby**, na conta `4-yu`, projeto
+`radar-ofertas`. O deploy de 31/07 responde em
+`https://radar-ofertas-hvmdkorj6-4-yu.vercel.app` — esse endereço é **do deploy**,
+muda a cada publicação; o alias estável está em *Vercel → radar-ofertas →
+Domains*. Fica escrito porque dívida sem endereço é dívida difícil de cobrar, e
+porque as URIs de redirect do OAuth do Mercado Livre apontam para ele. Isso
 **contraria a seção 2 do `AGENTS.md`**, que manda hospedar em Cloudflare Workers
 com OpenNext (D-016) e diz, com todas as letras, para não usar o plano gratuito
 da Vercel.

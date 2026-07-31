@@ -166,7 +166,7 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 | **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
 | **Shopee — afiliado** | ⏳ cadastro enviado, até 3 dias úteis | esperar e-mail |
 | **Shopee — Open API** | ⛔ bloqueado | exige o ID de afiliado, que só existe depois de aprovar. **Depois disso, até 2 semanas** |
-| **Mercado Livre — API de itens** | ⛔ não começou | é em `developers.mercadolivre.com.br`, separado do afiliado. **É o caminho mais curto para dado real** |
+| **Mercado Livre — API de itens** | 🟡 aplicação criada em 31/07, `Radar de Ofertas 4YU`, Client ID `7618355784652588` | falta **só** o `ML_REFRESH_TOKEN` — fluxo de navegador, passo a passo em `docs/credenciais.md` §4b |
 | **Canais** | ✅ `t.me/radarpet` (público) e grupo de WhatsApp | audiência |
 
 **Duas correções que a prática impôs à pesquisa**, e que valem para quem for planejar prazo:
@@ -300,8 +300,9 @@ E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm veri
 
 ### Bloqueado, e por quem
 
-- **Coleta de preço real** — falta credencial de marketplace, e o caminho mais curto **mudou em 31/07**. A Shopee continua sendo a melhor chave (resolve dado e link de uma vez), mas ela está a cerca de três semanas de distância: cadastro em análise, e a API só pode ser pedida depois de aprovado, levando até duas semanas a mais. **O Mercado Livre virou o atalho:** a conta de afiliado já está aprovada, e a API de itens só depende de criar uma aplicação em `developers.mercadolivre.com.br` — nada de fila de aprovação. Quem retomar isto: comece por ela.
-- **Segredos gerados** — ✅ `COLETA_SEGREDO` e `SAL_HASH_IP` existem no `.env`. O sal **nunca muda** depois que a coleta começar, senão a contagem de clique único quebra para sempre.
+- **Coleta de preço real** — falta credencial de marketplace, e o caminho mais curto **mudou em 31/07**. A Shopee continua sendo a melhor chave (resolve dado e link de uma vez), mas ela está a cerca de três semanas de distância: cadastro em análise, e a API só pode ser pedida depois de aprovado, levando até duas semanas a mais. **O Mercado Livre virou o atalho, e ele andou:** a aplicação já existe e `ML_CLIENT_ID` e `ML_CLIENT_SECRET` já estão no `.env`. **Falta um único passo**, o `ML_REFRESH_TOKEN`, que sai de um fluxo de navegador descrito em `docs/credenciais.md` §4b. Quem retomar isto: é a primeira coisa da fila, e leva minutos.
+- **Renovação do token do ML rasga o token guardado** — ⚠️ **defeito conhecido, não corrigido.** O Mercado Livre **troca o refresh token a cada renovação** e invalida o anterior. `pegaToken` em `supabase/functions/_compartilhado/fontes/mercado-livre.ts` lê só o `access_token` da resposta e descarta o `refresh_token` novo. Funciona na primeira renovação e quebra na próxima execução fria — o coletor passa a reportar "não consegui renovar o token" e pula a loja. **Tem que ser resolvido antes da primeira coleta agendada:** o token rotacionado precisa ser gravado em algum lugar que sobreviva à Edge Function, e variável de ambiente não é esse lugar.
+- **Segredos gerados** — `COLETA_SEGREDO` ✅ existe no `.env`. **`SAL_HASH_IP` ainda NÃO** — está com o texto de exemplo (`troque_por_uma_string_aleatoria_longa`), apesar de a versão anterior deste arquivo afirmar que existia. Gere antes da primeira coleta: o sal **nunca muda** depois que a coleta começar, senão a contagem de clique único quebra para sempre.
 - ~~**Projeto Supabase na nuvem**~~ — **resolvido em 31/07/2026.** Projeto `radar-ofertas`, organização 4YU Systems, região São Paulo (`sa-east-1`), ref `fcdkczueohekmgaaacdr`. As 15 migrations foram aplicadas e conferidas contra o banco, tabela por tabela. As chaves vivem em `.env.producao`, fora do Git. **A exceção da reescrita de migration fechou junto** — vale a regra da seção 6.
 
   O `.env` continua apontando para o banco **local**, que é onde o desenvolvimento acontece; a nuvem tem o schema e nenhum dado. Trocar o painel para ler a nuvem é decisão separada, e o gatilho é existir dado real lá.

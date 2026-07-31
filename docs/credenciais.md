@@ -191,18 +191,70 @@ histórica de preço só pode ser construída sobre Mercado Livre e Shopee**, po
 a política da Amazon proíbe guardar preço além de 24 horas (regra 3.3). Com uma
 loja só, a base do produto fica numa perna só.
 
-### Passo a passo
+### ✅ A aplicação já existe (31/07/2026)
 
-1. Entre em `developers.mercadolivre.com.br` com a sua conta.
-2. **Criar aplicação.** Preencha nome e descrição.
-3. Em URL de redirecionamento, pode usar `http://localhost:3000` por enquanto —
-   é só para o fluxo de autorização.
-4. Copie:
-   - **Client ID** → `ML_CLIENT_ID`
-   - **Client Secret** → `ML_CLIENT_SECRET`
-5. O **refresh token** (`ML_REFRESH_TOKEN`) sai de um fluxo de autorização que
-   dá para fazer no navegador. É chato e cheio de detalhe — **me chame nessa
-   hora** e eu te passo os endereços exatos, na ordem.
+| | |
+|---|---|
+| **Nome** | `Radar de Ofertas 4YU` (nome curto `radar-ofertas-4yu`) |
+| **Client ID** | `7618355784652588` |
+| **Client Secret** | no `.env`, como `ML_CLIENT_SECRET` |
+| **Onde** | `developers.mercadolivre.com.br` → *Minhas aplicações* |
+
+**Como ela foi configurada**, para quem precisar conferir ou repetir:
+
+- **Fluxos OAuth:** `Authorization Code` **e `Refresh Token`**. O segundo é o que
+  faz o coletor rodar sozinho — sem ele o acesso morre em ~6 horas e não há como
+  renovar. `Client Credentials` ficou desmarcado, não serve aqui. PKCE
+  desmarcado, para o fluxo manual no navegador não exigir `code_verifier`.
+- **Unidade de negócio:** Mercado Livre. (`VIS` é veículos, imóveis e serviços.)
+- **Permissões:** `Usuários` em leitura; **todo o resto em "Sem acesso"**. O
+  formulário exige escolha explícita em cada linha — o cinza é texto de exemplo,
+  não seleção.
+- **Tópicos: nenhum.** Tópico é *webhook*, e webhook do ML avisa sobre a **sua
+  conta de vendedor** — `Items`, `Items Prices`, `Public Offers` e afins falam de
+  anúncios que **você** publica. Não existe tópico que entregue promoção de
+  terceiro; marcar qualquer um só torna obrigatória uma URL de notificação que
+  este projeto não tem. Feed oficial de oferta é a Shopee, não o ML.
+- **URIs de redirect:** as duas da Vercel, `.../callback`. Uma é o alias estável
+  do projeto, a outra é a URL do deploy de 31/07. **Confirme a grafia exata na
+  tela da aplicação antes de usar** — ela precisa bater caractere por caractere
+  nos dois passos abaixo, e o registro aqui foi feito de memória.
+
+### Falta só o refresh token
+
+1. Abra no navegador, trocando `REDIRECT` pela URI exata cadastrada:
+
+   ```
+   https://auth.mercadolivre.com.br/authorization?response_type=code&client_id=7618355784652588&redirect_uri=REDIRECT
+   ```
+
+2. Autorize. O navegador vai para `REDIRECT?code=TG-xxxxx`. A página vai dar 404
+   ou erro de conexão — **tudo bem**, o que interessa é o `code` na barra de
+   endereço. Ele **vale ~10 minutos e serve uma vez só**.
+
+3. Troque o code pelos tokens:
+
+   ```bash
+   curl -X POST https://api.mercadolibre.com/oauth/token \
+     -H 'Content-Type: application/x-www-form-urlencoded' \
+     -d grant_type=authorization_code \
+     -d client_id=7618355784652588 \
+     -d client_secret="$ML_CLIENT_SECRET" \
+     -d code=TG-xxxxx \
+     -d redirect_uri=REDIRECT
+   ```
+
+4. Guarde o `refresh_token` da resposta em `ML_REFRESH_TOKEN`, no `.env` e nos
+   secrets da Edge Function.
+
+> ⚠️ **Antes de agendar a primeira coleta, leia isto.** O Mercado Livre **troca o
+> refresh token a cada renovação** e invalida o anterior. O adaptador em
+> `supabase/functions/_compartilhado/fontes/mercado-livre.ts` descarta o token
+> novo que vem na resposta, então o valor do `.env` envelhece: a primeira
+> renovação funciona, a próxima execução fria falha e a loja é pulada. Guardar o
+> token rotacionado em lugar que sobreviva à função **é pré-requisito da coleta
+> automática**, não melhoria. Está registrado em "Bloqueado, e por quem" no
+> `AGENTS.md`.
 
 > **Este é o que vence.** O token do Mercado Livre tem validade e precisa ser
 > renovado; quando vencer, o coletor pula a loja e avisa. Está anotado em
