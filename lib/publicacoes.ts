@@ -60,6 +60,8 @@ export type Publicacao = {
    * segunda implementação da coisa que paga o projeto.
    */
   link: LinkDeAfiliado;
+  /** LINK da foto, nunca o arquivo (regra 3.3). Nulo = publica sem imagem. */
+  imagemUrl: string | null;
   enviadaEm: string | null;
   origem: OrigemDoEnvio | null;
   cancelada: boolean;
@@ -122,6 +124,7 @@ type LinhaDePublicacao = {
     anuncio: {
       url_original: string;
       vendedor: string | null;
+      imagem_url: string | null;
       marketplace: { nome: string; slug: string } | null;
       produto: { titulo_canonico: string; nicho: { slug: string } | null } | null;
     } | null;
@@ -134,7 +137,7 @@ const SELECAO = `
     id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em,
     anuncio:anuncio_id (
-      url_original, vendedor,
+      url_original, vendedor, imagem_url,
       marketplace:marketplace_id ( nome, slug ),
       produto:produto_id ( titulo_canonico, nicho:nicho_id ( slug ) )
     )
@@ -214,6 +217,7 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
         linha.subid,
         anuncio?.marketplace?.slug ?? "",
       ),
+      imagemUrl: anuncio?.imagem_url ?? null,
       enviadaEm: linha.estado === "enviada" ? linha.enviada_em : null,
       origem: linha.estado === "enviada" ? (linha.origem as OrigemDoEnvio) : null,
       cancelada: linha.estado === "cancelada",

@@ -47,13 +47,13 @@ const API = "https://api.mercadolibre.com";
  * coisa.
  */
 const CATEGORIAS = {
-  pet: ["MLB1071"],
-  casa: ["MLB1574", "MLB264586"],
-  eletronico: ["MLB1000", "MLB1648"],
+  pet: ["MLB1071", "MLB417318"],
+  casa: ["MLB1574", "MLB264586", "MLB1499"],
+  eletronico: ["MLB1000", "MLB1648", "MLB1051", "MLB1276"],
 };
 
 /** Quantos produtos por nicho. Baixo de propósito: a série vale mais que a largura. */
-const POR_NICHO = Number(process.env.ML_PRODUTOS_POR_NICHO ?? 12);
+const POR_NICHO = Number(process.env.ML_PRODUTOS_POR_NICHO ?? 20);
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -179,6 +179,23 @@ async function melhorOferta(produtoId) {
   return vivas.reduce((menor, i) => (i.price < menor.price ? i : menor));
 }
 
+/**
+ * O link da foto do produto.
+ *
+ * LINK, nunca o arquivo — a regra 3.3 é explícita: *"You will not store
+ * or cache Product Advertising Content consisting of an image, but you
+ * may store a link to it for up to 24 hours."* Vale para a Amazon por
+ * contrato, e o sistema aplica para todas para não ter duas políticas.
+ *
+ * A maior disponível, porque o Telegram reduz sozinho e imagem pequena
+ * esticada é o que faz o post parecer amador.
+ */
+function fotoDoProduto(produto) {
+  const foto = produto.pictures?.[0];
+  if (!foto) return null;
+  return foto.url ?? foto.secure_url ?? null;
+}
+
 async function main() {
   const { data: operacao } = await db.from("operacao").select("id").limit(1).single();
   const { data: mkt } = await db
@@ -282,6 +299,11 @@ async function main() {
               vendedor: oferta.official_store_id ? "loja oficial" : `vendedor ${oferta.seller_id}`,
               loja_oficial: Boolean(oferta.official_store_id),
               ultima_coleta_em: new Date().toISOString(),
+              // O LINK da imagem, nunca o arquivo (regra 3.3). Ele
+              // expira pela política da loja, e `imagem_obtida_em` é o
+              // que permite a `expurga_imagens_expiradas` saber a idade.
+              imagem_url: fotoDoProduto(produto),
+              imagem_obtida_em: new Date().toISOString(),
             })
             .select("id")
             .single();
@@ -291,7 +313,11 @@ async function main() {
         } else {
           await db
             .from("anuncio")
-            .update({ ultima_coleta_em: new Date().toISOString() })
+            .update({
+              ultima_coleta_em: new Date().toISOString(),
+              imagem_url: fotoDoProduto(produto),
+              imagem_obtida_em: new Date().toISOString(),
+            })
             .eq("id", anuncio.id);
         }
 

@@ -27,6 +27,74 @@ export type ResultadoDoEnvio =
   | { ok: false; motivo: string; configuracao?: boolean };
 
 /**
+ * Limite da legenda de foto no Telegram. Texto solto aceita 4096, mas
+ * foto com legenda para em 1024 — e a diferença não dá erro bonito:
+ * a API recusa a mensagem inteira.
+ */
+const LIMITE_DA_LEGENDA = 1024;
+
+/**
+ * Manda a mensagem COM a foto do produto.
+ *
+ * Foto não é enfeite: todo canal de oferta que funciona publica com
+ * imagem, e post sem foto passa despercebido na rolagem. Foi o que o
+ * dono apontou comparando com os concorrentes.
+ *
+ * **O que vai é o LINK da imagem, e o Telegram baixa** — o sistema
+ * nunca guarda o arquivo (regra 3.3). Quando não há foto, cai para
+ * texto puro em vez de não publicar.
+ *
+ * Legenda que passa de 1024 caracteres derruba a mensagem inteira na
+ * API. Nesse caso vai a foto com o começo e o texto completo logo
+ * abaixo, em vez de perder o post.
+ */
+export async function publicaComFoto(
+  chatId: string,
+  texto: string,
+  fotoUrl: string | null,
+): Promise<ResultadoDoEnvio> {
+  if (!fotoUrl) return publicaNoTelegram(chatId, texto);
+
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) {
+    return { ok: false, configuracao: true, motivo: "falta TELEGRAM_BOT_TOKEN" };
+  }
+
+  const cabe = texto.length <= LIMITE_DA_LEGENDA;
+
+  try {
+    const r = await fetch(`${API}/bot${token}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        photo: fotoUrl,
+        caption: cabe ? texto : texto.slice(0, LIMITE_DA_LEGENDA - 1),
+        parse_mode: "HTML",
+      }),
+      signal: AbortSignal.timeout(25000),
+    });
+
+    const d = await r.json().catch(() => null);
+
+    // Foto que a loja recusa servir não pode custar a publicação: cai
+    // para texto, que ainda vende.
+    if (!r.ok || !d?.ok) {
+      const motivo = String(d?.description ?? "");
+      if (/photo|wrong file identifier|failed to get http url/i.test(motivo)) {
+        return publicaNoTelegram(chatId, texto);
+      }
+      return { ok: false, motivo: traduz(motivo || `HTTP ${r.status}`) };
+    }
+
+    if (!cabe) await publicaNoTelegram(chatId, texto);
+    return { ok: true, messageId: d.result.message_id };
+  } catch (erro) {
+    return { ok: false, motivo: `não alcancei o Telegram: ${(erro as Error).message}` };
+  }
+}
+
+/**
  * Manda a mensagem para o canal.
  *
  * `chatId` aceita `@nomedocanal` para canal público, ou o id numérico
@@ -60,6 +128,7 @@ export async function publicaNoTelegram(
       body: JSON.stringify({
         chat_id: chatId,
         text: texto,
+        parse_mode: "HTML",
         // A prévia do link ocupa metade da tela do celular e empurra a
         // oferta seguinte para fora. Num canal que publica dezenas por
         // dia, é a diferença entre rolar e desistir.

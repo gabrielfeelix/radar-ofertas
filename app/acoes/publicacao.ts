@@ -15,7 +15,7 @@ import {
 import { montaMensagem } from "@/lib/mensagem";
 import { modeloGlobal } from "@/lib/modelo";
 import { usuarioAtual } from "@/lib/sessao";
-import { publicaNoTelegram } from "@/lib/telegram";
+import { publicaComFoto } from "@/lib/telegram";
 
 /**
  * Ações da fila de publicação.
@@ -89,7 +89,11 @@ export async function publicaLoteTelegram(form: FormData): Promise<void> {
       link: publicacao.link.url,
     });
 
-    const envio = await publicaNoTelegram(publicacao.canal.telegramChatId ?? "", texto);
+    const envio = await publicaComFoto(
+      publicacao.canal.telegramChatId ?? "",
+      texto,
+      publicacao.imagemUrl,
+    );
 
     // Falhou: NÃO marca como enviada. A publicação fica na fila com o
     // motivo à vista. Marcar assim mesmo esvaziaria a tela deixando o
