@@ -128,7 +128,15 @@ const CANAIS = [
       `GENDER`, que ele devolve preenchido. Os outros valores
       observados em 01/08 são Feminino, Meninos, Meninas e Sem gênero.
     */
-    filtros: [{ atributo: "GENDER", valores: ["Masculino"], modo: "inclui" }],
+    filtros: [
+      /*
+        `exige: true` porque este canal é um RECORTE. Perfume sem
+        `GENDER` gravado não é "provavelmente masculino", é
+        desconhecido, e canal mudo é menos ruim que canal errado. Quem
+        fica com o desconhecido é o Beauty, que é o RESTO.
+      */
+      { atributo: "GENDER", valores: ["Masculino"], modo: "inclui", exige: true },
+    ],
   },
 ];
 
@@ -215,6 +223,7 @@ async function main() {
           atributo: f.atributo,
           valores: f.valores,
           modo: f.modo,
+          exige_atributo: f.exige ?? false,
         })),
       );
     }

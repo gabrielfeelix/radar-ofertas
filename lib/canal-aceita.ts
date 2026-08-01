@@ -32,6 +32,20 @@ export type FiltroDeCanal = {
   atributo: string;
   valores: string[];
   modo: "inclui" | "exclui";
+  /**
+   * Reprovar quando o produto não declara o atributo? (migration 43)
+   *
+   * Padrão falso, e o padrão está certo no geral. Mas o par
+   * Beauty/Perfumes mostrou que ele não pode ser o único comportamento:
+   * o primeiro perfume que entrou no catálogo veio com `atributos`
+   * nulo, e com "sem atributo passa" nos dois lados ele casava com
+   * `inclui Masculino` E com `exclui Masculino` — saindo nos dois
+   * canais.
+   *
+   * Quem é RECORTE exige (canal mudo é menos ruim que canal errado).
+   * Quem é RESTO não exige, e fica com o que não declara.
+   */
+  exigeAtributo?: boolean;
 };
 
 /**
@@ -65,8 +79,12 @@ export function canalAceitaAtributos(
 
   for (const filtro of filtros) {
     const bruto = atributos?.[filtro.atributo];
-    // O produto não declara o atributo: o filtro não opina.
-    if (!bruto) continue;
+
+    // O produto não declara o atributo. O filtro só opina se exigir.
+    if (!bruto) {
+      if (filtro.exigeAtributo) return false;
+      continue;
+    }
 
     const valor = normaliza(bruto);
     const casa = filtro.valores.some((v) => normaliza(v) === valor);

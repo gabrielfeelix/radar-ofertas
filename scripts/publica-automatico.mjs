@@ -329,7 +329,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: canais } = await db
     .from("canal")
     .select(
-      "id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo )",
+      "id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo )",
     )
     .eq("ativo", true);
 
@@ -488,7 +488,10 @@ async function melhorPrateleira(db, oferta) {
       segunda.
     */
     const elegiveis = doNicho.filter((c) =>
-      canalAceitaAtributos(c.canal_atributo, anuncio.produto?.atributos),
+      canalAceitaAtributos(
+        (c.canal_atributo ?? []).map((f) => ({ ...f, exigeAtributo: f.exige_atributo })),
+        anuncio.produto?.atributos,
+      ),
     );
 
     if (elegiveis.length === 0) {

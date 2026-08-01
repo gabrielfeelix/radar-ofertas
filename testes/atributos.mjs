@@ -89,6 +89,41 @@ const infantil = [{ atributo: "GENDER", valores: ["Meninos", "Meninas"], modo: "
 confere("vários valores: qualquer um serve", canalAceitaAtributos(infantil, { GENDER: "Meninas" }));
 confere("vários valores: fora da lista barra", !canalAceitaAtributos(infantil, { GENDER: "Masculino" }));
 
+/*
+  `exigeAtributo`: o caso que o par Beauty/Perfumes obrigou (migration 43).
+
+  O primeiro perfume que entrou no catálogo veio com `atributos` nulo, e
+  com "sem atributo passa" nos dois lados ele casava com os DOIS canais.
+  Quem é RECORTE exige; quem é RESTO não.
+*/
+const soMascExige = [
+  { atributo: "GENDER", valores: ["Masculino"], modo: "inclui", exigeAtributo: true },
+];
+
+confere("exige: produto sem atributos é reprovado", !canalAceitaAtributos(soMascExige, null));
+confere(
+  "exige: produto sem O atributo é reprovado",
+  !canalAceitaAtributos(soMascExige, { BRAND: "Azzaro" }),
+);
+confere(
+  "exige: quem declara e casa continua passando",
+  canalAceitaAtributos(soMascExige, { GENDER: "Masculino" }),
+);
+confere(
+  "exige: quem declara e não casa continua barrado",
+  !canalAceitaAtributos(soMascExige, { GENDER: "Feminino" }),
+);
+
+// A propriedade que o par depende: perfume sem GENDER cai SÓ no Beauty.
+for (const atributos of [null, { BRAND: "Natura" }, { GENDER: "" }]) {
+  const noMasc = canalAceitaAtributos(soMascExige, atributos);
+  const noBeauty = canalAceitaAtributos(semMasculino, atributos);
+  confere(
+    `perfume sem GENDER (${JSON.stringify(atributos)}) cai só no Beauty`,
+    !noMasc && noBeauty,
+  );
+}
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");

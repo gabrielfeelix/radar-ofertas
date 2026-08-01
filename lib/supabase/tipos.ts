@@ -238,6 +238,8 @@ export type CanalAtributoLinha = {
   valores: string[];
   /** `inclui`: só passa quem casa. `exclui`: passa quem não casa. */
   modo: "inclui" | "exclui";
+  /** Reprova produto que não declara o atributo. Só para canal que é recorte. */
+  exige_atributo: boolean;
   criado_em: string;
   atualizado_em: string;
 };
