@@ -267,6 +267,14 @@ export type PublicacaoLinha = {
   enviada_em: string | null;
   enviada_por: string | null;
   cancelada_em: string | null;
+  /**
+   * O id da mensagem no Telegram (migration 44).
+   *
+   * É o que permite `deleteMessage` e `editMessageText`. Sem ele,
+   * publicação errada é definitiva — foi o que aconteceu com um perfume
+   * feminino no canal masculino em 01/08.
+   */
+  telegram_message_id: number | null;
   criado_em: string;
   atualizado_em: string;
 };

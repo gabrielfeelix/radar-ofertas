@@ -682,7 +682,19 @@ async function melhorPrateleira(db, oferta) {
     const quando = new Date().toISOString();
     await db
       .from("publicacao")
-      .update({ estado: "enviada", origem: "fluxo", enviada_em: quando, mensagem: texto })
+      /*
+        `telegram_message_id` é o que permite apagar ou editar depois
+        (migration 44). O Telegram sempre devolveu esse id e nós sempre
+        o descartávamos — até um perfume feminino sair no canal
+        masculino e não haver como tirar.
+      */
+      .update({
+        estado: "enviada",
+        origem: "fluxo",
+        enviada_em: quando,
+        mensagem: texto,
+        telegram_message_id: envio.id ?? null,
+      })
       .eq("id", pub.id);
 
     publicadas++;
