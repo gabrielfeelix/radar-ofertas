@@ -147,11 +147,67 @@ async function main() {
     id, operacao_id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em, gatilho,
     anuncio:anuncio_id (
-      url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
+      id, produto_id, url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
       avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis,
+      preco_leitura_centavos, preco_original_centavos,
       marketplace:marketplace_id ( nome, slug ),
       produto:produto_id ( titulo_canonico, nota_curador, nicho_id )
     )`;
+
+/*
+  A MELHOR PRATELEIRA DO MESMO PRODUTO.
+
+  O Mercado Livre cadastra o mesmo item em vários catálogos, e até
+  01/08 cada um virava um produto nosso: a comparação de preço nunca
+  atravessava entre eles. Depois da migration 30 eles são anúncios do
+  MESMO produto, e esta é a função que escolhe entre eles.
+
+  A TROCA SÓ ACONTECE COM LASTRO PRÓPRIO, e a restrição é o coração
+  disto. Publicar o preço de uma prateleira com o "de" de outra é
+  inventar desconto — seria a regra 3.4 violada por dentro, com dois
+  números verdadeiros que nunca conviveram. Então:
+
+    prateleira melhor E com desconto declarado próprio  →  troca
+    prateleira melhor SEM lastro próprio                →  não publica
+
+  Não publicar dói, e é o lado certo de doer: a alternativa é anunciar
+  R$ 130 sabendo que existe R$ 119,90 do mesmo item.
+*/
+async function melhorPrateleira(db, oferta) {
+  const anuncio = oferta.anuncio;
+  if (!anuncio?.produto_id) return { usar: anuncio, trocou: false };
+
+  const { data: melhorId } = await db.rpc("melhor_anuncio_do_produto", {
+    p_produto_id: anuncio.produto_id,
+  });
+
+  if (!melhorId || melhorId === anuncio.id) return { usar: anuncio, trocou: false };
+
+  const { data: melhor } = await db
+    .from("anuncio")
+    .select(
+      "id, produto_id, url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial, " +
+        "avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis, " +
+        "preco_leitura_centavos, preco_original_centavos, " +
+        "marketplace:marketplace_id ( nome, slug ), " +
+        "produto:produto_id ( titulo_canonico, nota_curador, nicho_id )",
+    )
+    .eq("id", melhorId)
+    .maybeSingle();
+
+  if (!melhor?.preco_leitura_centavos) return { usar: anuncio, trocou: false };
+  if (melhor.preco_leitura_centavos >= oferta.preco_atual_centavos) {
+    return { usar: anuncio, trocou: false };
+  }
+
+  const temLastro =
+    melhor.preco_original_centavos != null &&
+    melhor.preco_original_centavos > melhor.preco_leitura_centavos;
+
+  if (!temLastro) return { usar: null, trocou: false, melhorSemLastro: melhor };
+
+  return { usar: melhor, trocou: true };
+}
 
   const { data: novas } = await db
     .from("oferta")
@@ -217,6 +273,7 @@ async function main() {
   let publicadas = 0;
   let esperando = 0;
   let semLink = 0;
+  let trocas = 0;
   const motivos = {};
 
   for (const oferta of novas ?? []) {
@@ -335,6 +392,55 @@ async function main() {
       }
 
       /*
+        ANTES DO LINK, A PRATELEIRA. A ordem importa: gerar link para o
+        anúncio errado gastaria uma chamada ao painel do ML e ainda
+        publicaria o preço pior.
+      */
+      const escolha = await melhorPrateleira(db, oferta);
+
+      if (!escolha.usar) {
+        const dela = escolha.melhorSemLastro;
+        console.log(
+          `  ⤫ ${canal.nome}: existe prateleira melhor sem lastro próprio ` +
+            `(R$ ${(dela.preco_leitura_centavos / 100).toFixed(2)} contra ` +
+            `R$ ${(oferta.preco_atual_centavos / 100).toFixed(2)})`,
+        );
+        await db
+          .from("oferta")
+          .update({
+            status: "rejeitada",
+            motivo_rejeicao: "prateleira_melhor_sem_lastro",
+            decidida_em: new Date().toISOString(),
+          })
+          .eq("id", oferta.id);
+        motivos.prateleira_melhor_sem_lastro = (motivos.prateleira_melhor_sem_lastro ?? 0) + 1;
+        reprovadas++;
+        continue;
+      }
+
+      const aPublicar = escolha.usar;
+      const trocou = escolha.trocou;
+
+      // Quando troca, os três números vêm TODOS da prateleira nova.
+      // Misturar o preço de uma com o "de" de outra seria inventar
+      // desconto com dois números verdadeiros que nunca conviveram.
+      const precoFinal = trocou ? aPublicar.preco_leitura_centavos : oferta.preco_atual_centavos;
+      const referenciaFinal = trocou
+        ? aPublicar.preco_original_centavos
+        : oferta.preco_referencia_centavos;
+      const descontoFinal = trocou
+        ? Math.round((1 - precoFinal / referenciaFinal) * 100)
+        : Math.round(Number(oferta.desconto_pct));
+
+      if (trocou) {
+        trocas++;
+        console.log(
+          `  ⇄ prateleira melhor: R$ ${(precoFinal / 100).toFixed(2)} contra ` +
+            `R$ ${(oferta.preco_atual_centavos / 100).toFixed(2)}`,
+        );
+      }
+
+      /*
         O LINK É GERADO AQUI, POR ÚLTIMO, e a posição importa.
 
         Só chega neste ponto o que já passou pelas comportas de
@@ -356,7 +462,7 @@ async function main() {
 
       if (!curto) {
         const { gerados, falhas } = await geraLinks(
-          [anuncio.url_original],
+          [aPublicar.url_original],
           canal.etiqueta_afiliado,
           sessao,
         );
@@ -378,22 +484,22 @@ async function main() {
       const link = { url: curto };
 
       const texto = montaMensagem(modelo, {
-        produto: anuncio.produto?.titulo_canonico ?? "",
-        precoCentavos: oferta.preco_atual_centavos,
-        precoAntesCentavos: oferta.preco_referencia_centavos,
-        descontoPct: Math.round(Number(oferta.desconto_pct)),
-        loja: anuncio.marketplace?.nome ?? "",
-        vendedor: anuncio.loja_oficial ? "Loja oficial" : (anuncio.vendedor ?? ""),
+        produto: aPublicar.produto?.titulo_canonico ?? "",
+        precoCentavos: precoFinal,
+        precoAntesCentavos: referenciaFinal,
+        descontoPct: descontoFinal,
+        loja: aPublicar.marketplace?.nome ?? "",
+        vendedor: aPublicar.loja_oficial ? "Loja oficial" : (aPublicar.vendedor ?? ""),
         janelaDias: oferta.referencia_janela_dias,
         observadoDesde: oferta.detectada_em.slice(0, 10),
-        podeAfirmarMinimo: oferta.pode_afirmar_minimo,
-        gatilho: oferta.gatilho,
-        notaDoCurador: anuncio.produto?.nota_curador,
-        freteGratis: anuncio.frete_gratis,
+        podeAfirmarMinimo: trocou ? false : oferta.pode_afirmar_minimo,
+        gatilho: trocou ? "declarado" : oferta.gatilho,
+        notaDoCurador: aPublicar.produto?.nota_curador,
+        freteGratis: aPublicar.frete_gratis,
         link: link.url,
       });
 
-      const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, fotoValida(anuncio));
+      const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, fotoValida(aPublicar));
 
       // Falha NÃO marca como enviada: a publicação fica pendente com o
       // canal mudo, que é visível, em vez de sumir da fila em silêncio.
@@ -511,7 +617,8 @@ async function main() {
   }
 
   console.log(
-    `\n${publicadas} publicadas · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ${semLink} sem link`,
+    `\n${publicadas} publicadas · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
+      `${semLink} sem link · ${trocas} trocaram de prateleira`,
   );
   if (semLink > 0) {
     console.log("Sem link é quase sempre sessão da Central expirada. Renove e rode de novo.");

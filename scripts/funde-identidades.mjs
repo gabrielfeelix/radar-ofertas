@@ -308,4 +308,97 @@ async function procuraIrmaos(mkt, anuncios, identidadeDe) {
   console.log(`\n${achados} prateleira(s) nova(s) do mesmo produto${SECO ? "  (SECO)" : ""}`);
 }
 
-await main();
+/**
+ * Confere as fusões que já estão no banco e desfaz as erradas.
+ *
+ * POR QUE ELE PRECISOU EXISTIR: a primeira fusão rodou com a chave
+ * frouxa, antes da trava de quantidades e da comparação aos pares. Ela
+ * juntou coisas que não são o mesmo produto, e o estrago ficou gravado
+ * — fundir apaga o produto antigo, então não há como "desfazer" pelo
+ * histórico.
+ *
+ * Enquanto a fusão errada só bagunçava o catálogo, dava para conviver.
+ * A partir do momento em que a publicação TROCA de prateleira pela mais
+ * barata do mesmo produto, uma fusão errada faz o canal anunciar o
+ * preço de um item com o nome de outro. Aí vira urgência.
+ *
+ * Ele separa de novo: cada anúncio que não passa na comparação aos
+ * pares contra o primeiro ganha um produto próprio.
+ */
+async function revisaFusoes(mkt) {
+  const { data: produtos } = await db
+    .from("produto")
+    .select("id, titulo_canonico, nicho_id, chave_identidade, anuncio(id, produto_externo_id)")
+    .eq("operacao_id", mkt.operacao_id);
+
+  const suspeitos = (produtos ?? []).filter(
+    (p) => new Set((p.anuncio ?? []).map((a) => a.produto_externo_id)).size > 1,
+  );
+
+  console.log(`\n${suspeitos.length} produtos com mais de uma prateleira, conferindo`);
+
+  let separados = 0;
+
+  for (const p of suspeitos) {
+    const catalogos = [...new Set((p.anuncio ?? []).map((a) => a.produto_externo_id))].filter(Boolean);
+
+    const fichas = new Map();
+    for (const c of catalogos) {
+      const cat = await api(`products/${c}`);
+      if (cat?.name) fichas.set(c, { atributos: atributosDe(cat), titulo: cat.name });
+    }
+
+    const [base, ...resto] = catalogos;
+    const fichaBase = fichas.get(base);
+    if (!fichaBase) continue;
+
+    for (const c of resto) {
+      const f = fichas.get(c);
+      if (!f) continue;
+      if (saoOMesmoProduto(fichaBase, f)) continue;
+
+      console.log(`  ✂ ${c} não é o mesmo que ${base}`);
+      console.log(`      ${f.titulo.slice(0, 58)}`);
+      console.log(`      ${fichaBase.titulo.slice(0, 58)}`);
+      separados++;
+
+      if (SECO) continue;
+
+      const { data: novo } = await db
+        .from("produto")
+        .insert({
+          operacao_id: mkt.operacao_id,
+          nicho_id: p.nicho_id,
+          titulo_canonico: f.titulo,
+          chave_identidade: chaveDeIdentidade(f.atributos, null, f.titulo)
+            ? `${chaveDeIdentidade(f.atributos, null, f.titulo)}|${c}`
+            : null,
+          atributos: f.atributos,
+        })
+        .select("id")
+        .single();
+
+      if (!novo) continue;
+
+      await db
+        .from("anuncio")
+        .update({ produto_id: novo.id })
+        .eq("produto_id", p.id)
+        .eq("produto_externo_id", c);
+    }
+  }
+
+  console.log(`\n${separados} prateleira(s) separada(s) de volta${SECO ? "  (SECO)" : ""}`);
+}
+
+if (process.argv.includes("--revisa")) {
+  const { data: mkt } = await db
+    .from("marketplace")
+    .select("id, operacao_id")
+    .eq("slug", "mercado_livre")
+    .single();
+  await autentica(mkt.id);
+  await revisaFusoes(mkt);
+} else {
+  await main();
+}

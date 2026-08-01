@@ -156,6 +156,12 @@ Atualizado em 01/08/2026. **Mantenha esta seção viva** — ela é o que uma se
 | A colheita escava o histórico do canal com `?before=` | `telegram-web.ts`, migration 25 |
 | A medida do critério da Fase 1 | views `ofertas_por_dia` e `motivo_de_rejeicao` |
 
+**O link de afiliado é GERADO, nunca montado** (migration 29). Colar `?matt_word=X&matt_tool=Y` numa URL de produto **não paga comissão** — o gerador descarta o nosso parâmetro e cria um `ref=` cifrado, que é onde a atribuição mora. Sete publicações saíram assim antes disso ficar claro, e elas **ficam no banco** como evidência (a constraint é `not valid`).
+
+Não existe API oficial de afiliados: 15 rotas varridas, todas 404. O caminho é `POST /affiliate-program/api/v2/affiliates/createLink`, com a sessão da Central guardada em `credencial_rotativa`. **Ela expira**, e quando expirar nada é publicado — que é o desfecho certo.
+
+**A granularidade do subid ficou decidida, e era a pergunta da Fase 0:** o ML só atribui **por etiqueta**, e etiqueta tem que estar cadastrada (`error_code 109` para qualquer outra). Uma etiqueta por canal. Saber qual *post* vendeu volta com o redirecionador próprio, na Fase 2, e aí o subid vive do nosso lado.
+
 **Três coisas que valem saber antes de tocar em qualquer uma delas:**
 
 1. **`original_price` do ML é frequentemente inflado.** Ele é peneira de entrada, a mensagem **atribui a alegação à loja** (`lastro_declarado`), e desconto acima de 70% é recusado. Nunca o use como o "de" da mensagem por conta própria: é a regra 3.4.

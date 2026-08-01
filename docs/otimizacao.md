@@ -481,3 +481,64 @@ produtos aqui.
 Resultado medido: **28 categorias na descoberta** (eram 12), **15
 nichos** criados para os grupos futuros, e a reclassificação da base
 deixou **zero produtos sem nicho** (eram 131).
+
+---
+
+## 9. A identidade do produto, e o erro que eu cometi diagnosticando
+
+**01/08, fim do dia.** O dono perguntou por que o canal publicou uma
+ração a R$ 130,00 se existia outra a R$ 119,90. Eu respondi que era o
+mesmo saco cadastrado em dois catálogos do Mercado Livre, e propus
+construir a identidade do produto. **A parte do diagnóstico estava
+errada, e o próprio conserto provou.**
+
+### O que era verdade
+
+O `docs/dados.md` sempre disse que `produto` é "a identidade da coisa"
+e `anuncio` é "esse produto numa loja específica". O código chaveava
+`produto` pelo **título do catálogo**, então cada título virava um
+produto nosso e a comparação de preço nunca atravessava entre eles. O
+modelo estava certo no papel e errado na implementação.
+
+### O que era falso
+
+Aquela ração **não é o mesmo produto**. Eu comparei quatro atributos e
+concluí "idênticos". A lista completa diz outra coisa:
+
+```
+PACKAGING_TYPE      Saco    vs   Sachê
+NET_WEIGHT          10 kg   vs   10.1 kg
+NUTRIENTS_SUPPLY    fórmulas diferentes
+```
+
+### A lição, e ela é de método
+
+A primeira versão da chave usava uma **lista branca** de atributos.
+Ela errou três vezes contra o catálogo real, sempre do mesmo jeito:
+
+| Casou errado | Faltava na lista |
+|---|---|
+| Galaxy A17 128GB com 256GB (R$ 925 vs R$ 1.877) | `INTERNAL_MEMORY` |
+| Cabo HDMI 5m com 20m | o comprimento |
+| Essência de Bambu com a de Lavanda | `FRAGRANCE` |
+
+Cada correção consertava o caso visto e deixava o próximo passar. A
+lista virou **preta**: atributo desconhecido agora **separa** em vez de
+ser ignorado.
+
+Mais duas travas: as quantidades do título precisam bater, e a decisão
+final é **aos pares**, olhando os atributos dos dois catálogos — o que
+uma chave calculada com um produto por vez não consegue fazer.
+
+### O resultado, medido
+
+A primeira fusão, rodada com a chave frouxa, juntou 23 produtos. A
+revisão com as regras estritas **separou 27 prateleiras de volta**, e
+sobrou **zero** duplicata real na base.
+
+Ou seja: o mecanismo está construído, testado com 28 casos de dado
+real, e **hoje não encontra nada**. Ele é uma guarda para quando o caso
+aparecer, não uma economia que já está acontecendo.
+
+**Mudaria se:** aparecerem duplicatas de verdade. A view
+`economia_por_identidade` é onde elas apareceriam, e ela está vazia.
