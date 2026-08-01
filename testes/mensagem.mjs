@@ -17,6 +17,7 @@
 
 import {
   afirmaMinimoSemLastro,
+  temTravessao,
   identificacaoEstaEscondida,
   montaMensagem,
   previa,
@@ -224,6 +225,18 @@ confere(
   "sem gatilho, continua decidindo pela série",
   montaMensagem(modeloTres, { ...dados, podeAfirmarMinimo: true }).includes("Menor preço em"),
 );
+
+console.log("\ntravessão, a regra 3.11\n");
+
+/*
+  Travessão em texto de canal tem cara de IA, e canal de oferta vive de
+  parecer gente. Está em teste porque é o tipo de coisa que volta sem
+  ninguém notar, na primeira vez que alguém reescrever um modelo.
+*/
+confere("pega o travessão longo", temTravessao("Caiu de R$ 36 — agora R$ 31"));
+confere("e o curto", temTravessao("Menor preço – nós acompanhamos"));
+confere("hífen comum passa", !temTravessao("anti-dobra, custo-benefício"));
+confere("texto limpo passa", !temTravessao("Caiu agora: era R$ 36, foi para R$ 31."));
 
 // =============================================================
 

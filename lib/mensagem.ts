@@ -147,6 +147,20 @@ const PROIBIDAS = [
  * só é usado quando a série alcança os 14 dias, que é justamente
  * quando a afirmação passa a ter lastro.
  */
+/**
+ * Tem travessão? (regra 3.11)
+ *
+ * Parece implicância e não é: travessão em texto de canal **tem cara
+ * de IA**, e canal de oferta vive de parecer gente. O leitor não sabe
+ * explicar por quê, mas sente, e desconfiança custa a venda.
+ *
+ * Vale só para o que o público lê. Código e documentação seguem
+ * normais.
+ */
+export function temTravessao(texto: string): boolean {
+  return /[—–]/.test(texto);
+}
+
 export function afirmaMinimoSemLastro(texto: string): boolean {
   return PROIBIDAS.some((padrao) => padrao.test(texto));
 }

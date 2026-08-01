@@ -59,6 +59,8 @@ Se você acha que outra tecnologia é melhor, escreva a sugestão em `docs/decis
 
 **3.10 Toda mensagem publicada identifica que é publicidade.** Link de afiliado gera comissão, e conteúdo remunerado é publicidade — o CONAR, o CDC e a própria Shopee dizem isso com todas as letras. A identificação usa `#publi`, `#publicidade`, `#parceriapaga` ou `#conteúdopago`, **aparece de imediato** (nunca escondida no fim, em letra pequena ou perdida entre hashtags), e `#ad` não conta: não é reconhecida pelo público brasileiro. Marcar o perfil da loja também não basta. A Shopee pode pedir suspensão do conteúdo de quem não cumpre. Detalhe e fontes em `docs/pesquisa-operacao.md`.
 
+**3.11 Nunca use travessão no que vai para o canal.** Nada de `—` nem `–` em mensagem publicada, nota do curador ou modelo. **Motivo: tem cara de texto de IA**, e canal de oferta vive de parecer gente. O leitor não sabe explicar por quê, mas sente, e desconfiança em canal de oferta custa a venda. Use vírgula, ponto ou dois-pontos. Vale só para o que o público lê: código, comentário e documentação seguem normais.
+
 ---
 
 ## 4. Fase atual e escopo
@@ -325,6 +327,26 @@ aceita várias URLs de uma vez por etiqueta: o sistema monta a lista de
 aprovados, alguém cola, e devolve os links. Funciona hoje, com um passo
 manual por lote. Vale medir quanto tempo custa de verdade antes de
 descartar.
+
+**0. De onde os concorrentes tiram cupom.** Eles publicam cupom com
+formato exato e repetido (`FULL3107`, `TODOSITE31072`, sempre com
+percentual, mínimo e teto), o que sugere fonte estruturada e não
+garimpo manual. **A API do Mercado Livre não é essa fonte:** varridos
+9 endpoints plausíveis em 01/08 (`marketplace/coupons`,
+`users/me/coupons`, `loyalty/coupons`, `sites/MLB/promotions`,
+`affiliates/coupons` e outros), **todos 404**. Não é permissão, é
+ausência.
+
+O que ainda não foi olhado, e é onde eu procuraria: **a aba "Cupons" do
+próprio site do ML** (existe no menu, ao lado de Ofertas) e a **página
+de cupons da Central de Afiliados**. Se a lista vier de página pública,
+lê-se como a colheita de canais lê `t.me/s/`. E a **Shopee Open API
+documenta endpoint de cupom de afiliado**, o que resolveria o lado
+dela quando o cadastro aprovar.
+
+**Atalho que já funciona hoje, e é o mais barato:** os cupons aparecem
+nos canais que a colheita já lê. Extrair código de cupom do texto
+colhido é trabalho de regex, não de credencial.
 
 **3. Configurar o bot do Telegram.** Criar no `@BotFather`, adicionar
 como administrador do canal, e o sistema publica por `sendMessage`. A
