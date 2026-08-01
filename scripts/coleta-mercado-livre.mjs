@@ -65,8 +65,9 @@ if (!url || !chave) {
   console.error("Falta NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY.");
   process.exit(1);
 }
-if (!clientId || !clientSecret || !refreshToken) {
-  console.error("Faltam ML_CLIENT_ID, ML_CLIENT_SECRET ou ML_REFRESH_TOKEN no .env.");
+// O refresh token pode vir só do banco: no agendador não há `.env`.
+if (!clientId || !clientSecret) {
+  console.error("Faltam ML_CLIENT_ID ou ML_CLIENT_SECRET.");
   process.exit(1);
 }
 
@@ -80,12 +81,14 @@ const db = createClient(url, chave, { auth: { persistSession: false } });
  * lugar que sobreviva ao processo, senão a próxima execução fria
  * falha. Aqui ele é devolvido junto, e o chamador decide.
  */
-async function pegaToken() {
+async function pegaToken(guardado) {
+  // O do banco vence o do arquivo: no agendador o `.env` nem existe,
+  // e na máquina o do arquivo envelhece assim que o agendador roda.
   const corpo = new URLSearchParams({
     grant_type: "refresh_token",
     client_id: clientId,
     client_secret: clientSecret,
-    refresh_token: refreshToken,
+    refresh_token: guardado ?? refreshToken,
   });
 
   const r = await fetch(`${API}/oauth/token`, {
@@ -114,15 +117,31 @@ let ACESSO = "";
  * Function, GitHub Actions) ele avisa em vez de morrer calado: lá o
  * token precisa de outro lugar para viver, e isso continua em aberto.
  */
-function guardaRefresh(novo) {
-  const alvo = process.execArgv.find((a) => a.startsWith("--env-file="))?.slice(11) ?? ".env";
-  try {
-    const antes = readFileSync(alvo, "utf8");
-    writeFileSync(alvo, antes.replace(/^ML_REFRESH_TOKEN=.*$/m, `ML_REFRESH_TOKEN=${novo}`));
-    console.log(`token rotacionado — gravei o novo em ${alvo}`);
-  } catch {
-    console.log(`\n⚠️  O ML rotacionou o refresh token e não consegui gravar em ${alvo}.`);
-    console.log(`   Guarde à mão, senão a próxima execução falha:\n   ML_REFRESH_TOKEN=${novo}\n`);
+async function guardaRefresh(novo, marketplaceId) {
+  // O banco primeiro: é ele que sobrevive ao agendador, onde cada
+  // execução começa de um clone limpo.
+  const { error } = await db
+    .from("credencial_rotativa")
+    .update({ valor: novo, atualizado_em: new Date().toISOString() })
+    .eq("marketplace_id", marketplaceId)
+    .eq("chave", "refresh_token");
+
+  if (error) {
+    console.log(`\n⚠️  Não gravei o token novo no banco: ${error.message}`);
+    console.log(`   Guarde à mão, senão a próxima execução falha:\n   ${novo}\n`);
+    return;
+  }
+
+  // E o .env também, quando existir, para o desenvolvimento na
+  // máquina não sair de sincronia com o banco.
+  const alvo = process.execArgv.find((a) => a.startsWith("--env-file="))?.slice(11);
+  if (alvo) {
+    try {
+      const antes = readFileSync(alvo, "utf8");
+      writeFileSync(alvo, antes.replace(/^ML_REFRESH_TOKEN=.*$/m, `ML_REFRESH_TOKEN=${novo}`));
+    } catch {
+      /* arquivo somente leitura não é motivo para parar: o banco já tem. */
+    }
   }
 }
 
@@ -161,16 +180,25 @@ async function melhorOferta(produtoId) {
 }
 
 async function main() {
-  const { acesso, refreshNovo } = await pegaToken();
-  ACESSO = acesso;
-  if (refreshNovo && refreshNovo !== refreshToken) guardaRefresh(refreshNovo);
-
   const { data: operacao } = await db.from("operacao").select("id").limit(1).single();
   const { data: mkt } = await db
     .from("marketplace")
     .select("id")
     .eq("slug", "mercado_livre")
     .single();
+
+  const { data: credencial } = await db
+    .from("credencial_rotativa")
+    .select("valor")
+    .eq("marketplace_id", mkt.id)
+    .eq("chave", "refresh_token")
+    .maybeSingle();
+
+  const { acesso, refreshNovo } = await pegaToken(credencial?.valor);
+  ACESSO = acesso;
+  if (refreshNovo && refreshNovo !== (credencial?.valor ?? refreshToken)) {
+    await guardaRefresh(refreshNovo, mkt.id);
+  }
   const { data: nichos } = await db.from("nicho").select("id, slug");
 
   const porSlug = new Map((nichos ?? []).map((n) => [n.slug, n.id]));

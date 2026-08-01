@@ -1,0 +1,55 @@
+name: Coleta horária
+
+# POR QUE DE HORA EM HORA, E NÃO UMA VEZ AO DIA
+#
+# Canal de oferta é operação de tempo real. O comprador entra no
+# Telegram e vê promoção o dia inteiro; quem administra publica quando
+# aparece, não de manhã. Coletar uma vez por dia perde tudo que cai à
+# tarde — e "o que caiu agora" é justamente o que se publica.
+#
+# Isto NÃO polui a série histórica: `registra_preco` guarda um ponto
+# por dia, o menor do dia. Rodar de hora em hora só torna esse ponto
+# mais preciso, e é o que dá material para o gatilho de queda.
+#
+# A rotina diária continua existindo e faz outra coisa: manutenção,
+# expurgo e detecção de oferta por série.
+
+on:
+  schedule:
+    # De hora em hora, entre 8h e 23h de São Paulo (11–02 UTC). Fora
+    # disso ninguém publica, e coletar de madrugada só gasta cota.
+    - cron: "0 11-23,0-2 * * *"
+  workflow_dispatch:
+
+# Duas execuções ao mesmo tempo brigariam pelo refresh token: o ML
+# invalida o anterior a cada renovação, então a segunda derrubaria a
+# primeira e o token gravado ficaria sendo o perdedor.
+concurrency:
+  group: coleta-mercado-livre
+  cancel-in-progress: false
+
+jobs:
+  coleta:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Instala o cliente do Supabase
+        run: npm install --no-save @supabase/supabase-js
+
+      - name: Coleta de preços do Mercado Livre
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ML_CLIENT_ID: ${{ secrets.ML_CLIENT_ID }}
+          ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+          # Sem ML_REFRESH_TOKEN de propósito: ele vive em
+          # `credencial_rotativa`, no banco. Aqui cada execução começa
+          # de um clone limpo, então token em arquivo ou em secret
+          # ficaria velho na primeira renovação e a execução seguinte
+          # falharia calada, dizendo só que pulou a loja.
+        run: node scripts/coleta-mercado-livre.mjs
