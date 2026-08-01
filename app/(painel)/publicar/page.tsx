@@ -386,7 +386,7 @@ function CartaoDeEnvio({
   // é real desde já, e é ele que liga a venda ao canal.
   const texto = montaMensagem(modelo, {
     ...publicacao.dadosDaMensagem,
-    link: `${process.env.URL_BASE_REDIRECIONADOR ?? "https://link.pendente"}/${publicacao.subid}`,
+    link: publicacao.link.url,
   });
 
   return (

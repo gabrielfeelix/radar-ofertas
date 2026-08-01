@@ -1,5 +1,6 @@
 import "server-only";
 
+import { montaLinkDeAfiliado, type LinkDeAfiliado } from "@/lib/afiliado";
 import { buscaCanal, canais, type Canal } from "@/lib/distribuicao";
 import type { DadosDaMensagem } from "@/lib/mensagem";
 import { supabaseServidor } from "@/lib/supabase/servidor";
@@ -51,6 +52,14 @@ export type Publicacao = {
   /** Preço agora, do último ponto da série. Diferente = a oferta mudou embaixo. */
   precoAgoraCentavos: number;
   subid: string;
+  /**
+   * O link a publicar, já com o subid dentro.
+   *
+   * Vem montado daqui e não da tela porque é o campo que carrega a
+   * comissão: uma tela que o remontasse por conta própria seria a
+   * segunda implementação da coisa que paga o projeto.
+   */
+  link: LinkDeAfiliado;
   enviadaEm: string | null;
   origem: OrigemDoEnvio | null;
   cancelada: boolean;
@@ -113,7 +122,7 @@ type LinhaDePublicacao = {
     anuncio: {
       url_original: string;
       vendedor: string | null;
-      marketplace: { nome: string } | null;
+      marketplace: { nome: string; slug: string } | null;
       produto: { titulo_canonico: string; nicho: { slug: string } | null } | null;
     } | null;
   } | null;
@@ -126,7 +135,7 @@ const SELECAO = `
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em,
     anuncio:anuncio_id (
       url_original, vendedor,
-      marketplace:marketplace_id ( nome ),
+      marketplace:marketplace_id ( nome, slug ),
       produto:produto_id ( titulo_canonico, nicho:nicho_id ( slug ) )
     )
   )
@@ -200,6 +209,11 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
       precoNaFilaCentavos: linha.preco_na_fila_centavos,
       precoAgoraCentavos: precoAgora.get(oferta.anuncio_id) ?? oferta.preco_atual_centavos,
       subid: linha.subid,
+      link: montaLinkDeAfiliado(
+        anuncio?.url_original ?? "",
+        linha.subid,
+        anuncio?.marketplace?.slug ?? "",
+      ),
       enviadaEm: linha.estado === "enviada" ? linha.enviada_em : null,
       origem: linha.estado === "enviada" ? (linha.origem as OrigemDoEnvio) : null,
       cancelada: linha.estado === "cancelada",

@@ -310,7 +310,10 @@ E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm veri
 
 ### Para testar depois — anotado em 01/08/2026
 
-**1. `matt_word` numa URL normal, sem o gerador.** Colar
+**1. `matt_word` numa URL normal, sem o gerador — JÁ IMPLEMENTADO, falta provar.**
+`lib/afiliado.ts` monta o link nesse formato e a fila de publicação já o
+usa. **Faça a compra de teste por um link saído dele**, não por um feito
+à mão: assim a prova valida o código de produção. Colar
 `?matt_word=radarpet&matt_tool=66367903` numa URL comum de produto do ML.
 Se o Mercado Livre honrar, o sistema publica **100% sozinho**; se não,
 cada lote de links passa pelo gerador do painel. É a diferença entre
