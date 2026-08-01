@@ -358,10 +358,10 @@ function reputacaoDoVendedor(usuario) {
  * É o trabalho que precisa caber de hora em hora, e por isso ele lê em
  * lotes e pelo produto de catálogo, que é uma chamada por anúncio.
  */
-async function relePrecos(db, mktId) {
+async function relePrecos(db, mktId, porDominio) {
   const { data: anuncios } = await db
     .from("anuncio")
-    .select("id, url_original")
+    .select("id, url_original, produto_id, dominio_externo, produto:produto_id ( nicho_id )")
     .eq("marketplace_id", mktId)
     .eq("ativo", true)
     .order("ultima_coleta_em", { ascending: true, nullsFirst: true })
@@ -369,6 +369,7 @@ async function relePrecos(db, mktId) {
 
   let lidos = 0;
   let quedas = 0;
+  let classificados = 0;
 
   for (const a of anuncios ?? []) {
     // O id do produto de catálogo mora na própria URL que guardamos.
@@ -389,9 +390,43 @@ async function relePrecos(db, mktId) {
 
       await db.rpc("registra_preco", { p_anuncio_id: a.id, p_preco_centavos: centavos });
       await db.rpc("registra_leitura", { p_anuncio_id: a.id, p_preco_centavos: centavos });
+      /*
+        CLASSIFICA O QUE CHEGOU SEM NICHO, e é aqui que a colheita fica
+        segura.
+
+        Anúncio vindo de canal de terceiro herda o nicho da FONTE, o
+        que só funciona em canal de nicho único: "canal de pet traz
+        produto de pet". Canal de oferta genérico traz de tudo, e sem
+        isto cadastrar um deles ressuscitaria o defeito que a Frente B
+        acabou de matar, por outra porta.
+
+        A chamada extra a `products/{id}` acontece UMA VEZ por anúncio,
+        e só enquanto faltar domínio ou nicho. Fazê-la sempre dobraria
+        o custo da releitura horária para reconfirmar o que não muda.
+      */
+      const precisaClassificar = !a.dominio_externo || a.produto?.nicho_id == null;
+      let dominio = a.dominio_externo ?? null;
+
+      if (precisaClassificar) {
+        const p = await api(`products/${produtoId}`).catch(() => null);
+        dominio = p?.domain_id ?? dominio;
+
+        if (dominio && a.produto?.nicho_id == null && porDominio?.has(dominio)) {
+          const nicho = porDominio.get(dominio);
+          if (nicho) {
+            await db.from("produto").update({ nicho_id: nicho }).eq("id", a.produto_id);
+            classificados++;
+          }
+        }
+      }
+
       await db
         .from("anuncio")
-        .update({ ultima_coleta_em: new Date().toISOString(), ...promocaoDeclarada(oferta) })
+        .update({
+          ultima_coleta_em: new Date().toISOString(),
+          dominio_externo: dominio ?? undefined,
+          ...promocaoDeclarada(oferta),
+        })
         .eq("id", a.id);
 
       if (antes?.preco_leitura_centavos && centavos < antes.preco_leitura_centavos) quedas++;
@@ -401,7 +436,9 @@ async function relePrecos(db, mktId) {
     }
   }
 
-  console.log(`\nreleitura: ${lidos} anúncios · ${quedas} com preço menor que antes`);
+  console.log(
+    `\nreleitura: ${lidos} anúncios · ${quedas} com preço menor que antes · ${classificados} ganharam nicho`,
+  );
 }
 
 async function main() {
@@ -654,7 +691,7 @@ async function main() {
   }
 
   // E o que já estava no banco. É daqui que sai a queda.
-  await relePrecos(db, mkt.id);
+  await relePrecos(db, mkt.id, porDominio);
   if (problemas.length > 0) {
     console.log(`\n${problemas.length} problema(s):`);
     for (const p of problemas.slice(0, 10)) console.log(`  ${p}`);

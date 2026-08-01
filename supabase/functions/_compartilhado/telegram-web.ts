@@ -22,22 +22,113 @@ export type PostDoCanal = {
 
 const ENDERECO_BASE = "https://t.me/s";
 
-export async function leCanalPublico(identificador: string): Promise<PostDoCanal[]> {
-  const resposta = await fetch(`${ENDERECO_BASE}/${encodeURIComponent(identificador)}`, {
-    headers: {
-      // Sem isto o Telegram devolve a página de convite em vez do
-      // histórico. É o mesmo cabeçalho de um navegador comum.
-      "User-Agent":
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
-      "Accept-Language": "pt-BR,pt;q=0.9",
-    },
-  });
+const CABECALHOS = {
+  // Sem isto o Telegram devolve a página de convite em vez do
+  // histórico. É o mesmo cabeçalho de um navegador comum.
+  "User-Agent":
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36",
+  "Accept-Language": "pt-BR,pt;q=0.9",
+};
 
-  if (!resposta.ok) {
-    throw new Error(`t.me devolveu HTTP ${resposta.status} para @${identificador}`);
+export type OpcoesDeLeitura = {
+  /**
+   * Quantas páginas voltar no máximo. Uma página são ~20 posts.
+   *
+   * É orçamento, não meta: a leitura para sozinha quando alcança
+   * `ateOPost` ou quando o canal acaba. Existe para que um canal que
+   * publica vinte posts por hora não consuma a execução inteira.
+   */
+  paginas?: number;
+  /** Começa antes deste post, em vez do topo. É por onde a escavação continua. */
+  antesDe?: number | null;
+  /** Para de voltar ao alcançar este post. É o que a atualização usa. */
+  ateOPost?: number | null;
+};
+
+/**
+ * Lê um canal público, voltando no tempo enquanto valer a pena.
+ *
+ * POR QUE PAGINAR, e é a diferença entre ler um canal e ter o
+ * histórico dele: `t.me/s/<canal>` mostra só os ~20 posts mais
+ * recentes, e a versão anterior desta função parava aí. Num canal que
+ * publica vinte posts por hora, isso é uma hora de histórico.
+ *
+ * O Telegram aceita `?before=<id>` e devolve os 20 anteriores.
+ * Medido em 01/08 contra `t.me/s/promobit`: oito páginas seguidas, sem
+ * parar, chegando a dois dias atrás. Cada post traz data e preço, que
+ * é o que transforma canal alheio em série de referência.
+ *
+ * Continua sem conta nossa envolvida: é a mesma página que qualquer
+ * pessoa abre no navegador, então não há conta para banir.
+ */
+export async function leCanalPublico(
+  identificador: string,
+  opcoes: OpcoesDeLeitura = {},
+): Promise<PostDoCanal[]> {
+  const teto = Math.max(1, opcoes.paginas ?? 1);
+  const colhidos = new Map<number, PostDoCanal>();
+  let antes = opcoes.antesDe ?? null;
+
+  for (let pagina = 0; pagina < teto; pagina++) {
+    const endereco = `${ENDERECO_BASE}/${encodeURIComponent(identificador)}${
+      antes ? `?before=${antes}` : ""
+    }`;
+
+    const resposta = await fetch(endereco, { headers: CABECALHOS });
+    if (!resposta.ok) {
+      // A primeira página falhando é problema; falhar no meio da
+      // escavação não é, e devolver o que já veio vale mais que perder
+      // a passada inteira.
+      if (pagina === 0) {
+        throw new Error(`t.me devolveu HTTP ${resposta.status} para @${identificador}`);
+      }
+      break;
+    }
+
+    const html = await resposta.text();
+
+    /*
+      QUEM O TELEGRAM SERVIU DE VERDADE.
+
+      Não é paranoia: das oito fontes cadastradas, DUAS não eram canais
+      distintos. `t.me/s/promobit` devolve o conteúdo de
+      `ofertasdecomputador`, e `t.me/s/chinasuperofertas` devolve o de
+      `nerdofertas` — nome antigo, redirecionamento, ou canal que trocou
+      de handle. A página não avisa: responde 200 com posts perfeitos.
+
+      O custo de não conferir é duplo e invisível: metade do orçamento
+      de colheita lendo o mesmo canal duas vezes, e a contagem de "em
+      quantos canais este produto apareceu" inflada, que é justamente o
+      sinal que `referencia_alegada` existe para dar.
+
+      Falhar alto é melhor que adivinhar: renomear a fonte sozinho
+      esconderia que o cadastro está errado.
+    */
+    const servido = html.match(/data-post="([^"/]+)\//)?.[1];
+    if (servido && servido.toLowerCase() !== identificador.toLowerCase()) {
+      throw new Error(
+        `@${identificador} devolve o conteúdo de @${servido}. Fonte duplicada ou canal renomeado.`,
+      );
+    }
+
+    const daPagina = extraiPosts(html);
+    if (daPagina.length === 0) break;
+
+    for (const p of daPagina) colhidos.set(p.id, p);
+
+    const menor = Math.min(...daPagina.map((p) => p.id));
+
+    // Alcançou o que já conhecíamos: daqui para trás é repetição.
+    if (opcoes.ateOPost != null && menor <= opcoes.ateOPost) break;
+
+    // O canal não andou para trás. Sem esta guarda, um canal curto
+    // devolveria a mesma página até o teto e gastaria requisição à toa.
+    if (antes != null && menor >= antes) break;
+
+    antes = menor;
   }
 
-  return extraiPosts(await resposta.text());
+  return [...colhidos.values()].sort((a, b) => a.id - b.id);
 }
 
 /**

@@ -288,7 +288,12 @@ export type FonteDescobertaLinha = {
   nicho_id: string | null;
   ativo: boolean;
   ultima_leitura_em: string | null;
+  /** A borda de cima: o post mais recente já lido. */
   ultimo_post_id: number | null;
+  /** A borda de baixo: o post mais antigo já lido. Daqui a escavação continua. */
+  primeiro_post_id: number | null;
+  /** Verdadeiro quando o canal não devolve mais nada para trás. */
+  escavacao_concluida: boolean;
   criado_em: string;
   atualizado_em: string;
 };

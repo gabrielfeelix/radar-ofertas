@@ -36,6 +36,26 @@ const RESOLUCOES_SIMULTANEAS = 3;
 /** Teto de links por canal, para uma mensagem cheia de links não dominar a execução. */
 const LINKS_POR_CANAL = 60;
 
+/**
+ * Páginas de ~20 posts que a ATUALIZAÇÃO pode voltar.
+ *
+ * Uma só bastava quando o canal publicava devagar. Canal de oferta
+ * grande publica vinte posts por hora, e entre duas execuções da
+ * rotina cabe mais de uma página: com teto 1, tudo que passasse disso
+ * era perdido em silêncio, e a perda não aparecia em lugar nenhum.
+ */
+const PAGINAS_ATUALIZANDO = 4;
+
+/**
+ * Páginas que a ESCAVAÇÃO desce por passada, por canal.
+ *
+ * Escavar é trabalho de fundo e não tem pressa: o histórico já
+ * aconteceu e não vai a lugar nenhum. Descer devagar em toda passada
+ * chega mais fundo, ao longo do dia, do que uma varredura grande que
+ * estoura o tempo da função.
+ */
+const PAGINAS_ESCAVANDO = 6;
+
 Deno.serve(async (req: Request) => {
   const segredoEsperado = Deno.env.get("COLETA_SEGREDO");
   if (!segredoEsperado) {
@@ -57,7 +77,9 @@ Deno.serve(async (req: Request) => {
     // direto na tabela, e `mencao.operacao_id` é NOT NULL. Só o
     // caminho feliz passa por `registra_mencao`, que resolve a
     // operação sozinha por ser security definer.
-    .select("id, operacao_id, identificador, nome, tipo_leitura, ultimo_post_id")
+    .select(
+      "id, operacao_id, identificador, nome, tipo_leitura, ultimo_post_id, primeiro_post_id, escavacao_concluida",
+    )
     .eq("ativo", true)
     .eq("tipo_leitura", "web_publica")
     .order("ultima_leitura_em", { ascending: true, nullsFirst: true })
@@ -72,6 +94,7 @@ Deno.serve(async (req: Request) => {
     posts_vistos: 0,
     links_candidatos: 0,
     anuncios_novos: 0,
+    escavados: 0,
     ja_conhecidos: 0,
     descartados: 0,
     falhas: [] as string[],
@@ -81,20 +104,82 @@ Deno.serve(async (req: Request) => {
   for (const fonte of fontes ?? []) {
     let posts: PostDoCanal[];
 
+    /*
+      DUAS LEITURAS POR CANAL, e elas respondem perguntas diferentes.
+
+      A primeira ATUALIZA: desce do topo até alcançar o que já
+      conhecemos. É o que traz a oferta de agora.
+
+      A segunda ESCAVA: continua de onde a passada anterior parou,
+      indo para trás. É o que constrói o histórico, e foi o pedido do
+      dono: "foi postado na semana passada com o valor de oitocentos
+      reais, e agora até por setecentos".
+
+      Separadas de propósito. Juntas, um canal com muito atraso
+      consumiria o orçamento inteiro atualizando e nunca escavaria, ou
+      o contrário: o histórico chegaria e a oferta de hoje se perderia.
+    */
     try {
-      posts = await leCanalPublico(fonte.identificador);
+      posts = await leCanalPublico(fonte.identificador, {
+        paginas: PAGINAS_ATUALIZANDO,
+        ateOPost: fonte.ultimo_post_id,
+      });
     } catch (erro) {
       resumo.falhas.push(`@${fonte.identificador}: ${(erro as Error).message}`);
       await marcaLeitura(db, fonte.id, fonte.ultimo_post_id);
       continue;
     }
 
+    let fundoNovo: number | null = fonte.primeiro_post_id ?? null;
+    let acabou = fonte.escavacao_concluida ?? false;
+
+    if (!acabou) {
+      try {
+        const antigos = await leCanalPublico(fonte.identificador, {
+          paginas: PAGINAS_ESCAVANDO,
+          antesDe: fonte.primeiro_post_id ?? null,
+        });
+
+        const menor = antigos.length > 0 ? Math.min(...antigos.map((p) => p.id)) : null;
+
+        // Não desceu nada: ou o canal acabou, ou a preview dele para
+        // aqui. Nos dois casos insistir é gastar requisição por nada.
+        if (menor === null || (fonte.primeiro_post_id != null && menor >= fonte.primeiro_post_id)) {
+          acabou = true;
+        } else {
+          fundoNovo = menor;
+        }
+
+        posts = [...antigos, ...posts];
+      } catch {
+        // Escavação é trabalho de fundo: falhar nela não pode custar a
+        // atualização, que é a parte que traz a oferta de hoje.
+      }
+    }
+
     resumo.canais_lidos++;
 
-    // Só o que ainda não foi visto. Sem isto, cada passada
-    // reprocessaria a página inteira e gastaria requisição à toa.
-    const novos = posts.filter((p) => p.id > (fonte.ultimo_post_id ?? 0));
+    /*
+      O que ainda não foi visto, e agora são DOIS lados.
+
+      A versão anterior era `p.id > ultimo_post_id`, e ela sozinha
+      jogaria fora exatamente o que a escavação acabou de trazer: post
+      antigo tem id MENOR que o último lido, então cairia no filtro e a
+      escavação inteira viraria requisição gasta à toa.
+
+      O que já foi processado é a faixa entre as duas bordas. Fora
+      dela, dos dois lados, é novidade.
+      Sem borda de baixo ainda, só a de cima manda.
+    */
+    const bordaDeCima = fonte.ultimo_post_id ?? 0;
+    const bordaDeBaixo = fonte.primeiro_post_id ?? null;
+
+    const novos = posts.filter(
+      (p) => p.id > bordaDeCima || (bordaDeBaixo != null && p.id < bordaDeBaixo),
+    );
+
     resumo.posts_vistos += novos.length;
+    resumo.escavados += novos.filter((p) => p.id < bordaDeCima).length;
 
     const candidatos: Array<{ post: PostDoCanal; url: string }> = [];
     for (const post of novos) {
@@ -177,7 +262,10 @@ Deno.serve(async (req: Request) => {
     });
 
     const ultimoPost = posts.reduce((maior, p) => Math.max(maior, p.id), fonte.ultimo_post_id ?? 0);
-    await marcaLeitura(db, fonte.id, ultimoPost);
+    await marcaLeitura(db, fonte.id, ultimoPost, {
+      primeiro_post_id: fundoNovo,
+      escavacao_concluida: acabou,
+    });
 
     resumo.por_canal.push({
       canal: fonte.identificador,
@@ -224,10 +312,18 @@ async function marcaLeitura(
   db: ReturnType<typeof createClient>,
   fonteId: string,
   ultimoPostId: number | null,
+  escavacao?: { primeiro_post_id: number | null; escavacao_concluida: boolean },
 ) {
   await db
     .from("fonte_descoberta")
-    .update({ ultima_leitura_em: new Date().toISOString(), ultimo_post_id: ultimoPostId })
+    .update({
+      ultima_leitura_em: new Date().toISOString(),
+      ultimo_post_id: ultimoPostId,
+      // As duas bordas são gravadas juntas porque são lidas juntas na
+      // passada seguinte: `ultimo_post_id` diz até onde já subimos e
+      // `primeiro_post_id` diz de onde continuar descendo.
+      ...(escavacao ?? {}),
+    })
     .eq("id", fonteId);
 }
 
