@@ -1000,7 +1000,8 @@ async function main() {
           título, que é o comportamento antigo. Perde-se a comparação
           entre catálogos, não o produto.
         */
-        const identidade = chaveDeIdentidade(atributosDe(produto), produto.domain_id, produto.name);
+        const atributos = atributosDe(produto);
+        const identidade = chaveDeIdentidade(atributos, produto.domain_id, produto.name);
 
         let { data: linha } = identidade
           ? await db
@@ -1049,12 +1050,39 @@ async function main() {
               nicho_id: nichoDoProduto,
               titulo_canonico: produto.name,
               chave_identidade: identidade,
+              /*
+                OS ATRIBUTOS ERAM CALCULADOS E JOGADOS FORA. A migration
+                31 criou a coluna para a comparação de irmãos, e quem a
+                preenchia era só `funde-identidades.mjs`, que roda à
+                parte — por isso 471 de 1.714 produtos a tinham.
+
+                Custou o Radar Perfumes (masc): o filtro da migration 43
+                exige `GENDER`, os sete perfumes do catálogo estavam com
+                `atributos` nulo, e o canal ficaria mudo para sempre. O
+                dado vem nesta mesma resposta, duas linhas acima.
+              */
+              atributos,
             })
             .select("id")
             .single();
           if (error) throw new Error(`produto: ${error.message}`);
           linha = novo;
           produtosNovos++;
+        } else {
+          /*
+            Produto que já existe também ganha os atributos, e só quando
+            faltam. Sem isto, os 1.243 produtos que entraram antes desta
+            correção continuariam sem eles para sempre: a descoberta pula
+            quem já conhece, e nunca voltaria a olhar.
+
+            `is("atributos", null)` faz a escrita acontecer no máximo uma
+            vez por produto.
+          */
+          await db
+            .from("produto")
+            .update({ atributos })
+            .eq("id", linha.id)
+            .is("atributos", null);
         }
 
         // O anúncio: marketplace + sku_externo é o que impede a série
