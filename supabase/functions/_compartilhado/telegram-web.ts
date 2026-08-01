@@ -269,6 +269,132 @@ export function extraiPrecoAlegado(texto: string): number | null {
   return valores.length > 0 ? Math.min(...valores) : null;
 }
 
+/** Um cupom lido do texto de um canal. */
+export type CupomLido = {
+  codigo: string;
+  /** Sempre percentual: o padrão do ML não emite cupom de valor fixo. */
+  percentual: number;
+  minimoCentavos: number;
+  tetoCentavos: number | null;
+  /** O dia e o mês que o próprio código carrega. */
+  dia: number;
+  mes: number;
+};
+
+/**
+ * Cupons do Mercado Livre no texto de um canal.
+ *
+ * DE ONDE VEM A CERTEZA DO FORMATO: a pesquisa de 01/08 leu três canais
+ * concorrentes ao vivo, em dois dias diferentes, e o padrão se repetiu
+ * sem exceção (`docs/pesquisa/cupons-de-onde-vem.md`):
+ *
+ *   31/07  FULL3107 · DECORELETRO3107 · LIVROSJOGOS3107
+ *   01/08  LOJASOFICIAIS0108 · MODAEBELEZA0108
+ *
+ * É `<CATEGORIA><DDMM>`: o prefixo é o nome da campanha, o sufixo é o
+ * dia e o mês sem separador. Campanha de categoria criada em lote pelo
+ * próprio ML, todo dia, e **por isso o cupom traz a própria validade
+ * dentro do código** — que resolve o problema que o comentário da
+ * tabela `cupom` já apontava: *"cupom sem prazo é o que fica publicado
+ * depois de morrer"*.
+ *
+ * A ÂNCORA É O SUFIXO DE DATA, e é ela que torna isto seguro. Procurar
+ * "palavra em maiúscula" acharia PROMOÇÃO, OFERTA, FRETE e metade dos
+ * títulos de produto. Exigir quatro dígitos que formem um dia e um mês
+ * válidos derruba quase todo falso positivo sem precisar de lista.
+ *
+ * **SÓ MERCADO LIVRE, e isso é contratual, não técnico.** O termo do
+ * Programa de Afiliados da Shopee diz: *"A divulgação ou
+ * compartilhamento de cupons nominais de afiliados terceiros pelo
+ * Afiliado será considerada violação"*, com rescisão imediata e
+ * retenção de comissão já ganha. Os códigos da Shopee também não
+ * seguem este formato (são leetspeak, tipo `D1AD0SP41S`), então o
+ * filtro de data já os exclui sozinho — mas quem ler isto depois
+ * precisa saber que a exclusão é deliberada.
+ */
+export function extraiCupons(texto: string): CupomLido[] {
+  // Primeiro só as posições. O percentual e os valores precisam saber
+  // onde o cupom VIZINHO começa, senão uma mensagem com três cupons
+  // seguidos lê o desconto de um e atribui ao outro — que é pior que
+  // não achar nada, porque promete no canal um número que não existe.
+  const candidatos: { codigo: string; dia: number; mes: number; de: number; ate: number }[] = [];
+
+  for (const m of texto.matchAll(/\b([A-Z][A-Z0-9]{2,24}?)(\d{2})(\d{2})\b/g)) {
+    const [inteiro, prefixo, dd, mm] = m;
+    const dia = Number(dd);
+    const mes = Number(mm);
+
+    // O que segura o falso positivo: 3107 é 31/07, mas 9999 não é
+    // data nenhuma e 3113 tem mês treze.
+    if (dia < 1 || dia > 31 || mes < 1 || mes > 12) continue;
+    // Prefixo precisa ter letra suficiente para ser nome de campanha.
+    if (!/[A-Z]{3}/.test(prefixo)) continue;
+
+    const de = m.index ?? 0;
+    candidatos.push({ codigo: inteiro, dia, mes, de, ate: de + inteiro.length });
+  }
+
+  const achados = new Map<string, CupomLido>();
+
+  for (let i = 0; i < candidatos.length; i += 1) {
+    const c = candidatos[i];
+
+    /*
+      DUAS JANELAS, E A DE FRENTE VENCE.
+
+      O formato real escreve o código e depois os números:
+
+        LOJASOFICIAIS0108
+        15% OFF · mínimo R$ 29 · até R$ 20
+
+      Uma janela única em volta do código lia, para o segundo cupom de
+      uma mensagem com três, o percentual do primeiro — e prometer no
+      canal um desconto que não existe é pior que não achar o cupom.
+
+      Então procura primeiro para a frente, até onde o próximo cupom
+      começa. Só se não houver nada ali é que olha para trás, que é o
+      caso de "15% OFF com o cupom LOJASOFICIAIS0108".
+    */
+    const fim = i + 1 < candidatos.length ? candidatos[i + 1].de : Math.min(texto.length, c.ate + 220);
+    const adiante = texto.slice(c.ate, fim);
+    const atras = texto.slice(i > 0 ? candidatos[i - 1].ate : Math.max(0, c.de - 160), c.de);
+
+    const pct = adiante.match(/(\d{1,2})\s*%/) ?? atras.match(/(\d{1,2})\s*%/);
+    if (!pct) continue; // sem percentual não há o que prometer
+
+    const janela = adiante.includes("%") ? adiante : atras;
+    // As redações vieram dos canais reais, não de imaginação: o
+    // "(Limite de R$ 20)" do `canaldeofertasecupons` não era coberto
+    // por "limitado a" e o teto saía nulo.
+    const MINIMO = /(?:m[ií]nim[ao]|acima de|a partir de|compras? de)/i;
+    const TETO = /(?:at[ée]|limite de|limitad[ao] a|teto|m[áa]ximo de)/i;
+
+    achados.set(c.codigo, {
+      codigo: c.codigo,
+      percentual: Number(pct[1]),
+      minimoCentavos: valorApos(janela, MINIMO) ?? 0,
+      tetoCentavos: valorApos(janela, TETO),
+      dia: c.dia,
+      mes: c.mes,
+    });
+  }
+
+  return [...achados.values()];
+}
+
+/** O primeiro valor em reais que aparece depois de uma expressão. */
+function valorApos(texto: string, gatilho: RegExp): number | null {
+  const m = texto.match(new RegExp(`${gatilho.source}[^R\\d]{0,20}R?\\$?\\s*([\\d.]+(?:,\\d{2})?)`, "i"));
+  if (!m) return null;
+  const bruto = m[1];
+  const numero = Number(
+    bruto.includes(",") ? bruto.replace(/\./g, "").replace(",", ".") : bruto.replace(/\./g, ""),
+  );
+  return Number.isFinite(numero) && numero > 0 && numero <= 100_000
+    ? Math.round(numero * 100)
+    : null;
+}
+
 /**
  * Encurtadores que aparecem nos canais. O link publicado quase nunca
  * é o do produto — é um encurtador com o código de afiliado de outra

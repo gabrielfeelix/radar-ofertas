@@ -10,7 +10,7 @@
  * A rede é dublada: o que está sob teste é a decisão de quando parar
  * de voltar, não o HTML do Telegram.
  */
-import { leCanalPublico } from "../supabase/functions/_compartilhado/telegram-web.ts";
+import { extraiCupons, leCanalPublico } from "../supabase/functions/_compartilhado/telegram-web.ts";
 
 let passou = 0;
 let falhou = 0;
@@ -152,6 +152,115 @@ confere("canal servido diferente do pedido é erro", trocou);
 confere("e o erro diz qual canal veio no lugar", mensagem.includes("outrocanal"));
 
 globalThis.fetch = fetchOriginal;
+
+/*
+  EXTRAÇÃO DE CUPOM.
+
+  Os textos abaixo são reproduções do que a pesquisa de 01/08 leu ao
+  vivo em `t.me/s/sddescontos`, `t.me/s/canaldeofertasecupons` e
+  `t.me/s/shopeepromocoesecuponsbr`. O que está sob teste é a âncora de
+  data: ela é o que separa cupom de qualquer outra palavra em maiúscula
+  numa mensagem de canal, que é onde este tipo de extração costuma
+  produzir lixo.
+*/
+console.log("\nextração de cupom\n");
+
+const doCanal = `🔥 CUPOM MERCADO LIVRE 🔥
+LOJASOFICIAIS0108
+15% OFF em Lojas Oficiais
+Compra mínima de R$ 29
+Desconto de até R$ 20
+Válido só hoje!`;
+
+const achados = extraiCupons(doCanal);
+confere("acha o cupom no texto do canal", achados.length === 1);
+confere("lê o código inteiro", achados[0]?.codigo === "LOJASOFICIAIS0108");
+confere("lê o percentual", achados[0]?.percentual === 15);
+confere("lê a compra mínima em centavos", achados[0]?.minimoCentavos === 2900);
+confere("lê o teto do desconto", achados[0]?.tetoCentavos === 2000);
+confere("lê o dia e o mês do próprio código", achados[0]?.dia === 1 && achados[0]?.mes === 8);
+
+const varios = extraiCupons(
+  `FULL3107 - 25% OFF, até R$ 30\nDECORELETRO3107 - 30% OFF, até R$ 20\nLIVROSJOGOS3107 - 20% OFF, até R$ 30`,
+);
+confere("acha os três da mesma mensagem", varios.length === 3);
+confere(
+  "e não confunde os valores entre eles",
+  varios.find((c) => c.codigo === "DECORELETRO3107")?.percentual === 30 &&
+    varios.find((c) => c.codigo === "FULL3107")?.percentual === 25,
+);
+confere("31/07 é lido como dia 31, mês 7", varios[0]?.dia === 31 && varios[0]?.mes === 7);
+
+// O que NÃO pode virar cupom. Cada linha destas apareceria numa
+// mensagem de canal comum, e sem a âncora de data viraria lixo no banco.
+confere("PROMOÇÃO não é cupom", extraiCupons("PROMOÇÃO imperdível 50% OFF").length === 0);
+confere("FRETE GRATIS não é cupom", extraiCupons("FRETE GRATIS 10% a mais").length === 0);
+confere(
+  "código sem data não passa",
+  extraiCupons("Use o cupom DESCONTAO e ganhe 20% OFF").length === 0,
+);
+confere(
+  "quatro dígitos que não são data não passam",
+  extraiCupons("SAMSUNG9999 com 10% OFF").length === 0,
+);
+confere(
+  "mês 13 não existe",
+  extraiCupons("CUPOM0112 15% OFF").length === 1 && extraiCupons("CUPOM3113 15% OFF").length === 0,
+);
+confere("dia 32 não existe", extraiCupons("CUPOM3208 15% OFF").length === 0);
+confere("sem percentual não vira cupom", extraiCupons("LOJASOFICIAIS0108 só hoje").length === 0);
+confere(
+  "modelo de produto não vira cupom",
+  extraiCupons("Notebook DELL I15 3000 por R$ 2.999 com 10% OFF").length === 0,
+);
+
+// A Shopee usa leetspeak e fica de fora por contrato. O filtro de data
+// já a exclui sozinho, e este caso existe para provar isso.
+confere(
+  "código da Shopee não é capturado",
+  extraiCupons("Cupom D1AD0SP41S 20% OFF na Shopee").length === 0 &&
+    extraiCupons("Cupom 3XCLU51V020 15% OFF").length === 0,
+);
+
+confere("texto sem cupom nenhum devolve lista vazia", extraiCupons("só uma oferta boa").length === 0);
+
+/*
+  O TEXTO LITERAL DE UM CANAL, copiado de `t.me/s/canaldeofertasecupons`
+  em 01/08/2026. Está aqui porque a primeira versão do extrator passava
+  nos casos inventados acima e devolvia teto nulo neste: o canal escreve
+  "(Limite de R$ 20)", e o regex só cobria "limitado a". Caso inventado
+  não pega esse tipo de erro.
+*/
+const real = `🚨 CUPONS 😱 | #MERCADOLIVRE:
+
+🛒 ATIVE RÁPIDO AQUI:
+🔗 https://mercadolivre.com/sec/1BVEbve
+
+🎟 CÓDIGO: LOJASOFICIAIS0108
+👉 15% OFF (Limite de R$ 20) em ✦ Lojas Oficiais
+
+🎟 CÓDIGO: MODAEBELEZA0108
+👉 20% OFF (Limite de R$ 30) em ✦ Moda e Bem-Estar
+
+⚠️ CORRE QUE É LIMITADO! Cupom com poucas unidades`;
+
+const doReal = extraiCupons(real);
+confere("no texto real acha os dois cupons", doReal.length === 2);
+confere(
+  "e separa os percentuais certos",
+  doReal.find((c) => c.codigo === "LOJASOFICIAIS0108")?.percentual === 15 &&
+    doReal.find((c) => c.codigo === "MODAEBELEZA0108")?.percentual === 20,
+);
+confere(
+  "lê o teto escrito como 'Limite de R$'",
+  doReal.find((c) => c.codigo === "LOJASOFICIAIS0108")?.tetoCentavos === 2000 &&
+    doReal.find((c) => c.codigo === "MODAEBELEZA0108")?.tetoCentavos === 3000,
+);
+confere(
+  "sem mínimo declarado o mínimo é zero, não um chute",
+  doReal.every((c) => c.minimoCentavos === 0),
+);
+confere("e o link do canal não vira cupom", !doReal.some((c) => c.codigo.includes("1BVEbve")));
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);

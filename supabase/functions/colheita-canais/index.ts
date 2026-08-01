@@ -2,6 +2,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 import { leLinkDeProduto } from "../../../lib/marketplaces.ts";
 import {
+  extraiCupons,
   extraiPrecoAlegado,
   leCanalPublico,
   limpaTitulo,
@@ -97,9 +98,20 @@ Deno.serve(async (req: Request) => {
     escavados: 0,
     ja_conhecidos: 0,
     descartados: 0,
+    cupons_novos: 0,
     falhas: [] as string[],
     por_canal: [] as Array<Record<string, unknown>>,
   };
+
+  // O cupom colhido é só do Mercado Livre, e a exclusão da Shopee é
+  // contratual: o termo do programa de afiliados dela trata repassar
+  // cupom de terceiro como violação, com rescisão imediata.
+  const { data: mktML } = await db
+    .from("marketplace")
+    .select("id")
+    .eq("slug", "mercado_livre")
+    .maybeSingle();
+  const mercadoLivreId: string | null = mktML?.id ?? null;
 
   for (const fonte of fontes ?? []) {
     let posts: PostDoCanal[];
@@ -180,6 +192,31 @@ Deno.serve(async (req: Request) => {
 
     resumo.posts_vistos += novos.length;
     resumo.escavados += novos.filter((p) => p.id < bordaDeCima).length;
+
+    /*
+      O CUPOM SAI DO TEXTO, NÃO DO LINK.
+
+      Até aqui a colheita lia os posts, tirava os links e jogava o texto
+      fora. E o texto é onde mora a única coisa que o Mercado Livre não
+      publica em lugar nenhum consultável: o cupom do dia.
+
+      A pesquisa de 01/08 (`docs/pesquisa/cupons-de-onde-vem.md`) varreu
+      15 rotas plausíveis da API e todas deram 404 — não é falta de
+      permissão, é ausência: o único endpoint de cupom documentado do ML
+      é o do VENDEDOR gerenciando a própria campanha. O cupom é público,
+      mas distribuído por banner e push dentro do app.
+
+      Ele chega aqui de graça, porque os canais que a colheita já lê
+      publicam todos eles, e o formato `<CATEGORIA><DDMM>` traz a
+      própria validade dentro do código.
+
+      Isto substitui digitação: `app/acoes/cupons.ts` dizia *"cupom é
+      digitado à mão porque nenhum marketplace expõe cupom por API"*.
+      Continua verdade sobre API, e deixou de ser o único caminho.
+    */
+    for (const post of novos) {
+      resumo.cupons_novos += await guardaCupons(db, post.texto, fonte.operacao_id, mercadoLivreId);
+    }
 
     const candidatos: Array<{ post: PostDoCanal; url: string }> = [];
     for (const post of novos) {
@@ -278,6 +315,81 @@ Deno.serve(async (req: Request) => {
 
   return responde(200, resumo);
 });
+
+/**
+ * Guarda os cupons achados no texto de um post. Devolve quantos são novos.
+ *
+ * A VALIDADE SAI DO PRÓPRIO CÓDIGO, e é o que torna isto seguro. O
+ * comentário da tabela `cupom` avisa: *"cupom sem prazo é o que fica
+ * publicado depois de morrer"*. Como o formato do ML é
+ * `<CATEGORIA><DDMM>`, o dia de expiração vem escrito no código, e o
+ * cupom sai de `cupons_vivos` sozinho na virada — sem ninguém marcar
+ * nada à mão.
+ *
+ * O ano não está no código, então é o corrente. A exceção é a virada:
+ * um `CUPOM0101` lido em 31 de dezembro é de janeiro do ano que vem, e
+ * sem esse ajuste ele nasceria vencido há doze meses.
+ *
+ * Conflito não é erro: o mesmo cupom aparece em vários canais no mesmo
+ * dia, e é exatamente assim que a pesquisa o encontrou. O primeiro que
+ * chega grava, os outros são ignorados em silêncio.
+ */
+async function guardaCupons(
+  db: ReturnType<typeof createClient>,
+  texto: string,
+  operacaoId: string,
+  marketplaceId: string | null,
+): Promise<number> {
+  if (!marketplaceId) return 0;
+
+  const achados = extraiCupons(texto);
+  if (achados.length === 0) return 0;
+
+  const agora = new Date();
+  const anoAtual = agora.getUTCFullYear();
+  let novos = 0;
+
+  for (const c of achados) {
+    // Fim do dia DD/MM no fuso de São Paulo, que é onde o cupom vale
+    // (regra 3.9). O `-03:00` é fixo: não há horário de verão no
+    // Brasil desde 2019.
+    const mm = String(c.mes).padStart(2, "0");
+    const dd = String(c.dia).padStart(2, "0");
+    let vigenteAte = new Date(`${anoAtual}-${mm}-${dd}T23:59:59-03:00`);
+
+    // Data inválida (31 de fevereiro, por exemplo) não vira cupom.
+    if (Number.isNaN(vigenteAte.getTime())) continue;
+
+    // A virada do ano: cupom que "venceu" há mais de seis meses é, na
+    // verdade, do ano que vem.
+    if (agora.getTime() - vigenteAte.getTime() > 180 * 24 * 3_600_000) {
+      vigenteAte = new Date(`${anoAtual + 1}-${mm}-${dd}T23:59:59-03:00`);
+    }
+
+    // Cupom já vencido não entra: ele nasceria morto e só sujaria a
+    // tela de cupons.
+    if (vigenteAte.getTime() <= agora.getTime()) continue;
+
+    const { error } = await db.from("cupom").upsert(
+      {
+        operacao_id: operacaoId,
+        marketplace_id: marketplaceId,
+        codigo: c.codigo,
+        descricao: `${c.percentual}% colhido de canal`,
+        tipo: "percentual",
+        valor: c.percentual,
+        valor_minimo_centavos: c.minimoCentavos,
+        teto_desconto_centavos: c.tetoCentavos,
+        vigente_ate: vigenteAte.toISOString(),
+      },
+      { onConflict: "operacao_id,marketplace_id,codigo", ignoreDuplicates: true },
+    );
+
+    if (!error) novos += 1;
+  }
+
+  return novos;
+}
 
 /**
  * Grava a menção que não virou anúncio.
