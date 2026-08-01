@@ -287,7 +287,62 @@ Fase 2. Enquanto isso, o que dá para fazer sem apostar é **acrescentar o dia
 da semana**, que as duas fontes concordam e o código ignora: terça a quinta
 convertem melhor que segunda e sexta.
 
-### P5 · Cupom do Mercado Livre como conteúdo próprio
+### P5 · Cupom `INGESTÃO EXECUTADA — falta a mensagem usar`
+
+O esquema já existia desde a migration 17: tabela `cupom`, view
+`cupons_vivos`, função `preco_com_cupom`, e até a tela `/ajustes/cupons`.
+**O que faltava era quem alimenta** — e a resposta era "uma pessoa
+digitando", com o comentário de `app/acoes/cupons.ts` justificando:
+*"cupom é digitado à mão porque nenhum marketplace expõe cupom por API"*.
+
+Continua verdade sobre API. Deixou de ser o único caminho: o cupom chega de
+graça pelos canais que a colheita já lê.
+
+**O que foi construído:** `extraiCupons` em `telegram-web.ts` e a gravação em
+`colheita-canais`. A âncora é o sufixo de data do formato
+`<CATEGORIA><DDMM>` — procurar "palavra em maiúscula" acharia PROMOÇÃO,
+OFERTA e metade dos títulos de produto; exigir quatro dígitos que formem dia
+e mês válidos derruba o falso positivo sem lista de exceção.
+
+E o código **traz a própria validade dentro dele**, o que resolve o que o
+comentário da tabela avisava: *"cupom sem prazo é o que fica publicado depois
+de morrer"*. O `vigente_ate` sai do `DDMM`, no fuso de São Paulo, com
+tratamento da virada do ano.
+
+**Só Mercado Livre.** A exclusão da Shopee é contratual: o termo dela trata
+repassar cupom de terceiro como violação, com rescisão imediata.
+
+**Provado contra os canais ao vivo**, e os cinco batem com o que a pesquisa
+tinha documentado dois dias antes:
+
+```
+@sddescontos            DECORELETRO3107 30% · LIVROSJOGOS3107 20% · FULL3107 25%
+@canaldeofertasecupons  LOJASOFICIAIS0108 15% teto R$20 · MODAEBELEZA0108 20% teto R$30
+```
+
+O texto literal desses canais entrou no teste, e foi ele que pegou o erro que
+os casos inventados deixaram passar: o canal escreve `(Limite de R$ 20)` e o
+regex só cobria "limitado a", então o teto saía nulo. **Caso inventado não
+pega esse tipo de erro.**
+
+**O que falta, e é a metade que entrega valor:**
+
+1. **Publicar a Edge Function.** A colheita roda como função no Supabase; o
+   código está no repositório e não foi implantado.
+2. **A mensagem não sabe falar de cupom.** `lib/mensagem.ts` não tem nenhuma
+   menção a ele. Duas formas, e recomendo a primeira:
+   - **Post de cupom próprio**, que é o que os concorrentes publicam de
+     madrugada e não depende de histórico de preço nenhum.
+   - Anexar cupom a uma oferta. **Mais arriscado:** o cupom é por categoria e
+     aplicar fora dela falha, o que a pesquisa listou como armadilha e vira
+     reclamação de seguidor.
+
+**Lacuna conhecida:** o `@sddescontos` escreve o teto num formato que o regex
+ainda não cobre, e por isso sai nulo. Teto nulo é seguro — a mensagem
+simplesmente não promete limite — mas vale ampliar quando aparecer o
+terceiro formato.
+
+### P5-antigo · Notas da pesquisa que originaram este plano
 
 A pesquisa achou que os cupons do ML seguem `<CATEGORIA><DDMM>`, são criados
 em lote todo dia, e são públicos. `docs/pesquisa/cupons-de-onde-vem.md` tem
