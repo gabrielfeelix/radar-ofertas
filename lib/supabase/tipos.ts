@@ -344,6 +344,8 @@ export type ModeloMensagemLinha = {
   lastro_com: string;
   /** Nunca pode afirmar mínimo histórico (regra 3.4). */
   lastro_sem: string;
+  /** Usado quando a oferta veio de queda de hoje. Também não afirma histórico. */
+  lastro_queda: string;
   ativo: boolean;
   criado_em: string;
   atualizado_em: string;
@@ -370,6 +372,10 @@ export type OfertaLinha = {
   nota_comissao: number;
   nota_vendedor: number;
   status: OfertaStatus;
+  /** serie = barata contra a mediana. queda = caiu desde a leitura anterior. */
+  gatilho: "serie" | "queda";
+  /** Só em oferta de queda: o preço de antes, contra o qual ela é medida. */
+  preco_anterior_centavos: number | null;
   motivo_rejeicao: string | null;
   adiamentos: number;
   detectada_em: string;

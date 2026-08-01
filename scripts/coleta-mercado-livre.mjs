@@ -298,11 +298,21 @@ async function main() {
         // O ponto de preço vai pela função do banco, e não por insert
         // direto: é ela que resolve o dia local e guarda o menor do dia.
         const centavos = Math.round(oferta.price * 100);
+        // Duas gravações, e são coisas diferentes: `registra_preco`
+        // alimenta a série de meses (um ponto por dia, o menor);
+        // `registra_leitura` guarda as duas últimas leituras da hora,
+        // que é contra o que a queda de agora é medida.
         const { error: erroPreco } = await db.rpc("registra_preco", {
           p_anuncio_id: anuncio.id,
           p_preco_centavos: centavos,
         });
         if (erroPreco) throw new Error(`preço: ${erroPreco.message}`);
+
+        const { error: erroLeitura } = await db.rpc("registra_leitura", {
+          p_anuncio_id: anuncio.id,
+          p_preco_centavos: centavos,
+        });
+        if (erroLeitura) throw new Error(`leitura: ${erroLeitura.message}`);
         pontos++;
 
         console.log(

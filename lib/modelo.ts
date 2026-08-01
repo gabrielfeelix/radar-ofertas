@@ -28,6 +28,7 @@ const RESERVA: ModeloDeMensagem = {
     "👉 {link}",
   ].join("\n"),
   lastroCom: "Menor preço em {janela} dias.",
+  lastroQueda: "Caiu de {antes} para {agora} hoje.",
   lastroSem: "Menor preço que observamos desde {desde}.",
 };
 
@@ -35,14 +36,19 @@ export async function modeloGlobal(): Promise<ModeloDeMensagem> {
   try {
     const { data } = await supabaseServidor()
       .from("modelo_mensagem")
-      .select("corpo, lastro_com, lastro_sem")
+      .select("corpo, lastro_com, lastro_sem, lastro_queda")
       .is("canal_id", null)
       .maybeSingle();
 
-    const linha = data as Pick<ModeloMensagemLinha, "corpo" | "lastro_com" | "lastro_sem"> | null;
+    const linha = data as Pick<ModeloMensagemLinha, "corpo" | "lastro_com" | "lastro_sem" | "lastro_queda"> | null;
     if (!linha) return RESERVA;
 
-    return { corpo: linha.corpo, lastroCom: linha.lastro_com, lastroSem: linha.lastro_sem };
+    return {
+      corpo: linha.corpo,
+      lastroCom: linha.lastro_com,
+      lastroSem: linha.lastro_sem,
+      lastroQueda: linha.lastro_queda,
+    };
   } catch {
     return RESERVA;
   }

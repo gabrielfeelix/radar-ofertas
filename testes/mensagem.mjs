@@ -193,3 +193,41 @@ confere(
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
+
+/* =============================================================
+   O gatilho da queda — a regra que não pode regredir
+
+   Oferta de queda tem horas de vida. Escrevê-la como "menor preço
+   que observamos" é a mentira que a regra 3.4 existe para impedir,
+   e é a que queima o canal.
+   ============================================================= */
+
+secao("o gatilho decide o lastro");
+
+const MODELO_TRES = {
+  corpo: "{produto} · {lastro} · {link}",
+  lastroCom: "Menor preço em {janela} dias.",
+  lastroSem: "Menor preço que observamos desde {desde}.",
+  lastroQueda: "Caiu de {antes} para {agora} hoje.",
+};
+
+const BASE_QUEDA = { ...EXEMPLO, precoCentavos: 3878, precoAntesCentavos: 4407 };
+
+verifica(
+  "queda usa o lastro da queda",
+  montaMensagem(MODELO_TRES, { ...BASE_QUEDA, podeAfirmarMinimo: false, gatilho: "queda" }).includes(
+    "Caiu de R$ 44,07 para R$ 38,78 hoje.",
+  ),
+);
+
+verifica(
+  "queda NUNCA usa o lastro com minimo, mesmo com podeAfirmarMinimo verdadeiro",
+  !montaMensagem(MODELO_TRES, { ...BASE_QUEDA, podeAfirmarMinimo: true, gatilho: "queda" }).includes(
+    "Menor preço",
+  ),
+);
+
+verifica(
+  "sem gatilho continua como antes, pela serie",
+  montaMensagem(MODELO_TRES, { ...EXEMPLO, podeAfirmarMinimo: true }).includes("Menor preço em"),
+);

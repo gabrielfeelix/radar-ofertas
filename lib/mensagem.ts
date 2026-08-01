@@ -24,7 +24,27 @@ export type ModeloDeMensagem = {
   corpo: string;
   lastroCom: string;
   lastroSem: string;
+  /**
+   * O terceiro caso: a oferta que nasceu de uma queda de hoje, não da
+   * série. Ela não fala de histórico nenhum — fala do que aconteceu
+   * nas últimas horas, e é a afirmação mais forte que sustenta.
+   */
+  lastroQueda: string;
 };
+
+/**
+ * O que fez a oferta existir.
+ *
+ * `serie` = está barata contra a mediana que NÓS observamos, com
+ * série suficiente. `queda` = caiu desde a leitura anterior, e pode
+ * ter três horas de vida.
+ *
+ * NÃO É DETALHE DE ORIGEM, É O QUE A MENSAGEM PODE AFIRMAR. Uma queda
+ * de três horas escrita como "menor preço que observamos" é
+ * exatamente a mentira que a regra 3.4 existe para impedir — e é a
+ * que queima o canal.
+ */
+export type GatilhoDaOferta = "serie" | "queda";
 
 export type DadosDaMensagem = {
   produto: string;
@@ -40,6 +60,8 @@ export type DadosDaMensagem = {
   link: string;
   /** A série alcançou o mínimo para afirmar mínimo histórico? */
   podeAfirmarMinimo: boolean;
+  /** O que fez a oferta existir. Ausente = série, que era o único caso antes. */
+  gatilho?: GatilhoDaOferta;
 };
 
 /** As variáveis que o corpo aceita, para a tela listar sem inventar. */
@@ -119,9 +141,21 @@ export function afirmaMinimoSemLastro(texto: string): boolean {
 
 /** Renderiza o modelo com os dados de uma oferta. */
 export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem): string {
-  const lastro = preenche(dados.podeAfirmarMinimo ? modelo.lastroCom : modelo.lastroSem, {
+  // A queda vem primeiro e ignora `podeAfirmarMinimo`: numa oferta de
+  // queda ele é sempre falso, mas depender disso deixaria a regra
+  // valendo por acidente. Aqui ela vale por decisão.
+  const molde =
+    dados.gatilho === "queda"
+      ? modelo.lastroQueda
+      : dados.podeAfirmarMinimo
+        ? modelo.lastroCom
+        : modelo.lastroSem;
+
+  const lastro = preenche(molde, {
     janela: String(dados.janelaDias),
     desde: formataDia(dados.observadoDesde),
+    antes: reais(dados.precoAntesCentavos),
+    agora: reais(dados.precoCentavos),
   });
 
   return preenche(modelo.corpo, {

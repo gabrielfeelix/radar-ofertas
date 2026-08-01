@@ -47,7 +47,10 @@ export function FormularioModelo({
   const [lastroCom, setLastroCom] = useState(inicial.lastroCom);
   const [lastroSem, setLastroSem] = useState(inicial.lastroSem);
 
-  const textos = previa({ corpo, lastroCom, lastroSem }, EXEMPLO);
+  // O lastro da queda não é editável aqui ainda: ele tem uma tela
+  // própria por fazer. Entra na prévia com o valor salvo, para o que
+  // se vê ser o que sai.
+  const textos = previa({ corpo, lastroCom, lastroSem, lastroQueda: inicial.lastroQueda }, EXEMPLO);
   const erroDe = (campo: "corpo" | "lastro_sem" | "geral") =>
     resultado?.ok === false && resultado.campo === campo ? resultado.mensagem : null;
 

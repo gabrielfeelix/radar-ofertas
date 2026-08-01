@@ -50,6 +50,7 @@ export default async function Modelos() {
           corpo: modelo.corpo,
           lastroCom: modelo.lastro_com,
           lastroSem: modelo.lastro_sem,
+          lastroQueda: modelo.lastro_queda,
         }}
       />
     </Pagina>
