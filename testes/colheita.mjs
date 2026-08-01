@@ -262,6 +262,51 @@ confere(
 );
 confere("e o link do canal não vira cupom", !doReal.some((c) => c.codigo.includes("1BVEbve")));
 
+
+/*
+  OS TRES JEITOS QUE OS CANAIS ESCREVEM, todos copiados ao vivo em
+  01/08. Existem juntos porque qualquer regra de direcao fixa acerta um
+  e erra outro, e o erro publica desconto que nao existe.
+*/
+console.log("\nos tres formatos de canal\n");
+
+// @promotop: valores ANTES do codigo, dois cupons na mesma mensagem.
+// Foi este que pegou o defeito: o MODAEBELEZA recebia os 15% do
+// LOJASOFICIAIS, porque eles ficam logo depois do codigo dele.
+const promotop = extraiCupons(`🔥 Novos Cupons Mercado Livre!
+
+▪️ 20% OFF em compras acima de R$49, Limitado a R$30
+🎯 Usem o cupom: MODAEBELEZA0108
+
+▪️ 15% OFF em compras acima de R$29, Limitado a R$20
+🎯 Usem o cupom: LOJASOFICIAIS0108
+
+🛒 https://mercadolivre.com/sec/2P5pupn`);
+
+const moda = promotop.find((c) => c.codigo === "MODAEBELEZA0108");
+const lojas = promotop.find((c) => c.codigo === "LOJASOFICIAIS0108");
+confere("valores antes do codigo: acha os dois", promotop.length === 2);
+confere("e NAO troca o percentual entre eles", moda?.percentual === 20 && lojas?.percentual === 15);
+confere("nem o minimo", moda?.minimoCentavos === 4900 && lojas?.minimoCentavos === 2900);
+confere("nem o teto", moda?.tetoCentavos === 3000 && lojas?.tetoCentavos === 2000);
+
+// @CupomDoGnu: valores antes, com linha em branco separando do codigo.
+const gnu = extraiCupons(`MERCADO LIVRE com cupom ativo para compras!
+
+📉 15% OFF
+🛒 Nas compras acima de R$ 79
+⚠️ Desconto limitado a R$ 20
+
+🎟 Cupom: LOJASOFICIAIS0108
+👉 Acesse o link para ir para a loja:
+🔗 CupomDoGnu.com.br/c/rj0oVrrIav`);
+
+confere("linha em branco entre valores e codigo: acha", gnu.length === 1);
+confere("  percentual", gnu[0]?.percentual === 15);
+confere("  minimo tres linhas acima", gnu[0]?.minimoCentavos === 7900);
+confere("  teto", gnu[0]?.tetoCentavos === 2000);
+confere("  e o link do canal nao vira cupom", !gnu.some((c) => /rj0oVrr/i.test(c.codigo)));
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");

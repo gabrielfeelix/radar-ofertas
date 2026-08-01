@@ -97,8 +97,42 @@ async function main() {
           // registra em quantos canais apareceu, que é o sinal mais
           // barato de que o cupom é real e não erro de digitação.
           const antes = vistos.get(c.codigo);
-          if (antes) antes.canais.add(fonte.identificador);
-          else vistos.set(c.codigo, { ...c, operacaoId: fonte.operacao_id, canais: new Set([fonte.identificador]) });
+          if (!antes) {
+            vistos.set(c.codigo, {
+              ...c,
+              operacaoId: fonte.operacao_id,
+              canais: new Set([fonte.identificador]),
+            });
+            continue;
+          }
+
+          antes.canais.add(fonte.identificador);
+
+          /*
+            QUANDO OS CANAIS DISCORDAM, VALE O QUE PROMETE MENOS.
+
+            Medido em 01/08 no mesmo cupom, no mesmo dia:
+
+              @CupomDoGnu   MODAEBELEZA0108  20%  mínimo R$ 59  teto R$ 20
+              @promotop     MODAEBELEZA0108  20%  mínimo R$ 49  teto R$ 30
+
+            Um dos dois está errado, e não temos como saber qual: nós
+            lemos o cupom do texto de terceiro, não do Mercado Livre.
+
+            Errar para o lado generoso custa a confiança do grupo: quem
+            chega no carrinho com R$ 50 esperando desconto e descobre
+            que o mínimo é R$ 59 não volta. Errar para o lado apertado
+            custa uma surpresa boa.
+
+            Então: maior mínimo, menor teto, menor percentual. É a regra
+            3.4 aplicada ao cupom — na dúvida, prometa menos.
+          */
+          antes.percentual = Math.min(antes.percentual, c.percentual);
+          antes.minimoCentavos = Math.max(antes.minimoCentavos, c.minimoCentavos);
+          if (c.tetoCentavos != null) {
+            antes.tetoCentavos =
+              antes.tetoCentavos == null ? c.tetoCentavos : Math.min(antes.tetoCentavos, c.tetoCentavos);
+          }
         }
       }
     } catch (e) {
@@ -140,7 +174,7 @@ async function main() {
       continue;
     }
 
-    const { error } = await db.from("cupom").upsert(
+    const { data, error } = await db.from("cupom").upsert(
       {
         operacao_id: c.operacaoId,
         marketplace_id: mkt.id,
@@ -155,12 +189,18 @@ async function main() {
         geral: escopo?.geral ?? false,
       },
       { onConflict: "operacao_id,marketplace_id,codigo", ignoreDuplicates: true },
-    );
+    )
+      // `select` depois de `ignoreDuplicates` devolve SÓ o que entrou.
+      // Sem isto o contador dizia "2 gravados" para dois cupons que já
+      // estavam no banco, e log que mente é pior que log que falta.
+      .select("id");
 
     if (error) console.log(`  ✗ ${c.codigo}: ${error.message}`);
-    else {
+    else if ((data ?? []).length > 0) {
       gravados++;
       console.log(`  ✓ ${linha}`);
+    } else {
+      console.log(`  = ${linha} (já estava)`);
     }
   }
 

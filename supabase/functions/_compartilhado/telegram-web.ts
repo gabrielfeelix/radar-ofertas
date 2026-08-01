@@ -340,29 +340,76 @@ export function extraiCupons(texto: string): CupomLido[] {
     const c = candidatos[i];
 
     /*
-      DUAS JANELAS, E A DE FRENTE VENCE.
+      A BUSCA É POR LINHA, SAINDO DO CÓDIGO PARA OS DOIS LADOS.
 
-      O formato real escreve o código e depois os números:
+      Os canais escrevem de três jeitos diferentes, e qualquer regra de
+      direção fixa erra em pelo menos um deles. Todos observados ao
+      vivo em 01/08:
 
-        LOJASOFICIAIS0108
-        15% OFF · mínimo R$ 29 · até R$ 20
+        @canaldeofertasecupons — valores DEPOIS do código
+          🎟 CÓDIGO: LOJASOFICIAIS0108
+          👉 15% OFF (Limite de R$ 20)
 
-      Uma janela única em volta do código lia, para o segundo cupom de
-      uma mensagem com três, o percentual do primeiro — e prometer no
-      canal um desconto que não existe é pior que não achar o cupom.
+        @promotop — valores ANTES do código, dois cupons na mensagem
+          ▪️ 20% OFF em compras acima de R$49, Limitado a R$30
+          🎯 Usem o cupom: MODAEBELEZA0108
 
-      Então procura primeiro para a frente, até onde o próximo cupom
-      começa. Só se não houver nada ali é que olha para trás, que é o
-      caso de "15% OFF com o cupom LOJASOFICIAIS0108".
+        @CupomDoGnu — valores antes, com linha em branco no meio
+          📉 15% OFF
+          🛒 Nas compras acima de R$ 79
+          (linha em branco)
+          🎟 Cupom: LOJASOFICIAIS0108
+
+      A primeira versão procurava para a frente primeiro, e no
+      `@promotop` deu ao MODAEBELEZA os 15% do LOJASOFICIAIS — o
+      percentual do bloco de baixo, que fica logo depois do código de
+      cima. **Publicar isso é prometer no canal um desconto que não
+      existe**, que é a regra 3.4 pelo lado do cupom.
+
+      Sair do código e alternar linha a linha (uma abaixo, uma acima,
+      duas abaixo, duas acima…) acerta os três: o percentual mais
+      próximo EM LINHAS é o do bloco a que o código pertence, e a
+      janela limitada pelos códigos vizinhos impede atravessar para o
+      bloco do outro.
     */
-    const fim = i + 1 < candidatos.length ? candidatos[i + 1].de : Math.min(texto.length, c.ate + 220);
-    const adiante = texto.slice(c.ate, fim);
-    const atras = texto.slice(i > 0 ? candidatos[i - 1].ate : Math.max(0, c.de - 160), c.de);
+    const fim = i + 1 < candidatos.length ? candidatos[i + 1].de : Math.min(texto.length, c.ate + 260);
+    const inicio = i > 0 ? candidatos[i - 1].ate : Math.max(0, c.de - 260);
 
-    const pct = adiante.match(/(\d{1,2})\s*%/) ?? atras.match(/(\d{1,2})\s*%/);
-    if (!pct) continue; // sem percentual não há o que prometer
+    const janelaToda = texto.slice(inicio, fim);
+    const linhas = janelaToda.split("\n");
+    // Em que linha da janela o código está.
+    const antesDoCodigo = texto.slice(inicio, c.de);
+    const linhaDoCodigo = antesDoCodigo.split("\n").length - 1;
 
-    const janela = adiante.includes("%") ? adiante : atras;
+    let linhaDoPct = -1;
+    for (let passo = 0; passo <= linhas.length && linhaDoPct === -1; passo += 1) {
+      for (const alvo of passo === 0 ? [linhaDoCodigo] : [linhaDoCodigo + passo, linhaDoCodigo - passo]) {
+        if (alvo < 0 || alvo >= linhas.length) continue;
+        if (/(\d{1,2})\s*%/.test(linhas[alvo])) {
+          linhaDoPct = alvo;
+          break;
+        }
+      }
+    }
+
+    if (linhaDoPct === -1) continue; // sem percentual não há o que prometer
+
+    const pct = linhas[linhaDoPct].match(/(\d{1,2})\s*%/)!;
+
+    /*
+      O MÍNIMO E O TETO SAEM DO MESMO BLOCO DO PERCENTUAL.
+
+      Bloco é a sequência de linhas não vazias em volta dele. No
+      `@CupomDoGnu` o mínimo está duas linhas abaixo do percentual e o
+      teto três; no `@promotop` os três estão na mesma linha. Pegar o
+      bloco resolve os dois sem regra por canal.
+    */
+    let de = linhaDoPct;
+    let ate = linhaDoPct;
+    while (de > 0 && linhas[de - 1].trim() !== "") de -= 1;
+    while (ate < linhas.length - 1 && linhas[ate + 1].trim() !== "") ate += 1;
+    const bloco = linhas.slice(de, ate + 1).join("\n");
+
     // As redações vieram dos canais reais, não de imaginação: o
     // "(Limite de R$ 20)" do `canaldeofertasecupons` não era coberto
     // por "limitado a" e o teto saía nulo.
@@ -372,8 +419,8 @@ export function extraiCupons(texto: string): CupomLido[] {
     achados.set(c.codigo, {
       codigo: c.codigo,
       percentual: Number(pct[1]),
-      minimoCentavos: valorApos(janela, MINIMO) ?? 0,
-      tetoCentavos: valorApos(janela, TETO),
+      minimoCentavos: valorApos(bloco, MINIMO) ?? 0,
+      tetoCentavos: valorApos(bloco, TETO),
       dia: c.dia,
       mes: c.mes,
     });

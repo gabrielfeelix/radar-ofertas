@@ -353,7 +353,7 @@ async function guardaCupons(
     const vigenteAte = validadeDoCupom(c.dia, c.mes, agora);
     if (!vigenteAte) continue;
 
-    const { error } = await db.from("cupom").upsert(
+    const { data, error } = await db.from("cupom").upsert(
       {
         operacao_id: operacaoId,
         marketplace_id: marketplaceId,
@@ -366,9 +366,12 @@ async function guardaCupons(
         vigente_ate: vigenteAte.toISOString(),
       },
       { onConflict: "operacao_id,marketplace_id,codigo", ignoreDuplicates: true },
-    );
+    )
+      // `select` depois de `ignoreDuplicates` devolve só o que entrou:
+      // sem ele o resumo contava como novo o cupom que já existia.
+      .select("id");
 
-    if (!error) novos += 1;
+    if (!error && (data ?? []).length > 0) novos += 1;
   }
 
   return novos;

@@ -76,6 +76,37 @@ jobs:
           echo "$resposta" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Colheita de canais de terceiros
+        # A colheita existia desde 28/07 e NÃO era chamada por workflow
+        # nenhum: rodava quando alguém lembrava. Numa invocação em
+        # 01/08 ela trouxe 35 anúncios novos e 2 cupons — catálogo que
+        # simplesmente não entrava porque ninguém apertava o botão.
+        #
+        # Diária e não horária de propósito: ela lê páginas de canal e
+        # escava histórico, que é trabalho pesado e de retorno lento.
+        # O cupom, que é o que vale um dia só, entra de hora em hora
+        # pelo `scripts/colhe-cupons.mjs`.
+        #
+        # `continue-on-error` porque canal de terceiro fora do ar não
+        # pode derrubar a manutenção e a detecção que vêm depois.
+        continue-on-error: true
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SEGREDO: ${{ secrets.COLETA_SEGREDO }}
+        run: |
+          set -euo pipefail
+          resposta=$(curl --silent --show-error --fail-with-body \
+            --max-time 600 \
+            -X POST "$URL/functions/v1/colheita-canais" \
+            -H "Authorization: Bearer $CHAVE" \
+            -H "x-coleta-segredo: $SEGREDO")
+          echo "$resposta"
+          echo "### Colheita" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          echo "$resposta" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Manutenção e detecção de ofertas
         env:
           URL: ${{ secrets.SUPABASE_URL }}
