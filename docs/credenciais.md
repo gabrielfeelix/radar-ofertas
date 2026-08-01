@@ -278,15 +278,23 @@ completo** — no curto o número fica oculto.
 
 ## 4d. Cupons do Mercado Livre — resolvido em 01/08/2026
 
-**O afiliado GERA o cupom, não o encontra.** Descoberto olhando a
-Central de Afiliados: *"Gere códigos de cupons, compartilhe-os com seu
-público e ganhe por venda."*
+**Existem DUAS origens de cupom, e confundi-las custou uma conclusão
+errada minha em 01/08.**
 
-O fluxo é: criar um **prefixo de até 9 caracteres**, uma vez, e depois
-gerar códigos com ele. É o que explica o padrão exato dos concorrentes,
-que parecia fonte secreta: `TODOSITE31072` e `FULL3107` são prefixo
-(`TODOSITE`, `FULL`) mais data (`3107` = 31/07). Não há garimpo, há
-gerador.
+**1. Cupom que o afiliado gera.** A Central de Afiliados tem um gerador:
+*"Gere códigos de cupons, compartilhe-os com seu público e ganhe por
+venda."* Cria-se um **prefixo de até 9 caracteres**, uma vez, e depois
+códigos com ele.
+
+**2. Cupom que o próprio Mercado Livre solta**, em campanha. É o que os
+concorrentes publicam, segundo o dono, que conhece a operação deles.
+Eu tinha olhado o gerador e concluído que os cupons dos prints saíam
+dali, pelo formato parecido. **Não havia evidência disso** e a conclusão
+estava errada.
+
+A diferença importa para o produto: cupom do ML é **achado**, e vale
+correr atrás; cupom gerado é **seu**, e vale emitir. São duas frentes,
+não uma.
 
 **O que isso muda no sistema:** a tabela `cupom` (migration 17) continua
 certa, mas o texto que diz "digitado à mão porque a loja não expõe" está
