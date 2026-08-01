@@ -42,7 +42,7 @@ jobs:
           node-version: "24"
 
       - name: Descobre produtos novos no Mercado Livre
-        # A descoberta pesada mora aqui, uma vez ao dia: varre 44 termos
+        # A descoberta pesada mora aqui, uma vez ao dia: varre 109 termos
         # de busca e as categorias de mais vendidos. A coleta horária
         # cuida de reler o preço do que isto encontrou.
         #

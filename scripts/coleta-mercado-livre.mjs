@@ -119,6 +119,39 @@ const BUSCAS = [
   "fone bluetooth", "smartwatch", "carregador rapido", "cabo usb c", "power bank",
   "caixa de som bluetooth", "mouse sem fio", "teclado", "webcam", "ssd",
   "cartao de memoria", "suporte celular", "smart tv", "roteador wifi", "pen drive",
+  /*
+    Os cinco blocos abaixo entraram em 01/08, com os canais de Fitness,
+    Tech, Geek, Kids, Beauty e Perfumes.
+
+    A base é o gargalo da detecção — a queda é medida contra a NOSSA
+    leitura anterior, então nicho com pouco anúncio nunca produz oferta,
+    e o canal nasce mudo. Pet, casa e eletrônico tinham 44 termos; os
+    seis nichos novos tinham zero, e o catálogo deles vinha só do
+    `highlights`, que satura.
+
+    O nicho NÃO sai daqui, e é por isso que ampliar ficou barato: desde
+    a migration 24 ele vem do `domain_id`. Se "creatina" arrastar um
+    pote de ração junto, o produto cai em pet e não em suplemento, sem
+    que ninguém precise prever isso na lista.
+  */
+  // Fitness e suplemento
+  "whey protein", "creatina", "barra de proteina", "colageno", "pre treino",
+  "halter", "kettlebell", "tapete yoga", "faixa elastica", "corda de pular",
+  "luva academia", "coqueteleira", "bicicleta ergometrica", "caneleira peso", "termogenico",
+  // Beleza e perfume
+  "perfume masculino", "perfume feminino", "protetor solar", "hidratante corporal", "serum facial",
+  "shampoo", "condicionador", "base maquiagem", "batom", "esmalte",
+  "secador de cabelo", "prancha cabelo", "barbeador eletrico", "creme para pentear", "desodorante",
+  // Bebê e infantil
+  "fralda descartavel", "lenco umedecido", "formula infantil", "mamadeira", "chupeta",
+  "carrinho de bebe", "cadeirinha carro bebe", "papinha", "shampoo infantil", "berco portatil",
+  // Brinquedo
+  "lego", "boneca", "quebra cabeca", "pelucia", "carrinho de brinquedo",
+  "patinete infantil", "massinha de modelar", "brinquedo educativo", "pista hot wheels", "nerf",
+  // Geek e games
+  "action figure", "jogo de tabuleiro", "card game", "funko pop", "miniatura colecionavel",
+  "controle ps5", "controle xbox", "headset gamer", "cadeira gamer", "jogo ps5",
+  "nintendo switch jogo", "mousepad gamer", "kit modelismo", "album de figurinhas", "cubo magico",
 ];
 
 /** Produtos por termo de busca. */
@@ -128,7 +161,8 @@ const POR_BUSCA = Number(process.env.ML_PRODUTOS_POR_BUSCA ?? 20);
  * Descobrir e reler preço são trabalhos de ritmo diferente, e juntá-los
  * quebrou a coleta horária.
  *
- * A descoberta varre 44 termos de busca e leva mais de dez minutos —
+ * A descoberta varre 109 termos de busca e desce nas subcategorias
+ * das raízes com canal — leva bem mais de dez minutos, então
  * cabe uma vez ao dia. A releitura de preço precisa acontecer de hora
  * em hora, porque é dela que sai a queda. Rodar a descoberta toda hora
  * gastaria a janela inteira redescobrindo o que já está no banco.
@@ -178,6 +212,9 @@ async function pegaToken(guardado) {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: corpo,
+    // Mesmo motivo do TEMPO_LIMITE_MS abaixo: sem isto, uma conexão
+    // pendurada aqui trava a rodada antes mesmo de ela começar.
+    signal: AbortSignal.timeout(20_000),
   });
   const d = await r.json();
   if (!d.access_token) throw new Error(`não renovei o token: ${JSON.stringify(d)}`);
@@ -228,9 +265,33 @@ async function guardaRefresh(novo, marketplaceId) {
   }
 }
 
+/**
+ * Quanto se espera uma resposta antes de desistir.
+ *
+ * POR QUE ISTO PRECISOU EXISTIR, e o caso é literal: em 01/08 à noite a
+ * descoberta ficou **quarenta minutos parada** numa única chamada de
+ * `products/search`, com 0,01 de CPU e nenhuma linha nova no log. O
+ * `fetch` do Node **não tem timeout por padrão** — uma conexão que o
+ * outro lado nunca fecha simplesmente pendura o processo para sempre.
+ *
+ * Rodando à mão isso é chato. No agendador é grave: a rotina diária
+ * ficaria pendurada até o teto de seis horas do GitHub Actions, e os
+ * canais amanheceriam sem catálogo novo sem ninguém entender por quê.
+ *
+ * Vinte segundos é folgado para esta API — as chamadas medidas no mesmo
+ * dia ficaram entre 150ms e 5,5s. Quem estourar isso não está lento,
+ * está pendurado.
+ *
+ * Quem chama já trata falha: categoria e termo de busca entram em
+ * `problemas` e a rodada segue. Desistir de uma chamada custa uma
+ * categoria; não desistir custa a rodada inteira.
+ */
+const TEMPO_LIMITE_MS = Number(process.env.ML_TEMPO_LIMITE_MS ?? 20_000);
+
 async function api(caminho) {
   const r = await fetch(`${API}/${caminho}`, {
     headers: { Authorization: `Bearer ${ACESSO}` },
+    signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
   });
   const d = await r.json().catch(() => null);
   if (!r.ok) {
