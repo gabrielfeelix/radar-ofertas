@@ -180,7 +180,7 @@ async function main() {
     anuncio:anuncio_id (
       id, produto_id, url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
       avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis,
-      preco_leitura_centavos, preco_original_centavos,
+      preco_leitura_centavos, preco_original_centavos, categoria_ramo,
       marketplace:marketplace_id ( nome, slug ),
       produto:produto_id ( titulo_canonico, nota_curador, nicho_id )
     )`;
@@ -371,6 +371,30 @@ async function melhorPrateleira(db, oferta) {
     return (enviadasHoje[canal.id] ?? 0) >= teto;
   }
 
+  /*
+    OS RAMOS SECUNDÁRIOS (migration 36).
+
+    O "Pet Shop" do Mercado Livre tem 28 filhas, e entre elas estão
+    Cavalos, Peixes, Aves e Répteis. Suplemento equino é legitimamente
+    pet, e num canal de cão e gato é ruído — a pesquisa põe
+    irrelevância ao lado do volume como motivo de saída.
+
+    A regra do dono: quatro primários antes de cada secundário. Ela é
+    de DADO, não de código: qualquer nicho pode marcar os ramos dele, e
+    a proporção é um `parametro`.
+
+    Ramo sem linha é primário. Aqui o desconhecido **passa**, ao
+    contrário da D-036 — porque o custo de errar é oposto: lá seria
+    publicar o produto errado, aqui seria calar o canal por falta de
+    cadastro.
+  */
+  const { data: secundarios } = await db.from("ramo_secundario").select("ramo");
+  const ramoSecundario = new Set((secundarios ?? []).map((r) => r.ramo));
+  const porSecundario = par.primarios_por_secundario ?? 4;
+
+  const ehSecundario = (pub) =>
+    ramoSecundario.has(pub?.oferta?.anuncio?.categoria_ramo ?? "");
+
   let reprovadas = 0;
   let publicadas = 0;
   let esperando = 0;
@@ -378,6 +402,7 @@ async function melhorPrateleira(db, oferta) {
   let trocas = 0;
   let noTeto = 0;
   let cuponsPublicados = 0;
+  let adiadosPorProporcao = 0;
   const motivos = {};
 
   for (const oferta of ordenadas) {
@@ -726,6 +751,34 @@ async function melhorPrateleira(db, oferta) {
   }
 
   /*
+    QUANTOS PRIMÁRIOS JÁ SAÍRAM DESDE O ÚLTIMO SECUNDÁRIO.
+
+    Contado a partir do que o canal REALMENTE publicou hoje, e não
+    zerado a cada execução. Zerando, cada rodada horária teria direito a
+    um secundário logo de cara, e a proporção de um para quatro viraria
+    um para dois no fim do dia.
+  */
+  const primariosDesde = new Map();
+
+  {
+    const { data: doDia } = await db
+      .from("publicacao")
+      .select(`canal_id, oferta:oferta_id ( anuncio:anuncio_id ( categoria_ramo ) )`)
+      .eq("estado", "enviada")
+      .gte("enviada_em", desdeMeiaNoite)
+      .order("enviada_em", { ascending: false });
+
+    for (const canal of doTelegram) {
+      let contados = 0;
+      for (const linha of (doDia ?? []).filter((l) => l.canal_id === canal.id)) {
+        if (ramoSecundario.has(linha.oferta?.anuncio?.categoria_ramo ?? "")) break;
+        contados += 1;
+      }
+      primariosDesde.set(canal.id, contados);
+    }
+  }
+
+  /*
     O LAÇO QUE DORME.
 
     A cada volta escolhe o canal que pode falar mais cedo. Se ninguém
@@ -769,7 +822,32 @@ async function melhorPrateleira(db, oferta) {
     }
 
     const canal = melhor.canal;
-    const item = filaDoCanal.get(canal.id).shift();
+    const fila = filaDoCanal.get(canal.id);
+
+    /*
+      O PRIMEIRO ITEM ELEGÍVEL, e não simplesmente o primeiro.
+
+      Secundário só entra depois da cota de primários. Não sendo a vez
+      dele, ele **fica na fila** e o laço pega o próximo primário — não
+      se perde nada, só muda a ordem.
+    */
+    const indice = fila.findIndex(
+      (it) =>
+        it.tipo === "cupom" ||
+        !ehSecundario(it.pub) ||
+        (primariosDesde.get(canal.id) ?? 0) >= porSecundario,
+    );
+
+    if (indice === -1) {
+      // Só restou secundário e a cota não foi cumprida. Encerra o canal
+      // nesta rodada: eles continuam `pendente` e voltam na próxima,
+      // quando houver primário para acompanhar.
+      adiadosPorProporcao += fila.length;
+      filaDoCanal.set(canal.id, []);
+      continue;
+    }
+
+    const [item] = fila.splice(indice, 1);
 
     const saiu =
       item.tipo === "cupom" ? await enviaCupom(item.cupom, canal) : await enviaOferta(item.pub, canal);
@@ -781,13 +859,22 @@ async function melhorPrateleira(db, oferta) {
       await db.from("canal").update({ ultima_publicacao_em: quando }).eq("id", canal.id);
       canal.ultima_publicacao_em = quando;
       enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
+
+      // O cupom não conta como primário: ele não é do ramo nenhum.
+      if (item.tipo === "oferta") {
+        primariosDesde.set(
+          canal.id,
+          ehSecundario(item.pub) ? 0 : (primariosDesde.get(canal.id) ?? 0) + 1,
+        );
+      }
     }
   }
 
 
   console.log(
     `\n${publicadas} publicadas · ${cuponsPublicados} cupons · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
-      `${noTeto} no teto do dia · ${semLink} sem link · ${trocas} trocaram de prateleira`,
+      `${noTeto} no teto do dia · ${adiadosPorProporcao} adiados pela proporção · ` +
+      `${semLink} sem link · ${trocas} trocaram de prateleira`,
   );
   for (const canal of canais ?? []) {
     const saiu = enviadasHoje[canal.id] ?? 0;

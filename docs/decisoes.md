@@ -1137,3 +1137,83 @@ Nove publicações foram ao canal assim. O canal viu; o sistema não.
 
 **Mudaria se:** o gerador do ML deixar de existir, ou se aparecer uma API
 oficial de afiliados que dispense a sessão da Central.
+
+---
+
+## D-041 · Ramo secundário: o canal tem miolo e periferia
+**Data:** 01/08/2026
+
+A descida por subcategoria multiplicou a largura da descoberta e trouxe
+junto um efeito que só apareceu lendo o canal: o "Pet Shop" do Mercado
+Livre tem **28 filhas**, e entre elas estão Cavalos, Peixes, Aves,
+Répteis, Roedores, Coelhos e Insetos. Um suplemento equino saiu no canal
+e é legitimamente pet — e num canal de cão e gato é ruído.
+
+A pesquisa de campo põe **irrelevância ao lado do volume** como motivo de
+alguém sair de um canal (`docs/pesquisa/sintese.md` §5), então isso não é
+preciosismo: é o mesmo risco do excesso de post, por outra porta.
+
+Regra do dono: *"só pode postar água de equinos, peixes e afins depois de
+4 de cachorros/gatos"*. E a ressalva dele veio junto, correta: *"é bem
+específico pra esse nicho de pet"*.
+
+### Por isso a regra não é de pet
+
+O que se modela é **ramo secundário dentro de um nicho**, com proporção
+configurável. Pet é o primeiro caso; eletrônico vai ter o dele (acessório
+contra aparelho) e casa também.
+
+**O ramo é a filha direta da raiz** na árvore do marketplace, e é a
+granularidade certa entre as duas que já existiam:
+
+| Camada | Quantas | Serve para |
+|---|---|---|
+| Raiz (`categoria_raiz`) | 28 | decidir o nicho |
+| **Ramo (`categoria_ramo`)** | ~28 por raiz | **separar miolo de periferia** |
+| Domínio (`dominio_externo`) | milhares | decidir o nicho quando tem opinião |
+
+Ele sai de `path_from_root[1]`, na **mesma resposta** que o coletor já
+pede para descobrir a raiz. Custo zero de chamada nova: o dado era
+descartado.
+
+### Presença marca, e o desconhecido passa
+
+`ramo_secundario` lista os ramos que entram na proporção. Ramo sem linha
+é primário.
+
+**Isso é o contrário da D-036 de propósito**, e a diferença é o custo de
+errar: lá, desconhecido separa porque o estrago seria publicar produto
+errado; aqui, desconhecido passa porque o estrago seria **calar o canal
+por falta de cadastro**.
+
+### Como a comporta age
+
+O secundário não é descartado: ele **fica na fila** e o laço pega o
+próximo primário. Só quando sobra apenas secundário sem cota cumprida é
+que o canal encerra a rodada — e eles voltam na seguinte.
+
+A contagem vem do que o canal **realmente publicou hoje**, não zerada a
+cada execução. Zerando, cada rodada horária teria direito a um secundário
+logo de cara, e um para quatro viraria um para dois no fim do dia.
+
+O cupom não conta como primário: ele não é de ramo nenhum.
+
+### O que o catálogo diz hoje
+
+```
+103  MLB1072  Cães      primário
+ 41  MLB1081  Gatos     primário
+ 11  MLB1100  Aves      SECUNDÁRIO
+  3  MLB1117  Cavalos   SECUNDÁRIO
+  2  MLB1091  Peixes    SECUNDÁRIO
+```
+
+146 primários contra 16 secundários. A proporção de um para quatro não
+aperta o canal: ela impede o agrupamento.
+
+A view `ramos_do_catalogo` é o insumo para marcar os próximos, e
+`primarios_por_secundario` (padrão 4) calibra sem publicar versão.
+
+**Mudaria se:** a medida de clique por post mostrar que o secundário
+performa igual ao primário — aí a periferia não é periferia, e o canal é
+de pet mesmo, não de cão e gato.

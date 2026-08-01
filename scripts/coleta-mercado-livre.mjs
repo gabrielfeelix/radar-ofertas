@@ -389,16 +389,31 @@ function entregaEArvore(item) {
   };
 }
 
-/** A raiz de uma categoria, com cache: a árvore do ML não muda no meio da rodada. */
-const RAIZ_DE = new Map();
-async function categoriaRaiz(categoriaId) {
-  if (!categoriaId) return null;
-  if (RAIZ_DE.has(categoriaId)) return RAIZ_DE.get(categoriaId);
+/**
+ * A raiz e o ramo de uma categoria, com cache: a árvore do ML não muda
+ * no meio da rodada.
+ *
+ * RAIZ é `path_from_root[0]`, e decide o nicho quando o domínio não tem
+ * opinião. RAMO é `path_from_root[1]`, a filha direta da raiz, e é a
+ * granularidade que separa "Cães" de "Cavalos" dentro de Pet Shop
+ * (migration 36). Os dois saem da MESMA resposta — o ramo era jogado
+ * fora.
+ */
+const ARVORE_DE = new Map();
+async function arvoreDaCategoria(categoriaId) {
+  if (!categoriaId) return { raiz: null, ramo: null };
+  if (ARVORE_DE.has(categoriaId)) return ARVORE_DE.get(categoriaId);
 
   const c = await api(`categories/${categoriaId}`).catch(() => null);
-  const raiz = c?.path_from_root?.[0]?.id ?? null;
-  RAIZ_DE.set(categoriaId, raiz);
-  return raiz;
+  const caminho = c?.path_from_root ?? [];
+  const arvore = { raiz: caminho[0]?.id ?? null, ramo: caminho[1]?.id ?? null };
+  ARVORE_DE.set(categoriaId, arvore);
+  return arvore;
+}
+
+/** Só a raiz, para quem não precisa do ramo. */
+async function categoriaRaiz(categoriaId) {
+  return (await arvoreDaCategoria(categoriaId)).raiz;
 }
 
 /**
@@ -547,7 +562,11 @@ async function relePrecos(db, mktId, porDominio, porCategoria) {
         o custo da releitura horária para reconfirmar o que não muda.
       */
       const arvore = entregaEArvore(oferta);
-      const raiz = a.categoria_raiz ?? (await categoriaRaiz(arvore.categoria_folha));
+      // Raiz e ramo saem da mesma resposta. O ramo é o que separa
+      // "Cães" de "Cavalos" dentro de Pet Shop (migration 36).
+      const daArvore = await arvoreDaCategoria(arvore.categoria_folha);
+      const raiz = a.categoria_raiz ?? daArvore.raiz;
+      const ramo = daArvore.ramo;
 
       const precisaClassificar = !a.dominio_externo || a.produto?.nicho_id == null;
       let dominio = a.dominio_externo ?? null;
@@ -594,6 +613,7 @@ async function relePrecos(db, mktId, porDominio, porCategoria) {
           ultima_coleta_em: new Date().toISOString(),
           dominio_externo: dominio ?? undefined,
           categoria_raiz: raiz ?? undefined,
+          categoria_ramo: ramo ?? undefined,
           ...arvore,
           ...promocaoDeclarada(oferta),
           vendedor: escolha.vendedor?.nickname ?? `vendedor ${oferta.seller_id}`,
@@ -880,7 +900,9 @@ async function main() {
           publicar é o lado certo de errar.
         */
         const arvore = entregaEArvore(oferta);
-        const raiz = await categoriaRaiz(arvore.categoria_folha);
+        const daArvore = await arvoreDaCategoria(arvore.categoria_folha);
+        const raiz = daArvore.raiz;
+        const ramo = daArvore.ramo;
         const nichoDoProduto = decideNicho(produto.domain_id, raiz, porDominio, porCategoria);
 
         if (raiz && !porCategoria.has(raiz)) categoriasNovas.add(raiz);
@@ -923,6 +945,7 @@ async function main() {
               produto_externo_id: produtoId,
               dominio_externo: produto.domain_id ?? null,
               categoria_raiz: raiz,
+              categoria_ramo: ramo,
               ...arvore,
               ...promocaoDeclarada(oferta),
               vendedor: vendedor?.nickname ?? `vendedor ${oferta.seller_id}`,
@@ -950,6 +973,7 @@ async function main() {
               ultima_coleta_em: new Date().toISOString(),
               dominio_externo: produto.domain_id ?? undefined,
               categoria_raiz: raiz ?? undefined,
+              categoria_ramo: ramo ?? undefined,
               ...arvore,
               ...promocaoDeclarada(oferta),
               imagem_url: fotoDoProduto(produto),
