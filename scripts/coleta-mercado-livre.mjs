@@ -47,13 +47,65 @@ const API = "https://api.mercadolibre.com";
  * coisa.
  */
 const CATEGORIAS = {
-  pet: ["MLB1071", "MLB417318"],
+  pet: ["MLB1071"],
   casa: ["MLB1574", "MLB264586", "MLB1499"],
   eletronico: ["MLB1000", "MLB1648", "MLB1051", "MLB1276"],
 };
 
+/**
+ * Busca por palavra, para engrossar a base.
+ *
+ * POR QUE ISTO EXISTE, e é a coisa mais importante deste arquivo: a
+ * detecção de queda compara o preço de agora com a leitura anterior
+ * **da nossa base**. Não existe API que diga "este produto baixou nos
+ * últimos minutos" — quem sabe que baixou é o nosso histórico.
+ *
+ * Então a base PEQUENA é o gargalo, não o algoritmo. Com 64 produtos,
+ * todos "mais vendidos" (que são justamente os de preço mais estável),
+ * cair 10% numa hora é evento raro e a fila fica vazia. Com milhares,
+ * vira fluxo.
+ *
+ * `highlights` dá os campeões de venda e satura rápido: são poucas
+ * dezenas por categoria e mudam devagar. `products/search` não satura,
+ * e é o que faz a base crescer de verdade.
+ */
+const BUSCAS = {
+  pet: [
+    "racao cachorro", "racao gato", "tapete higienico", "antipulgas", "coleira cachorro",
+    "brinquedo pet", "cama pet", "comedouro", "areia gato", "shampoo cachorro",
+    "petisco cachorro", "casinha cachorro", "arranhador gato", "caixa transporte pet",
+  ],
+  casa: [
+    "air fryer", "panela antiaderente", "jogo de cama", "toalha banho", "organizador",
+    "cortina blackout", "tapete sala", "liquidificador", "cafeteira", "ferro de passar",
+    "aspirador de po", "pote hermetico", "escorredor", "luminaria", "ventilador",
+  ],
+  eletronico: [
+    "fone bluetooth", "smartwatch", "carregador rapido", "cabo usb c", "power bank",
+    "caixa de som bluetooth", "mouse sem fio", "teclado", "webcam", "ssd",
+    "cartao de memoria", "suporte celular", "smart tv", "roteador wifi", "pen drive",
+  ],
+};
+
+/** Produtos por termo de busca. */
+const POR_BUSCA = Number(process.env.ML_PRODUTOS_POR_BUSCA ?? 20);
+
+/**
+ * Descobrir e reler preço são trabalhos de ritmo diferente, e juntá-los
+ * quebrou a coleta horária.
+ *
+ * A descoberta varre 44 termos de busca e leva mais de dez minutos —
+ * cabe uma vez ao dia. A releitura de preço precisa acontecer de hora
+ * em hora, porque é dela que sai a queda. Rodar a descoberta toda hora
+ * gastaria a janela inteira redescobrindo o que já está no banco.
+ *
+ * `ML_SO_PRECOS=1` pula a descoberta.
+ */
+const SO_PRECOS = process.env.ML_SO_PRECOS === "1";
+
 /** Quantos produtos por nicho. Baixo de propósito: a série vale mais que a largura. */
 const POR_NICHO = Number(process.env.ML_PRODUTOS_POR_NICHO ?? 20);
+
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -163,6 +215,14 @@ async function maisVendidos(categoria) {
   return (d.content ?? []).filter((c) => c.type === "PRODUCT").map((c) => c.id);
 }
 
+/** Ids de produto por termo de busca. É o que faz a base crescer. */
+async function porBusca(termo) {
+  const d = await api(
+    `products/search?site_id=MLB&status=active&limit=${POR_BUSCA}&q=${encodeURIComponent(termo)}`,
+  );
+  return (d.results ?? []).map((p) => p.id);
+}
+
 /** Quanto a mais vale pagar para ficar com o vendedor melhor (D-033). */
 const TOLERANCIA_PCT = Number(process.env.ML_TOLERANCIA_VENDEDOR_PCT ?? 5);
 
@@ -253,6 +313,61 @@ function reputacaoDoVendedor(usuario) {
   return Math.min(1, Number((base + bonus).toFixed(2)));
 }
 
+/**
+ * Relê o preço do que JÁ ESTÁ no banco.
+ *
+ * Esta é a função que faz a detecção de queda existir, e ela faltava: o
+ * coletor só lia preço do que descobria na mesma execução, então um
+ * anúncio cadastrado ontem nunca mais era consultado. Sem releitura não
+ * há "leitura anterior", e sem leitura anterior não há queda — o
+ * sistema ficaria para sempre com um ponto por anúncio.
+ *
+ * É o trabalho que precisa caber de hora em hora, e por isso ele lê em
+ * lotes e pelo produto de catálogo, que é uma chamada por anúncio.
+ */
+async function relePrecos(db, mktId) {
+  const { data: anuncios } = await db
+    .from("anuncio")
+    .select("id, url_original")
+    .eq("marketplace_id", mktId)
+    .eq("ativo", true)
+    .order("ultima_coleta_em", { ascending: true, nullsFirst: true })
+    .limit(Number(process.env.ML_RELEITURAS_POR_RODADA ?? 400));
+
+  let lidos = 0;
+  let quedas = 0;
+
+  for (const a of anuncios ?? []) {
+    // O id do produto de catálogo mora na própria URL que guardamos.
+    const produtoId = (a.url_original ?? "").match(/\/p\/(MLB\d+)/)?.[1];
+    if (!produtoId) continue;
+
+    try {
+      const oferta = await melhorOferta(produtoId);
+      if (!oferta) continue;
+
+      const centavos = Math.round(oferta.price * 100);
+
+      const { data: antes } = await db
+        .from("anuncio")
+        .select("preco_leitura_centavos")
+        .eq("id", a.id)
+        .single();
+
+      await db.rpc("registra_preco", { p_anuncio_id: a.id, p_preco_centavos: centavos });
+      await db.rpc("registra_leitura", { p_anuncio_id: a.id, p_preco_centavos: centavos });
+      await db.from("anuncio").update({ ultima_coleta_em: new Date().toISOString() }).eq("id", a.id);
+
+      if (antes?.preco_leitura_centavos && centavos < antes.preco_leitura_centavos) quedas++;
+      lidos++;
+    } catch {
+      /* anúncio que sumiu da loja não derruba a rodada. */
+    }
+  }
+
+  console.log(`\nreleitura: ${lidos} anúncios · ${quedas} com preço menor que antes`);
+}
+
 async function main() {
   const { data: operacao } = await db.from("operacao").select("id").limit(1).single();
   const { data: mkt } = await db
@@ -289,15 +404,24 @@ async function main() {
     }
 
     const ids = [];
-    for (const cat of categorias) {
+    for (const cat of SO_PRECOS ? [] : categorias) {
       try {
         ids.push(...(await maisVendidos(cat)));
       } catch (e) {
         problemas.push(`categoria ${cat}: ${e.message}`);
       }
     }
+    for (const termo of SO_PRECOS ? [] : (BUSCAS[slug] ?? [])) {
+      try {
+        ids.push(...(await porBusca(termo)));
+      } catch (e) {
+        problemas.push(`busca "${termo}": ${e.message}`);
+      }
+    }
 
-    const escolhidos = [...new Set(ids)].slice(0, POR_NICHO);
+    // Já conhecidos saem fora: relê-los aqui gastaria a cota que faz a
+    // base crescer, e o preço deles é atualizado no mesmo laço abaixo.
+    const escolhidos = [...new Set(ids)];
     console.log(`\n${slug} — ${escolhidos.length} produtos`);
 
     for (const produtoId of escolhidos) {
@@ -437,6 +561,9 @@ async function main() {
   console.log(
     `\n${produtosNovos} produtos novos · ${anunciosNovos} anúncios novos · ${pontos} pontos de preço`,
   );
+
+  // E o que já estava no banco. É daqui que sai a queda.
+  await relePrecos(db, mkt.id);
   if (problemas.length > 0) {
     console.log(`\n${problemas.length} problema(s):`);
     for (const p of problemas.slice(0, 10)) console.log(`  ${p}`);

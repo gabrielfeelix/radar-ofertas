@@ -47,6 +47,12 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ML_CLIENT_ID: ${{ secrets.ML_CLIENT_ID }}
           ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+          # Só preços: a descoberta varre 44 termos de busca e leva mais
+          # de dez minutos, então ela roda uma vez ao dia, na rotina
+          # diária. Aqui o que importa é RELER o preço do que já está no
+          # banco — é daí que sai a queda, e é o que precisa acontecer de
+          # hora em hora.
+          ML_SO_PRECOS: "1"
           # Sem ML_REFRESH_TOKEN de propósito: ele vive em
           # `credencial_rotativa`, no banco. Aqui cada execução começa
           # de um clone limpo, então token em arquivo ou em secret

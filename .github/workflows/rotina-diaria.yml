@@ -35,6 +35,29 @@ jobs:
   rotina:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Descobre produtos novos no Mercado Livre
+        # A descoberta pesada mora aqui, uma vez ao dia: varre 44 termos
+        # de busca e as categorias de mais vendidos. A coleta horária
+        # cuida de reler o preço do que isto encontrou.
+        #
+        # A base pequena era o gargalo da deteccao, não o algoritmo: a
+        # queda é medida contra a NOSSA leitura anterior, e com 64
+        # produtos de preço estável ela quase nunca acontecia.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ML_CLIENT_ID: ${{ secrets.ML_CLIENT_ID }}
+          ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+        run: |
+          npm install --no-save @supabase/supabase-js
+          node scripts/coleta-mercado-livre.mjs || echo "descoberta falhou, a coleta horária segue"
+
       - name: Coleta de preços
         env:
           URL: ${{ secrets.SUPABASE_URL }}
