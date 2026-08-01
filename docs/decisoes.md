@@ -1217,3 +1217,157 @@ A view `ramos_do_catalogo` é o insumo para marcar os próximos, e
 **Mudaria se:** a medida de clique por post mostrar que o secundário
 performa igual ao primário — aí a periferia não é periferia, e o canal é
 de pet mesmo, não de cão e gato.
+
+---
+
+## D-042 · O canal filtra por atributo, e "perfume masculino" não vira nicho
+**Data:** 2026-08-01
+
+O dono abriu seis canais de Telegram de uma vez — Fitness, Tech, Geek,
+Kids, Beauty e Perfumes (masc). Cinco couberam no modelo existente. O
+sexto não, e o motivo é instrutivo.
+
+### Nicho responde de que prateleira é, e só isso
+
+"Perfume" é nicho: existe como `MLB-PERFUMES` no Mercado Livre.
+**"Masculino" não é.** O ML põe todo perfume na mesma prateleira e
+distingue por um atributo, `GENDER`, cujos valores observados em 01/08
+são Masculino, Feminino, Meninos, Meninas e Sem gênero.
+
+Os dois caminhos sem tabela nova eram piores:
+
+- **Nicho `perfume_masculino`** — obriga a decidir o gênero na hora de
+  classificar, e a duplicar o nicho a cada recorte novo. Amanhã seria
+  `perfume_feminino`, `tenis_infantil`, `moda_plus_size`.
+- **Sem filtro** — um canal anunciado como masculino publica Floratta.
+
+Então entra `canal_atributo`: canal, atributo, valores, e modo `inclui`
+ou `exclui`. **O filtro é do canal, não do produto** — o produto continua
+sendo um perfume, sempre; quem tem preferência é o canal. É a mesma
+separação que já existe entre `produto` e `canal` no resto do modelo.
+
+Os dois modos existem porque o par Beauty/Perfumes precisa dos dois
+lados: um fica com o masculino, o outro com todo o resto. Assim nenhum
+perfume fica sem canal e nenhum sai repetido nos dois.
+
+### Ausência de linha é "aceita tudo", e produto sem o atributo passa
+
+Canal sem filtro se comporta exatamente como antes desta decisão —
+nenhum dos canais existentes muda por a tabela existir.
+
+E **produto que não declara o atributo passa**. Boa parte do catálogo do
+ML não preenche boa parte dos atributos, e reprovar por ausência calaria
+o canal por causa do cadastro de um terceiro. Mesma escolha da D-041:
+quando o custo de errar é "o canal fica mudo", o desconhecido passa.
+
+### A reprova ganha motivo próprio
+
+`filtro_de_atributo` é separado de `nenhum_canal_do_nicho` de propósito.
+São coisas diferentes: nicho sem canal é buraco de cobertura e pede canal
+novo; atributo que não passa é a preferência do canal funcionando e não
+pede nada. Somados num motivo só, o primeiro ficaria invisível dentro do
+segundo.
+
+**Mudaria se:** o recorte passar a precisar de faixa numérica (preço
+acima de X, peso abaixo de Y). `valores text[]` só compara igualdade, e
+aí a tabela precisa de operador.
+
+---
+
+## D-043 · Seis canais de uma vez, e por que a recomendação de começar com dois foi vencida
+**Data:** 2026-08-01
+
+A recomendação técnica era abrir dois canais e crescer com dado. O dono
+decidiu abrir seis, e a decisão é dele: *"eu não ligo sinceramente pra
+isso, eu já estou decidido"*.
+
+Fica registrado o risco que a recomendação carregava, porque ele não
+some por a decisão ter sido tomada: **com a base de hoje, o gargalo é
+oferta detectada, não canal**. Seis canais dividem o mesmo fluxo, e canal
+que posta uma vez por dia o membro silencia na primeira semana. A
+pesquisa de campo põe irrelevância ao lado do volume como motivo de saída
+(`docs/pesquisa/sintese.md` §5).
+
+O que a abertura mudou de concreto, e isso é ganho real:
+
+- **A descoberta desce onde há canal** (D-037). Eram 28 subcategorias sob
+  uma raiz; passaram a ser **196 sob onze raízes**. A base cresce em
+  todos os nichos ao mesmo tempo, e é a base que produz oferta.
+- **Nicho sem canal virou nicho com canal.** `esporte`, `bebe`,
+  `brinquedo`, `games` e `beleza` foram criados vazios em 01/08
+  justamente para o canal nascer com histórico. Nasceram.
+- Três domínios voltaram a rotear (`MLB-FOOTBALL_BALLS`,
+  `MLB-TOY_MICROWAVES`, `MLB-TELEPROMPTERS`), porque estavam fora só por
+  falta de canal.
+
+**A medida que decide se estava certo:** posts por canal por dia, ao fim
+da primeira semana. Se algum canal ficar abaixo de dois, ele não é canal
+— é uma lista de espera, e vale desligar até a base sustentar.
+
+**Mudaria se:** a medida acima mostrar que sobra fila. Aí o freio era
+imaginário e cabe abrir mais.
+
+---
+
+## D-044 · O canal é identificado pelo @nome público, não pelo id numérico
+**Data:** 2026-08-01
+
+Os seis canais novos foram cadastrados com o id numérico lido de
+`getUpdates`. Horas depois o dono abriu os grupos ao público, e **todos
+os seis ids morreram**:
+
+```
+Radar Tech   -5590063497  (group)  →  -1003978161593  (supergroup)
+```
+
+O Telegram converte grupo comum em supergrupo quando o grupo é aberto ao
+público — e a conversão troca o identificador. O id velho **não dá erro
+claro**: o post simplesmente não chega, e o sintoma é canal mudo sem
+pista nenhuma.
+
+Daqui em diante o identificador é o `@nome` público, que sobrevive à
+conversão. O Radar Pet já usava `@radarpet` por acidente feliz, e foi o
+único que não quebrou.
+
+**O custo:** canal privado não tem @nome, e para ele o id numérico
+continua sendo o único caminho — com este risco embutido. Se algum canal
+precisar ser privado, o cadastro dele precisa ser reconferido a cada
+mudança de configuração do grupo.
+
+**Mudaria se:** o Telegram passar a manter o id na conversão, o que não
+está anunciado em lugar nenhum.
+
+---
+
+## D-045 · A etiqueta de afiliado é por canal, e o Beauty não tem a dele
+**Data:** 2026-08-01
+
+`canal.etiqueta_afiliado` é o que atribui a comissão ao canal (D-035), e
+**a etiqueta precisa existir na Central de Afiliados**: inventar uma
+devolve `Tag is not associated with this affiliate` (código 109) e o
+canal fica mudo, sem link.
+
+As doze etiquetas criadas pelo dono foram conferidas uma a uma contra o
+gerador em 01/08. Cinco dos seis canais novos casaram pelo nome:
+
+| Canal | Etiqueta | Conferida |
+|---|---|---|
+| Radar Fitness | `radarfitness` | ✓ |
+| Radar Tech | `radartech` | ✓ |
+| Radar Geek | `radargeek` | ✓ |
+| Radar Kids | `radarkids` | ✓ |
+| Radar Perfumes (masc) | `radarperfumes` | ✓ |
+| **Radar Beauty** | **`radargeral`** | ✓ — mas é remendo |
+
+**`radarbeauty` não existe** (testada, código 109). O Beauty está usando
+`radargeral` para não ficar mudo, e isso tem um custo real: a comissão
+dele fica misturada com a de qualquer outro canal que use a mesma
+etiqueta, e a atribuição por canal — que é o ponto inteiro da D-035 —
+não vale para ele.
+
+**Pendência para o dono:** criar `radarbeauty` na Central e rodar
+`node --env-file=.env.producao scripts/cria-canais.mjs`. É uma linha no
+script e trinta segundos no painel.
+
+**Mudaria se:** a Central passar a aceitar criação de etiqueta por API,
+que hoje não existe (a própria geração de link já é endpoint interno).

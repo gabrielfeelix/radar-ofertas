@@ -151,6 +151,26 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 Atualizado em 01/08/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
 
+### 01/08/2026, à noite: de um canal para sete
+
+O dono abriu seis grupos de Telegram — **Fitness, Tech, Geek, Kids,
+Beauty e Perfumes (masc)** — e os seis estão no ar, com nicho, etiqueta
+de afiliado e chat conferido. O que mudou por baixo:
+
+| O quê | Onde |
+|---|---|
+| `canal_atributo`: o canal filtra por atributo do produto. "Perfume masculino" não é nicho, é o `GENDER` do ML | D-042, migration 37 |
+| O canal é identificado pelo **`@nome` público**, não pelo id numérico — abrir o grupo ao público troca o id | D-044 |
+| Etiqueta de afiliado por canal, conferida contra o gerador. `radarbeauty` não existe: o Beauty está com `radargeral`, e é pendência | D-045 |
+| Nichos `geek` e `perfume`, e os 30 ramos de Esportes que não são fitness marcados como secundários | migration 37 |
+| Ritmo a cinco minutos em pico e normal; madrugada em trinta | migration 39 |
+| As duas linhas de lastro que repetiam o "de" e o "por" que já estavam no corpo | migrations 39 e 40 |
+| **`fetch` do Node não tem timeout.** A descoberta ficou 40 min pendurada numa chamada. `AbortSignal.timeout` de 20s | `coleta-mercado-livre.mjs` |
+
+**A recomendação técnica era abrir dois canais e crescer com dado; o
+dono decidiu seis.** O risco e a medida que decide se estava certo estão
+na D-043 — não é para rediscutir, é para medir na primeira semana.
+
 ### O que a sessão de 01/08/2026 mudou — leia isto primeiro
 
 **O laço fechou: da queda detectada até a mensagem no canal, sem humano** (D-033). `scripts/publica-automatico.mjs` roda de hora em hora depois da coleta e da detecção. Quem aprova são as comportas, que são números em `parametro`. **A tela `/aprovar` continua existindo e não é mais o caminho** — virou conferência.

@@ -31,6 +31,44 @@ comportas, gera link de afiliado de verdade, publica oferta e cupom no
 Telegram. O **freio de mão foi solto em 01/08 à tarde**
 (`publicacao_automatica = 1`), com autorização do dono.
 
+**01/08, à noite: de um canal para sete.** O dono abriu seis grupos de
+Telegram — Fitness, Tech, Geek, Kids, Beauty e Perfumes (masc) — e os
+seis estão cadastrados, com nicho e chat conferido pela Bot API. A
+recomendação técnica era abrir dois e crescer com dado; ele decidiu seis,
+e o risco que a recomendação carregava está registrado na D-043 junto com
+a medida que decide se estava certo.
+
+O que isso mexeu por baixo, e é mais do que "cadastrar canal":
+
+- `geek` e `perfume` viraram nicho, com domínios conferidos contra a API.
+- **`canal_atributo` é tabela nova** (D-042): "Perfumes (masc)" não é
+  nicho, é o atributo `GENDER` do Mercado Livre. Beauty fica com o que
+  não é masculino; nenhum perfume fica sem canal.
+- A descoberta desce onde há canal (D-037), e passou de **28 para 196
+  subcategorias**, sob onze raízes. É o maior ganho de base do dia.
+- 65 termos de busca novos, para os nichos que tinham zero.
+
+Depois, com os grupos já abertos ao público, mais quatro coisas:
+
+- **Os seis `chat_id` morreram e foram refeitos** (D-044). Abrir o grupo
+  ao público converte `group` em `supergroup`, e a conversão troca o id.
+  O identificador passou a ser o `@nome` público.
+- **Etiqueta de afiliado por canal**, conferida uma a uma contra o
+  gerador (D-045). `radarbeauty` não existe: o Beauty está com
+  `radargeral`, que é remendo e está anotado como pendência.
+- **O ritmo foi a cinco minutos** em pico e normal, a pedido do dono. A
+  madrugada ficou em trinta, e a migration 39 explica a conta.
+- **As duas linhas redundantes da mensagem saíram** (migrations 39 e 40).
+  O dono viu uma delas; a outra, no gatilho `queda`, tinha o mesmo
+  defeito e teria aparecido no primeiro post por queda.
+
+E um defeito achado no caminho, que valia mais que os quatro:
+**`fetch` do Node não tem timeout**, e a descoberta ficou quarenta
+minutos pendurada numa única chamada, sem CPU e sem log. No agendador
+isso não é chatice, é a rotina diária pendurada até o teto de seis horas
+do GitHub Actions com os canais amanhecendo sem catálogo. Agora há
+`AbortSignal.timeout` de vinte segundos nas duas chamadas do coletor.
+
 ---
 
 ## O que foi construído hoje, em ordem
@@ -280,5 +318,6 @@ E no banco, as views que respondem as perguntas que importam:
 | `funde-identidades.mjs` | identidade do produto. `--seco`, `--procura-irmaos`, `--revisa` |
 | `reclassifica-nichos.mjs` | reatribui nicho pelo domínio e pela categoria raiz |
 | `entra-no-catalogo.mjs` | põe produto escolhido à mão no catálogo, pelo caminho normal |
+| `cria-canais.mjs` | cadastra os canais de Telegram, com nichos e filtro de atributo |
 
 **Todos aceitam `--seco` quando mexem em muita coisa.** Use.

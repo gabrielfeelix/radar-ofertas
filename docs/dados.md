@@ -121,6 +121,15 @@ Duas regras vivem no banco, não no coletor: um ponto por anúncio por dia mante
 
 `plataforma` aceita `whatsapp` e `telegram`, e hoje `whatsapp` significa **grupo** — é o que o `wa.me` alcança. O Canal do WhatsApp é uma terceira superfície e entra como **terceiro valor**, nunca como booleano ao lado (D-031). Não construa agora: é Fase 2, e muda o fluxo de publicação junto.
 
+### canal_atributo
+`id`, `operacao_id`, `canal_id`, `atributo`, `valores`, `modo`
+
+O **recorte fino dentro do nicho** (D-042). `canal_nicho` responde de que prateleira o canal aceita produto; esta responde qual parte da prateleira. Existe porque "Radar Perfumes (masc)" não é nicho: o Mercado Livre põe todo perfume em `MLB-PERFUMES` e distingue por um atributo, `GENDER`.
+
+`atributo` é a chave como o marketplace a escreve (`GENDER`), e casa com `produto.atributos`. `modo` é `inclui` (só passa quem casa) ou `exclui` (passa quem não casa) — os dois existem porque o par Beauty/Perfumes precisa dos dois lados.
+
+**Canal sem linha aceita tudo, e produto sem o atributo passa.** A segunda é a que importa: reprovar por ausência calaria o canal por causa do cadastro de um terceiro.
+
 ### fonte_descoberta e mencao
 Colheita (D-012). A fonte tem `nicho_id`, e **o produto colhido herda esse nicho** — sem isso a colheita produz milhares de produtos não roteáveis.
 
