@@ -166,6 +166,13 @@ export async function canaisElegiveis(nichoSlug: string): Promise<Canal[]> {
 export type DadosDoCanal = {
   nome: string;
   plataforma: Plataforma;
+  /**
+   * `@canal` ou o id numérico, e **obrigatório no Telegram** — o banco
+   * recusa a linha sem ele. Era o buraco que impedia criar canal de
+   * Telegram pela tela: a ação nunca mandava o campo, e o erro chegava
+   * como "não consegui salvar no banco", sem dizer o que faltava.
+   */
+  telegramChatId?: string | null;
   nichos: string[];
   tetoDiario: number;
   audiencia: number;
@@ -191,6 +198,7 @@ export async function criaCanal(dados: DadosDoCanal): Promise<string | null> {
       operacao_id: operacao.operacao_id,
       nome: dados.nome,
       plataforma: dados.plataforma,
+      telegram_chat_id: dados.telegramChatId || null,
       posts_por_dia_max: dados.tetoDiario,
       membros_estimados: dados.audiencia,
       split_audiencia_pct: dados.splitAudienciaPct,
@@ -214,6 +222,7 @@ export async function atualizaCanal(id: string, dados: DadosDoCanal): Promise<vo
     .update({
       nome: dados.nome,
       plataforma: dados.plataforma,
+      telegram_chat_id: dados.telegramChatId || null,
       posts_por_dia_max: dados.tetoDiario,
       membros_estimados: dados.audiencia,
       split_audiencia_pct: dados.splitAudienciaPct,

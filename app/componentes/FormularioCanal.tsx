@@ -68,7 +68,7 @@ export function FormularioCanal({
   const [plataforma, setPlataforma] = useState<string>(canal?.plataforma ?? "whatsapp");
 
   const dono = 100 - audiencia - operacao;
-  const erroDe = (campo: "nome" | "nichos" | "split" | "teto" | "horarios") =>
+  const erroDe = (campo: "nome" | "nichos" | "split" | "teto" | "horarios" | "telegram") =>
     resultado?.ok === false && resultado.campo === campo ? resultado.mensagem : null;
 
   return (
@@ -88,17 +88,20 @@ export function FormularioCanal({
         </Campo>
 
         {/*
-          A dica antiga era "Telegram publica sozinho", e isso ainda
-          não é verdade: o envio automático precisa de um bot e do
-          chat_id do canal, que nenhum campo daqui pede — é trabalho da
-          Fase 2. Prometer o que não existe faz o dono criar o canal e
-          descobrir na hora errada, olhando um grupo mudo.
+          Esta dica dizia "o envio automático é da Fase 2", e deixou de
+          ser verdade em 01/08: o bot existe e a fila publica sozinha no
+          Telegram. Faltava o campo do identificador do canal, sem o
+          qual o banco recusava a linha — e o erro chegava como "não
+          consegui salvar", que não diz o que fazer.
+
+          O WhatsApp continua manual, e isso NÃO vai mudar: é a regra
+          3.2, e é o que protege o número do parceiro.
         */}
         <Campo
           rotulo="Plataforma"
           dica={
             plataforma === "telegram"
-              ? "O envio automático pelo bot é da Fase 2. Até lá o Telegram sai na mão, igual ao WhatsApp."
+              ? "O bot publica sozinho, pela API oficial. Ele precisa ser administrador do canal, com “Publicar mensagens” ligado."
               : "O envio é sempre na mão: o painel monta a mensagem e abre o WhatsApp com ela pronta."
           }
         >
@@ -113,6 +116,22 @@ export function FormularioCanal({
           </select>
         </Campo>
       </div>
+
+      {plataforma === "telegram" && (
+        <Campo
+          rotulo="Canal no Telegram"
+          dica="É para onde o bot publica. Use @nomedocanal, ou o id numérico se o canal for privado."
+          erro={erroDe("telegram")}
+        >
+          <input
+            name="telegram_chat_id"
+            type="text"
+            defaultValue={canal?.telegramChatId ?? ""}
+            placeholder="@radarpet"
+            className={classeDeCampo}
+          />
+        </Campo>
+      )}
 
       <Campo
         rotulo="Nichos que este canal aceita"

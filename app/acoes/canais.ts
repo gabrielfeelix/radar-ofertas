@@ -23,7 +23,11 @@ import { HORARIOS_SUGERIDOS, leHorarios } from "@/lib/horarios";
 
 export type ResultadoCanal =
   | { ok: true; canalId: string; token: string }
-  | { ok: false; campo: "nome" | "nichos" | "split" | "teto" | "horarios"; mensagem: string };
+  | {
+      ok: false;
+      campo: "nome" | "nichos" | "split" | "teto" | "horarios" | "telegram";
+      mensagem: string;
+    };
 
 export async function salvaCanal(
   _anterior: ResultadoCanal | null,
@@ -36,9 +40,28 @@ export async function salvaCanal(
   const audiencia = Number(form.get("audiencia") ?? 0);
   const splitAudienciaPct = Number(form.get("split_audiencia") ?? 0);
   const splitOperacaoPct = Number(form.get("split_operacao") ?? 0);
+  const plataforma = String(form.get("plataforma") ?? "whatsapp") as Plataforma;
+  // O `@` é opcional para quem digita e obrigatório para o Telegram.
+  const chatBruto = String(form.get("telegram_chat_id") ?? "").trim();
+  const telegramChatId =
+    chatBruto === "" || chatBruto.startsWith("@") || chatBruto.startsWith("-")
+      ? chatBruto
+      : `@${chatBruto}`;
 
   if (nome.length < 2) {
     return { ok: false, campo: "nome", mensagem: "Dê um nome ao canal." };
+  }
+
+  // O banco recusa canal de Telegram sem identificador, e recusar aqui
+  // é melhor: o erro do banco chega como "não consegui salvar", que
+  // não diz o que fazer.
+  if (plataforma === "telegram" && telegramChatId === "") {
+    return {
+      ok: false,
+      campo: "telegram",
+      mensagem:
+        "Diga qual é o canal no Telegram (@radarpet). É para onde o bot publica — sem ele não há como enviar.",
+    };
   }
 
   // Canal sem nicho não recebe oferta nenhuma e fica no painel
@@ -93,7 +116,8 @@ export async function salvaCanal(
 
   const dados: DadosDoCanal = {
     nome,
-    plataforma: String(form.get("plataforma") ?? "whatsapp") as Plataforma,
+    plataforma,
+    telegramChatId,
     nichos,
     tetoDiario,
     audiencia: Number.isFinite(audiencia) ? Math.max(0, audiencia) : 0,
@@ -109,7 +133,12 @@ export async function salvaCanal(
   if (id === "") {
     const novoId = await criaCanal(dados);
     if (!novoId) {
-      return { ok: false, campo: "nome", mensagem: "Não consegui salvar o canal no banco." };
+      return {
+        ok: false,
+        campo: "nome",
+        mensagem:
+          "Não consegui salvar o canal no banco. Se a plataforma é Telegram, confira o identificador do canal.",
+      };
     }
     revalidatePath("/canais");
     revalidatePath("/aprovar");
