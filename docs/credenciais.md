@@ -228,6 +228,42 @@ etiqueta; renomear ou apagar provavelmente perde o histórico daquele
 número. Não foi testado, e até saber o contrário vale a suposição
 conservadora.
 
+### O formato do link, decifrado em 01/08/2026
+
+Dois links gerados com etiquetas diferentes, para o mesmo gerador:
+
+```
+https://www.mercadolivre.com.br/social/fega6031503
+  ?matt_word=radarpet      <- A ETIQUETA, em texto puro
+  &matt_tool=66367903      <- constante, igual nos dois
+  &forceInApp=true
+  &ref=BEtmhz7XQDUw...     <- blob cifrado, muda por produto
+```
+
+**`matt_word` carrega a etiqueta e é legível.** Comparando os dois links,
+só `matt_word` e `ref` mudam. Isso confirma: **atribuição por canal
+funciona sem redirecionador.**
+
+**Mas o `ref` não é gerável do nosso lado.** Ele codifica o produto e vem
+cifrado, então o sistema NÃO consegue montar link de afiliado sozinho —
+precisa passar pelo gerador do painel, que aceita várias URLs por vez.
+
+**A granularidade real é por CANAL, não por publicação.** O `matt_word`
+carrega a *etiqueta*, e etiqueta se cadastra no painel — não dá para
+inventar uma por publicação. Para dividir receita com parceiro isso
+basta. Para saber qual post vendeu, não.
+
+### O teste que falta, e ele é a compra da Fase 0
+
+Colar `?matt_word=radarpet&matt_tool=66367903` numa URL **normal** de
+produto, sem passar pelo gerador. Se o ML honrar, o sistema publica
+sozinho; se não, cada lote passa pelo painel.
+
+**Não há como verificar isso sem uma venda real** — é exatamente a compra
+de teste da Fase 0, que precisa ser feita por outra pessoa (autocompra é
+violação de termo). Faça o link desse jeito, peça a alguém que compre por
+ele, e veja se aparece com `radarpet` no relatório.
+
 ### O que ainda falta
 
 **Um link completo gerado com cada etiqueta**, para extrair o número de
