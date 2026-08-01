@@ -806,8 +806,47 @@ async function main() {
     );
   }
 
-  const idsPrioritarios = [];
+  /*
+    UM BALDE POR RAIZ, E NAO UMA LISTA SO. Esta foi a lição da primeira
+    rodada com sete canais, e o número mostra o tamanho do problema:
+    4.239 candidatos achados, teto de 600 por rodada, e as 600 vagas
+    foram embora nas primeiras raízes da lista. O resultado no banco:
+
+      eletronico=242  pet=228  casa=98  games=3  beleza=2  esporte=2
+
+    "Pet Shop" tem 28 filhas e cada uma devolve algumas dezenas de
+    campeões: sozinha, a primeira raiz da lista já enche metade do teto.
+    Brinquedos, Bebês e Beleza vinham depois e não sobrava vaga — e um
+    canal sem catálogo não é um canal, é uma lista de espera.
+
+    Concatenar em ordem só funcionava enquanto havia um canal. Com sete,
+    a ordem da lista virou uma decisão de negócio disfarçada de detalhe
+    de implementação.
+
+    Agora cada raiz tem o próprio balde e o rateio é por rodízio: uma
+    de cada, até o teto. Raiz que se esgota sai do rodízio e as outras
+    dividem o que sobra, então nada se perde quando uma categoria é
+    pequena.
+  */
+  const baldesPrioritarios = new Map();
   const ids = [];
+
+  /** Um de cada balde, por vez, até acabar. */
+  function rodizio(baldes) {
+    const filas = [...baldes.values()].map((v) => [...v]);
+    const saida = [];
+    let sobrou = true;
+    while (sobrou) {
+      sobrou = false;
+      for (const fila of filas) {
+        const item = fila.shift();
+        if (item === undefined) continue;
+        saida.push(item);
+        sobrou = true;
+      }
+    }
+    return saida;
+  }
 
   /*
     A DESCIDA POR SUBCATEGORIA, e ela só acontece onde existe canal.
@@ -846,7 +885,12 @@ async function main() {
     for (const alvo of alvos) {
       try {
         const achados = await maisVendidos(alvo);
-        (prioritaria ? idsPrioritarios : ids).push(...achados);
+        if (prioritaria) {
+          if (!baldesPrioritarios.has(cat)) baldesPrioritarios.set(cat, []);
+          baldesPrioritarios.get(cat).push(...achados);
+        } else {
+          ids.push(...achados);
+        }
       } catch (e) {
         // Folha sem destaque não é problema: nem toda subcategoria tem
         // campeão de venda. Só a raiz falhando merece registro.
@@ -858,15 +902,24 @@ async function main() {
   if (filhasUsadas > 0) {
     console.log(`desceu para ${filhasUsadas} subcategorias das raízes com canal`);
   }
-  // A busca por termo não sabe em que nicho vai cair, então ela entra
-  // depois do que tem canal e antes do que não tem.
+  /*
+    A busca por termo não sabe em que nicho vai cair, então ela entra
+    depois do que tem canal e antes do que não tem.
+
+    Mas ela tem o MESMO problema de rateio da lista de categorias: os
+    termos estão agrupados por nicho no topo do arquivo, e concatenar em
+    ordem faria os catorze termos de pet entregarem tudo antes de
+    "perfume masculino" ser consultado. Um balde por termo, e rodízio.
+  */
+  const baldesDeBusca = new Map();
   for (const termo of SO_PRECOS ? [] : BUSCAS) {
     try {
-      ids.push(...(await porBusca(termo)));
+      baldesDeBusca.set(termo, await porBusca(termo));
     } catch (e) {
       problemas.push(`busca "${termo}": ${e.message}`);
     }
   }
+  ids.push(...rodizio(baldesDeBusca));
 
   {
     // Já conhecidos saem fora: relê-los aqui gastaria a cota que faz a
@@ -878,6 +931,7 @@ async function main() {
     // que cabe" em "estoura o tempo e não grava nada".
     // O `Set` sobre a concatenação preserva a primeira aparição, então
     // um produto que existe nas duas listas conta como prioritário.
+    const idsPrioritarios = rodizio(baldesPrioritarios);
     const todos = [...new Set([...idsPrioritarios, ...ids])];
     const escolhidos = todos.slice(0, Number(process.env.ML_DESCOBERTAS_POR_RODADA ?? 600));
 
