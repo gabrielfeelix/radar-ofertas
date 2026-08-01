@@ -1371,3 +1371,78 @@ script e trinta segundos no painel.
 
 **Mudaria se:** a Central passar a aceitar criação de etiqueta por API,
 que hoje não existe (a própria geração de link já é endpoint interno).
+
+---
+
+## D-046 · Uma execução do publicador por vez, com trava de prazo
+**Data:** 2026-08-01
+
+Observado no canal, não deduzido: às 19:36 e 19:41 os sete canais
+publicaram duas vezes cada, com **44 segundos** de intervalo, contra os
+cinco minutos configurados. Depois da trava, o mesmo canal passou a
+publicar a cada 5 min 14 s.
+
+**O ritmo não estava errado.** `podePublicarAgora` está correto e
+testado. Eram duas instâncias do publicador no ar. Cada uma lê
+`canal.ultima_publicacao_em` uma vez, no começo, e mantém a própria
+cópia em memória — o que a outra grava, ela nunca vê. Com N processos o
+canal fala N vezes mais.
+
+**E o estrago pior não é o ritmo.** As duas leem a mesma fila de
+`publicacao` com `estado = 'pendente'`, e nada impede as duas de
+mandarem a MESMA mensagem. É a D-040 de novo, que custou nove
+publicações repetidas.
+
+Rodar à mão foi o que revelou, mas o agendador sozinho já corre o risco:
+o cron dispara de hora em hora e a janela do publicador é de 50 minutos.
+Um run que atrase dez minutos encontra o seguinte, e ninguém é avisado.
+
+### Por que a trava é de tempo, e não de sessão
+
+Advisory lock do Postgres seria o natural e **não serve**: cada chamada
+via PostgREST é uma sessão nova, e o lock morre com ela. Então a trava é
+uma linha com prazo. Quem toma escreve até quando; quem chega depois só
+entra se o prazo venceu.
+
+Prazo vencido destrava sozinho, e isso é o que impede um processo morto
+de calar o sistema para sempre. A trava é solta no `finally`, não no fim
+do `main`: erro no meio do laço deixaria o canal mudo por uma hora
+depois de um problema que já passou.
+
+**Mudaria se:** o publicador passar a rodar em processo único e
+permanente, em vez de invocado pelo cron. Aí o problema não existe.
+
+---
+
+## D-047 · O padrão que se repetiu quatro vezes: o dado vem na resposta e é descartado
+**Data:** 2026-08-01
+
+Não é uma decisão nova, é o reconhecimento de um padrão — e ele merece
+lugar próprio porque custou quatro defeitos no mesmo dia, todos com o
+mesmo formato: **a informação estava na resposta da API, alguém a usou
+para uma coisa só, e jogou o resto fora.**
+
+| O dado | Vinha em | Era usado para | O que custou |
+|---|---|---|---|
+| `domain_id` | `products/{id}` | nada | whey no canal de pet (migration 24) |
+| `shipping.free_shipping` | `products/{id}/items` | nada | a linha de frete que todo concorrente põe (migration 27) |
+| `message_id` | resposta do `sendMessage` | dizer "deu certo" | nenhuma publicação podia ser apagada (migration 44) |
+| `attributes` | `products/{id}` | montar a chave de identidade | Radar Perfumes mudo para sempre (01/08) |
+
+O último é o mais instrutivo. `atributosDe(produto)` era chamado, o
+resultado ia para `chaveDeIdentidade()`, e a variável morria ali. A
+coluna `produto.atributos` existia desde a migration 31 e era preenchida
+só por `funde-identidades.mjs`, que roda à parte: 471 de 1.714 produtos
+a tinham. Quando o filtro de `GENDER` passou a exigir o atributo, os
+sete perfumes do catálogo estavam todos sem ele.
+
+**A regra que fica:** ao ler uma resposta de API, gravar o que ela traz
+de estável e barato, mesmo sem uso imediato. O custo é uma coluna; o
+custo de não gravar é descobrir meses depois que o dado nunca existiu no
+banco, e que refazer o histórico é impossível.
+
+Isso **não** vale para dado que a política de terceiro proíbe guardar —
+preço e imagem da Amazon continuam com as 24 horas da regra 3.3.
+
+**Mudaria se:** o custo de armazenamento passar a apertar. Hoje o
+gargalo do plano gratuito é a série de preço, não a coluna de atributos.

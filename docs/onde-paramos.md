@@ -62,6 +62,25 @@ Depois, com os grupos já abertos ao público, mais quatro coisas:
   O dono viu uma delas; a outra, no gatilho `queda`, tinha o mesmo
   defeito e teria aparecido no primeiro post por queda.
 
+E mais três, todos achados olhando o canal de verdade em vez do código:
+
+- **O publicador rodava duas vezes ao mesmo tempo** (D-046). Sete canais
+  publicaram duas vezes cada com 44 segundos de intervalo, contra os
+  cinco minutos configurados. O ritmo estava certo; eram duas
+  instâncias, cada uma com a própria cópia de `ultima_publicacao_em`.
+  Depois da trava: 5 min 14 s, como configurado.
+- **Nenhuma publicação podia ser apagada.** O Telegram devolve
+  `message_id` em toda mensagem e nós descartávamos. Descoberto ao
+  tentar tirar um perfume feminino do canal masculino, e não dar.
+- **`produto.atributos` quase nunca era gravado.** O coletor calculava
+  os atributos para a chave de identidade e jogava fora: 471 de 1.714
+  produtos os tinham. Como o filtro do Radar Perfumes exige `GENDER`, o
+  canal ficaria mudo para sempre.
+
+Os três, mais os dois de cima, são o mesmo padrão, e ele virou a D-047:
+**o dado vem na resposta da API, alguém usa para uma coisa só, e
+descarta o resto.**
+
 E um segundo, achado ao conferir o catálogo depois da primeira rodada:
 **a descoberta gastava as 600 vagas por ordem de lista.** Com 4.239
 candidatos e 28 filhas só em Pet Shop, as primeiras raízes enchiam o
