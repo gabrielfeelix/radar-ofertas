@@ -51,6 +51,7 @@ export default async function Modelos() {
           lastroCom: modelo.lastro_com,
           lastroSem: modelo.lastro_sem,
           lastroQueda: modelo.lastro_queda,
+          lastroDeclarado: modelo.lastro_declarado,
         }}
       />
     </Pagina>

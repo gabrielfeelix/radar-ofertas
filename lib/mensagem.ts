@@ -32,6 +32,13 @@ export type ModeloDeMensagem = {
    * nas últimas horas, e é a afirmação mais forte que sustenta.
    */
   lastroQueda: string;
+  /**
+   * O quarto caso: a loja marcou o anúncio como promoção e nós não
+   * medimos nada. **Tem que atribuir a alegação à loja**, porque o
+   * `original_price` do Mercado Livre é frequentemente inflado, e
+   * assumi-lo como nosso é repetir a mentira que a regra 3.4 proíbe.
+   */
+  lastroDeclarado: string;
 };
 
 /**
@@ -39,14 +46,19 @@ export type ModeloDeMensagem = {
  *
  * `serie` = está barata contra a mediana que NÓS observamos, com
  * série suficiente. `queda` = caiu desde a leitura anterior, e pode
- * ter três horas de vida.
+ * ter três horas de vida. `declarado` = a LOJA diz que está em
+ * promoção, e nós não medimos nada.
  *
  * NÃO É DETALHE DE ORIGEM, É O QUE A MENSAGEM PODE AFIRMAR. Uma queda
  * de três horas escrita como "menor preço que observamos" é
  * exatamente a mentira que a regra 3.4 existe para impedir — e é a
  * que queima o canal.
+ *
+ * O `declarado` é o mais fraco dos três e por isso o mais perigoso: o
+ * preço de antes é alegação de terceiro. A mensagem dele nomeia a loja
+ * como quem afirma, e é essa atribuição que separa reportar de mentir.
  */
-export type GatilhoDaOferta = "serie" | "queda";
+export type GatilhoDaOferta = "serie" | "queda" | "declarado";
 
 export type DadosDaMensagem = {
   produto: string;
@@ -173,9 +185,11 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
   const molde =
     dados.gatilho === "queda"
       ? modelo.lastroQueda
-      : dados.podeAfirmarMinimo
-        ? modelo.lastroCom
-        : modelo.lastroSem;
+      : dados.gatilho === "declarado"
+        ? modelo.lastroDeclarado
+        : dados.podeAfirmarMinimo
+          ? modelo.lastroCom
+          : modelo.lastroSem;
 
   const lastro = preenche(molde, {
     janela: String(dados.janelaDias),

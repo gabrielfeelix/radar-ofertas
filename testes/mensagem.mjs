@@ -201,6 +201,7 @@ const modeloTres = {
   lastroCom: "Menor preço em {janela} dias.",
   lastroSem: "Menor preço que observamos desde {desde}.",
   lastroQueda: "Caiu de {antes} para {agora} hoje.",
+  lastroDeclarado: "A loja marcou de {antes} por {agora}.",
 };
 
 const daQueda = { ...dados, precoCentavos: 3878, precoAntesCentavos: 4407 };

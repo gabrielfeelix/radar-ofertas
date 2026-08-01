@@ -164,7 +164,7 @@ async function main() {
   // Modelo e canais, uma vez só.
   const { data: modeloLinha } = await db
     .from("modelo_mensagem")
-    .select("corpo, lastro_com, lastro_sem, lastro_queda, nota_prefixo")
+    .select("corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, nota_prefixo")
     .eq("ativo", true)
     .limit(1)
     .maybeSingle();
@@ -174,6 +174,7 @@ async function main() {
     lastroCom: modeloLinha.lastro_com,
     lastroSem: modeloLinha.lastro_sem,
     lastroQueda: modeloLinha.lastro_queda,
+    lastroDeclarado: modeloLinha.lastro_declarado,
     notaPrefixo: modeloLinha.nota_prefixo,
   };
 
@@ -203,12 +204,55 @@ async function main() {
       continue;
     }
 
-    // 2. Os canais que aceitam este nicho
+    /*
+      2. A COMPORTA DE NICHO.
+
+      Na primeira madrugada automática saíram três posts no canal de
+      pet e dois eram de outro nicho: uma mangueira de jardim e um whey
+      protein. Duas causas se somaram, e esta é a segunda linha de
+      defesa contra as duas.
+
+      Produto SEM nicho é reprovado, e não ignorado: antes ele
+      simplesmente não achava canal e ficava `nova` para sempre, sendo
+      reavaliado de hora em hora sem nunca sair nem aparecer. Erro de
+      classificação vira oferta não publicada, que é o lado certo de
+      errar, e o motivo gravado é o que permite achar o buraco depois.
+    */
     const nichoId = anuncio.produto?.nicho_id;
+
+    if (!nichoId) {
+      await db
+        .from("oferta")
+        .update({
+          status: "rejeitada",
+          motivo_rejeicao: "sem_nicho",
+          decidida_em: new Date().toISOString(),
+        })
+        .eq("id", oferta.id);
+      motivos.sem_nicho = (motivos.sem_nicho ?? 0) + 1;
+      reprovadas++;
+      continue;
+    }
+
+    // O casamento é explícito: o canal precisa declarar este nicho.
+    // Nunca "o canal aceita tudo" — foi assim que a mangueira saiu.
     const elegiveis = (canais ?? []).filter((c) =>
       (c.canal_nicho ?? []).some((cn) => cn.nicho_id === nichoId),
     );
-    if (elegiveis.length === 0) continue;
+
+    if (elegiveis.length === 0) {
+      await db
+        .from("oferta")
+        .update({
+          status: "rejeitada",
+          motivo_rejeicao: "nenhum_canal_do_nicho",
+          decidida_em: new Date().toISOString(),
+        })
+        .eq("id", oferta.id);
+      motivos.nenhum_canal_do_nicho = (motivos.nenhum_canal_do_nicho ?? 0) + 1;
+      reprovadas++;
+      continue;
+    }
 
     await db
       .from("oferta")

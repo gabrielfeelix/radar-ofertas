@@ -271,6 +271,39 @@ async function melhorOferta(produtoId) {
 }
 
 /**
+ * O desconto que a própria loja declara.
+ *
+ * POR QUE ISTO IMPORTA MAIS DO QUE PARECE: a queda é medida contra a
+ * NOSSA leitura anterior, então todo anúncio novo precisa de duas
+ * leituras antes de poder virar oferta. Medido em 01/08: 499 anúncios
+ * no banco e 6 ofertas desde sempre. O `original_price` já vinha nesta
+ * mesma resposta e era jogado fora.
+ *
+ * E ele NÃO É VERDADE ABSOLUTA. O "de" do Mercado Livre é
+ * frequentemente inflado, e repeti-lo como se fosse nosso é a mentira
+ * da regra 3.4. Por isso ele entra como peneira de entrada, a mensagem
+ * atribui a alegação à loja, e `detecta_declarados` recusa desconto
+ * acima do teto, que é onde mora o "de" inventado.
+ *
+ * `deal_ids` diz de quais campanhas do ML o anúncio participa (oferta
+ * do dia, relâmpago). Vazio não quer dizer sem desconto.
+ */
+function promocaoDeclarada(item) {
+  const original = Number(item?.original_price);
+  if (!Number.isFinite(original) || original <= item.price) {
+    // Não zera o que já estava: promoção que acabou some sozinha pela
+    // janela de 6 horas de `detecta_declarados`, e apagar aqui perderia
+    // o registro de que ela existiu.
+    return { promocoes: item?.deal_ids ?? null };
+  }
+  return {
+    preco_original_centavos: Math.round(original * 100),
+    preco_original_visto_em: new Date().toISOString(),
+    promocoes: item?.deal_ids ?? null,
+  };
+}
+
+/**
  * O link da foto do produto.
  *
  * LINK, nunca o arquivo — a regra 3.3 é explícita: *"You will not store
@@ -356,7 +389,10 @@ async function relePrecos(db, mktId) {
 
       await db.rpc("registra_preco", { p_anuncio_id: a.id, p_preco_centavos: centavos });
       await db.rpc("registra_leitura", { p_anuncio_id: a.id, p_preco_centavos: centavos });
-      await db.from("anuncio").update({ ultima_coleta_em: new Date().toISOString() }).eq("id", a.id);
+      await db
+        .from("anuncio")
+        .update({ ultima_coleta_em: new Date().toISOString(), ...promocaoDeclarada(oferta) })
+        .eq("id", a.id);
 
       if (antes?.preco_leitura_centavos && centavos < antes.preco_leitura_centavos) quedas++;
       lidos++;
@@ -389,16 +425,34 @@ async function main() {
     await guardaRefresh(refreshNovo, mkt.id);
   }
   const { data: nichos } = await db.from("nicho").select("id, slug");
-
   const porSlug = new Map((nichos ?? []).map((n) => [n.slug, n.id]));
+
+  /*
+    O mapa que decide o nicho, carregado uma vez.
+
+    Ele vive no banco (`nicho_dominio`) e não aqui pelo mesmo motivo da
+    D-023: mapear domínio novo é trabalho de trinta segundos, e não de
+    publicar versão. `has` sem `get` é a distinção que importa: linha
+    com nicho nulo quer dizer "olhamos e não roteia", ausência de linha
+    quer dizer "ninguém olhou" — e só a segunda vira trabalho.
+  */
+  const { data: mapeamento } = await db
+    .from("nicho_dominio")
+    .select("dominio_externo, nicho_id")
+    .eq("marketplace_id", mkt.id);
+
+  const porDominio = new Map((mapeamento ?? []).map((m) => [m.dominio_externo, m.nicho_id]));
+  const dominiosNovos = new Set();
+
   let produtosNovos = 0;
   let anunciosNovos = 0;
   let pontos = 0;
   const problemas = [];
 
   for (const [slug, categorias] of Object.entries(CATEGORIAS)) {
-    const nichoId = porSlug.get(slug);
-    if (!nichoId) {
+    // O slug ainda comanda ONDE PROCURAR. O que ele não decide mais é
+    // o que o produto É: isso agora sai do domínio que o ML devolve.
+    if (!porSlug.has(slug)) {
       problemas.push(`nicho "${slug}" não existe no banco`);
       continue;
     }
@@ -456,12 +510,37 @@ async function main() {
           .eq("titulo_canonico", produto.name)
           .maybeSingle();
 
+        /*
+          O NICHO VEM DO QUE O PRODUTO É, não de quem o achou.
+
+          Antes ele vinha da lista de termos que devolveu o produto: se
+          `products/search?q=racao gato` trouxe algo, esse algo virava
+          pet. E como a busca casa por texto de forma frouxa, o banco
+          ficou com Galaxy Buds e papel fotográfico dentro de pet, e
+          com um whey dentro de eletrônico que foi publicado no canal
+          de pet na primeira madrugada automática.
+
+          O `domain_id` é a classificação do próprio Mercado Livre
+          sobre o produto de catálogo, e vem nesta mesma resposta.
+          Domínio sem mapeamento dá nicho NULO de propósito: o produto
+          entra no catálogo, aparece em /produtos/sem-nicho, e não é
+          publicado até alguém decidir. Errar para o lado de não
+          publicar é o lado certo de errar.
+        */
+        const nichoDoProduto = produto.domain_id
+          ? (porDominio.get(produto.domain_id) ?? null)
+          : null;
+
+        if (produto.domain_id && !porDominio.has(produto.domain_id)) {
+          dominiosNovos.add(produto.domain_id);
+        }
+
         if (!linha) {
           const { data: novo, error } = await db
             .from("produto")
             .insert({
               operacao_id: operacao.id,
-              nicho_id: nichoId,
+              nicho_id: nichoDoProduto,
               titulo_canonico: produto.name,
             })
             .select("id")
@@ -490,6 +569,8 @@ async function main() {
               marketplace_id: mkt.id,
               sku_externo: sku,
               url_original: `https://www.mercadolivre.com.br/p/${produtoId}`,
+              dominio_externo: produto.domain_id ?? null,
+              ...promocaoDeclarada(oferta),
               vendedor: vendedor?.nickname ?? `vendedor ${oferta.seller_id}`,
               loja_oficial: Boolean(oferta.official_store_id),
               reputacao_vendedor: reputacaoDoVendedor(vendedor),
@@ -513,6 +594,8 @@ async function main() {
             .from("anuncio")
             .update({
               ultima_coleta_em: new Date().toISOString(),
+              dominio_externo: produto.domain_id ?? undefined,
+              ...promocaoDeclarada(oferta),
               imagem_url: fotoDoProduto(produto),
               imagem_obtida_em: new Date().toISOString(),
               // Reputação e nota mudam com o tempo, e a curadoria
@@ -561,6 +644,14 @@ async function main() {
   console.log(
     `\n${produtosNovos} produtos novos · ${anunciosNovos} anúncios novos · ${pontos} pontos de preço`,
   );
+
+  // Domínio sem mapeamento é catálogo parado: o produto entra e nunca
+  // publica. Dizer isso alto é o que impede a fila de triagem de
+  // crescer em silêncio.
+  if (dominiosNovos.size > 0) {
+    console.log(`\n${dominiosNovos.size} domínio(s) sem mapeamento, e o produto deles não publica:`);
+    for (const d of [...dominiosNovos].slice(0, 15)) console.log(`  ${d}`);
+  }
 
   // E o que já estava no banco. É daqui que sai a queda.
   await relePrecos(db, mkt.id);

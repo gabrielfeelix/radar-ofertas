@@ -136,6 +136,21 @@ export type AnuncioLinha = {
   imagem_url: string | null;
   /** Quando o link foi obtido. Sem isto não há como saber a idade dele. */
   imagem_obtida_em: string | null;
+  /**
+   * O "de" que a LOJA declara. Alegação de terceiro, não medição nossa:
+   * o `original_price` do ML é frequentemente inflado. Serve para achar
+   * candidato, e a mensagem sempre atribui a alegação à loja.
+   */
+  preco_original_centavos: number | null;
+  /** Campanhas do marketplace de que o anúncio participa (`deal_ids`). */
+  promocoes: string[] | null;
+  /** Quando o preço original foi lido. Promoção velha não é promoção. */
+  preco_original_visto_em: string | null;
+  /**
+   * O domínio do marketplace (`MLB-CAT_AND_DOG_FOODS`). É por ele que o
+   * nicho é decidido, e não pela busca que achou o produto.
+   */
+  dominio_externo: string | null;
   criado_em: string;
   atualizado_em: string;
 };
@@ -380,6 +395,8 @@ export type ModeloMensagemLinha = {
   lastro_sem: string;
   /** Usado quando a oferta veio de queda de hoje. Também não afirma histórico. */
   lastro_queda: string;
+  /** Usado quando quem afirma o desconto é a loja. TEM que atribuir a ela. */
+  lastro_declarado: string;
   /** Abre a linha da nota do curador. */
   nota_prefixo: string;
   ativo: boolean;
@@ -408,8 +425,11 @@ export type OfertaLinha = {
   nota_comissao: number;
   nota_vendedor: number;
   status: OfertaStatus;
-  /** serie = barata contra a mediana. queda = caiu desde a leitura anterior. */
-  gatilho: "serie" | "queda";
+  /**
+   * serie = barata contra a mediana. queda = caiu desde a leitura
+   * anterior. declarado = a loja marcou promoção, e nós não medimos.
+   */
+  gatilho: "serie" | "queda" | "declarado";
   /** Só em oferta de queda: o preço de antes, contra o qual ela é medida. */
   preco_anterior_centavos: number | null;
   motivo_rejeicao: string | null;

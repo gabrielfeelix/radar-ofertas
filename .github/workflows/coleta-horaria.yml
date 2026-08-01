@@ -16,9 +16,20 @@ name: Coleta horária
 
 on:
   schedule:
-    # De hora em hora, entre 8h e 23h de São Paulo (11–02 UTC). Fora
-    # disso ninguém publica, e coletar de madrugada só gasta cota.
-    - cron: "0 11-23,0-2 * * *"
+    # De hora em hora, as 24 horas.
+    #
+    # Era 11–02 UTC (8h às 23h de São Paulo), com o motivo "fora disso
+    # ninguém publica". A D-033 decidiu o contrário: o canal publica de
+    # madrugada, um post a cada 90 minutos, porque o dono confirmou que
+    # os concorrentes publicam nesse horário e ele mesmo vê.
+    #
+    # Enquanto a janela fosse 8h–23h, o `intervalo_madrugada_min` nunca
+    # disparava: das 00h às 07h não havia execução nenhuma. O canal
+    # ficava mudo desde as 23h por falta de execução, não por regra de
+    # ritmo.
+    #
+    # Quem segura o volume continua sendo o intervalo, não o cron.
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 # Duas execuções ao mesmo tempo brigariam pelo refresh token: o ML
@@ -60,21 +71,29 @@ jobs:
           # falharia calada, dizendo só que pulou a loja.
         run: node scripts/coleta-mercado-livre.mjs
 
-      - name: Detecta quedas
+      - name: Detecta ofertas
         # Sem este passo a coleta grava o preço novo e ninguém vira
         # oferta: o preço cai, o sistema vê, e a fila continua vazia.
+        #
+        # São DUAS detecções e a ordem importa. `detecta_quedas` mede
+        # contra a nossa leitura anterior e é o sinal forte, então roda
+        # primeiro e fica com o anúncio. `detecta_declarados` lê o "de"
+        # que a loja declara, que é alegação de terceiro, e só pega o
+        # que sobrou. Invertê-las trocaria medição por alegação.
         env:
           URL: ${{ secrets.SUPABASE_URL }}
           CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          resposta=$(curl --silent --show-error --fail-with-body --max-time 120 \
-            -X POST "$URL/rest/v1/rpc/detecta_quedas" \
-            -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" \
-            -H "Content-Type: application/json" -d '{}')
-          echo "$resposta"
-          echo "### Quedas" >> "$GITHUB_STEP_SUMMARY"
-          echo "$resposta" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Ofertas detectadas" >> "$GITHUB_STEP_SUMMARY"
+          for funcao in detecta_quedas detecta_declarados; do
+            resposta=$(curl --silent --show-error --fail-with-body --max-time 120 \
+              -X POST "$URL/rest/v1/rpc/$funcao" \
+              -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" \
+              -H "Content-Type: application/json" -d '{}')
+            echo "$funcao: $resposta"
+            echo "- \`$funcao\` $resposta" >> "$GITHUB_STEP_SUMMARY"
+          done
 
       - name: Publica no Telegram
         # O laço fecha aqui. Não há aprovação humana no caminho (D-033):
