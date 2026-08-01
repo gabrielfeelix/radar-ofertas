@@ -29,6 +29,15 @@ export type Canal = {
   plataforma: Plataforma;
   /** Slugs dos nichos que este canal aceita. É o que roteia a oferta. */
   nichos: string[];
+  /**
+   * O recorte fino dentro do nicho (migration 37).
+   *
+   * Só a leitura, de propósito: quem edita é o `scripts/cria-canais.mjs`,
+   * e a tela mostra porque sem isso o Radar Perfumes (masc) recebendo
+   * metade das ofertas de perfume parece defeito. Um filtro invisível é
+   * indistinguível de um bug.
+   */
+  filtros: { atributo: string; valores: string[]; modo: "inclui" | "exclui" }[];
   tetoDiario: number;
   /**
    * Calculado, **nunca guardado**. Guardado ele mente: publicava-se
@@ -84,6 +93,7 @@ type LinhaDeCanal = {
   ultima_publicacao_em: string | null;
   parceiro: { nome: string } | null;
   canal_nicho: { nicho: { slug: string } | null }[] | null;
+  canal_atributo: { atributo: string; valores: string[]; modo: string }[] | null;
 };
 
 const SELECAO = `
@@ -91,7 +101,8 @@ const SELECAO = `
   split_audiencia_pct, split_operacao_pct, horarios_permitidos,
   ativo, telegram_chat_id, ultima_publicacao_em,
   parceiro:parceiro_id ( nome ),
-  canal_nicho ( nicho:nicho_id ( slug ) )
+  canal_nicho ( nicho:nicho_id ( slug ) ),
+  canal_atributo ( atributo, valores, modo )
 `;
 
 function montaCanal(linha: LinhaDeCanal, publicadasHoje: number): Canal {
@@ -100,6 +111,11 @@ function montaCanal(linha: LinhaDeCanal, publicadasHoje: number): Canal {
     nome: linha.nome,
     plataforma: linha.plataforma === "telegram" ? "telegram" : "whatsapp",
     nichos: (linha.canal_nicho ?? []).map((c) => c.nicho?.slug).filter((s): s is string => !!s),
+    filtros: (linha.canal_atributo ?? []).map((f) => ({
+      atributo: f.atributo,
+      valores: f.valores,
+      modo: f.modo === "exclui" ? ("exclui" as const) : ("inclui" as const),
+    })),
     tetoDiario: linha.posts_por_dia_max,
     publicadasHoje,
     audiencia: linha.membros_estimados ?? 0,

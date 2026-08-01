@@ -222,6 +222,27 @@ export type CanalNichoLinha = {
 };
 
 /**
+ * Preferência do canal sobre um atributo do produto (migration 37).
+ *
+ * Existe porque nicho responde "de que prateleira é", e o Radar
+ * Perfumes (masc) precisa de outra pergunta: o Mercado Livre põe todo
+ * perfume em `MLB-PERFUMES` e distingue masculino de feminino por um
+ * atributo, `GENDER`. Canal sem linha aqui aceita tudo.
+ */
+export type CanalAtributoLinha = {
+  id: string;
+  operacao_id: string;
+  canal_id: string;
+  /** O id do atributo como o marketplace o chama (`GENDER`). */
+  atributo: string;
+  valores: string[];
+  /** `inclui`: só passa quem casa. `exclui`: passa quem não casa. */
+  modo: "inclui" | "exclui";
+  criado_em: string;
+  atualizado_em: string;
+};
+
+/**
  * Uma oferta enviada a um canal (migration 16).
  *
  * `subid` é único no banco, não só aqui: subid repetido não dá erro em
@@ -566,6 +587,7 @@ export type Banco = {
       comporta_dia: Tabela<ComportaDiaLinha, "operacao_id" | "dia" | "comporta">;
       canal: Tabela<CanalLinha, "operacao_id" | "nome" | "plataforma">;
       canal_nicho: Tabela<CanalNichoLinha, "canal_id" | "nicho_id">;
+      canal_atributo: Tabela<CanalAtributoLinha, "operacao_id" | "canal_id" | "atributo" | "valores">;
       cupom: Tabela<CupomLinha, "operacao_id" | "marketplace_id" | "codigo" | "tipo" | "valor">;
       publicacao: Tabela<
         PublicacaoLinha,

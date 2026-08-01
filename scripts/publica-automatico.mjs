@@ -37,6 +37,7 @@ import {
   podePublicarAgora,
 } from "../lib/ritmo.ts";
 import { intercalaPorVariedade } from "../lib/variedade.ts";
+import { canalAceitaAtributos } from "../lib/canal-aceita.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.CHAVE;
@@ -182,7 +183,7 @@ async function main() {
       avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis,
       preco_leitura_centavos, preco_original_centavos, categoria_ramo,
       marketplace:marketplace_id ( nome, slug ),
-      produto:produto_id ( titulo_canonico, nota_curador, nicho_id )
+      produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos )
     )`;
 
 /*
@@ -221,7 +222,7 @@ async function melhorPrateleira(db, oferta) {
         "avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis, " +
         "preco_leitura_centavos, preco_original_centavos, " +
         "marketplace:marketplace_id ( nome, slug ), " +
-        "produto:produto_id ( titulo_canonico, nota_curador, nicho_id )",
+        "produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos )",
     )
     .eq("id", melhorId)
     .maybeSingle();
@@ -328,7 +329,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: canais } = await db
     .from("canal")
     .select(
-      "id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, canal_nicho ( nicho_id )",
+      "id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo )",
     )
     .eq("ativo", true);
 
@@ -453,11 +454,11 @@ async function melhorPrateleira(db, oferta) {
 
     // O casamento é explícito: o canal precisa declarar este nicho.
     // Nunca "o canal aceita tudo" — foi assim que a mangueira saiu.
-    const elegiveis = (canais ?? []).filter((c) =>
+    const doNicho = (canais ?? []).filter((c) =>
       (c.canal_nicho ?? []).some((cn) => cn.nicho_id === nichoId),
     );
 
-    if (elegiveis.length === 0) {
+    if (doNicho.length === 0) {
       await db
         .from("oferta")
         .update({
@@ -467,6 +468,39 @@ async function melhorPrateleira(db, oferta) {
         })
         .eq("id", oferta.id);
       motivos.nenhum_canal_do_nicho = (motivos.nenhum_canal_do_nicho ?? 0) + 1;
+      reprovadas++;
+      continue;
+    }
+
+    /*
+      2b. O FILTRO DE ATRIBUTO DO CANAL (migration 37).
+
+      Nicho responde de que prateleira o produto é. Ele não responde
+      "perfume masculino", porque isso não é prateleira em lugar
+      nenhum: o ML põe todo perfume em `MLB-PERFUMES` e distingue por
+      um atributo, `GENDER`.
+
+      Vem DEPOIS do nicho e não junto de propósito. As duas reprovas
+      são coisas diferentes e precisam de motivos diferentes: nicho sem
+      canal é buraco de cobertura, e pede canal novo; atributo que não
+      passa é a preferência do canal funcionando, e não pede nada.
+      Somadas num motivo só, a primeira ficaria invisível dentro da
+      segunda.
+    */
+    const elegiveis = doNicho.filter((c) =>
+      canalAceitaAtributos(c.canal_atributo, anuncio.produto?.atributos),
+    );
+
+    if (elegiveis.length === 0) {
+      await db
+        .from("oferta")
+        .update({
+          status: "rejeitada",
+          motivo_rejeicao: "filtro_de_atributo",
+          decidida_em: new Date().toISOString(),
+        })
+        .eq("id", oferta.id);
+      motivos.filtro_de_atributo = (motivos.filtro_de_atributo ?? 0) + 1;
       reprovadas++;
       continue;
     }

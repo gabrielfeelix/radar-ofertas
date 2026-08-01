@@ -67,6 +67,35 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
         />
       </section>
 
+      {canal.filtros.length > 0 && (
+        /*
+          O filtro de atributo é invisível em todo o resto da tela, e
+          filtro invisível é indistinguível de defeito: o Radar
+          Perfumes (masc) recebe metade das ofertas de perfume, e sem
+          esta linha a leitura é "o radar está falhando".
+
+          Só leitura de propósito. Quem edita é `scripts/cria-canais.mjs`
+          — é recorte que se decide uma vez, ao abrir o canal, não no
+          meio da manhã.
+        */
+        <section className="rounded-lg border border-borda bg-superficie-alt p-5">
+          <h2 className="mb-1 text-lg font-bold tracking-titulo">Recorte dentro do nicho</h2>
+          <p className="mb-4 text-base text-texto-fraco">
+            Além do nicho, este canal só aceita parte do que chega. Produto que não declara o
+            atributo passa — dado que falta não pode calar o canal.
+          </p>
+          <ul className="grid gap-2">
+            {canal.filtros.map((f) => (
+              <li key={`${f.atributo}-${f.modo}`} className="text-base">
+                <code className="text-texto-fraco">{f.atributo}</code>{" "}
+                {f.modo === "inclui" ? "precisa ser" : "não pode ser"}{" "}
+                <strong>{f.valores.join(" ou ")}</strong>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="rounded-lg border border-borda-sutil bg-superficie shadow-repouso p-5">
         <h2 className="mb-1 text-lg font-bold tracking-titulo">Como este canal funciona</h2>
         <p className="mb-5 text-base text-texto-fraco">
