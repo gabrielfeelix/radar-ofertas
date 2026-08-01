@@ -26,9 +26,10 @@ banco local e banco da nuvem contando histórias diferentes.
 
 ## O estado agora, em uma frase
 
-O laço automático está **completo e parado**: coleta, detecta, aplica
-comportas, gera link de afiliado de verdade e publica no Telegram, mas
-o **freio de mão está puxado** (`publicacao_automatica = 0`).
+O laço automático está **completo e rodando**: coleta, detecta, aplica
+comportas, gera link de afiliado de verdade, publica oferta e cupom no
+Telegram. O **freio de mão foi solto em 01/08 à tarde**
+(`publicacao_automatica = 1`), com autorização do dono.
 
 ---
 
@@ -88,22 +89,60 @@ domínio, e **zero defeitos**. Medi antes de rodar `reclassifica-nichos.mjs`,
 e ainda bem. A perda real é só uma: **61 ofertas por rodada morrendo por
 falta de canal**, e isso não é código.
 
+### O que a tarde de 01/08 acrescentou
+
+**Largura de descoberta.** `highlights` satura: o topo de "Pet Shop" é
+sempre o mesmo punhado de itens de preço estável, que é o pior insumo
+possível para detectar queda. Pet Shop tem **28 filhas**, e o topo de
+"Coleiras" nunca aparece no topo da raiz. A descoberta passou a descer um
+nível **nas raízes que têm canal**. Medido: 1.338 candidatos contra ~900,
+68% dos escolhidos inéditos, e o que entrou é mais fundo (Bravecto,
+NexGard, chocadeira, suplemento equino).
+
+**Cupom, de ponta a ponta** (D-039). Colhido do texto dos canais que a
+colheita já lê, com escopo por prefixo para não repetir a mangueira, e
+publicado como post próprio. Não depende de série de preço nenhuma.
+
+**O link da tela** (D-040), e o estrago que ele causou. Leia a decisão
+antes de mexer em `/publicar`: nove publicações foram ao canal duas ou
+três vezes porque a mensagem chegava, o registro era recusado pelo banco
+e o erro não era conferido.
+
+**Duas armadilhas de Postgres que custaram tempo e valem lembrar:**
+
+- `create or replace view` congela a lista de colunas de um `select c.*`
+  **na criação**. A coluna `geral` da migration 34 não aparecia em
+  `cupons_vivos`, sem erro e sem aviso. Migration 35 recria com as
+  colunas nomeadas.
+- Constraint `not valid` **não é constraint desligada**: ela não
+  revalida linha antiga, mas vale para todo `UPDATE`.
+
 ---
 
 ## O que está QUEBRADO ou pendente, por prioridade
 
-### 1. O freio de mão está puxado, e é decisão do dono soltar
+### 1. ~~O freio de mão está puxado~~ — SOLTO em 01/08 à tarde
 
-`publicacao_automatica = 0` em `parametro`. Puxei quando percebi que as
-fusões erradas fariam a troca de prateleira publicar item trocado.
-As fusões foram desfeitas, então **o motivo já não existe** — mas soltar
-é decisão dele, não sua.
+`publicacao_automatica = 1`, com autorização explícita do dono. O que
+segura o volume agora são três coisas que **não existiam de manhã**: o
+teto diário do canal (que era lido e nunca conferido), o intervalo do
+ritmo, e a intercalação por variedade.
 
-### 2. Sete publicações saíram com link que não paga comissão
+### 2. Dezesseis publicações saíram com link que não paga comissão
 
 Estão no banco, com `link_afiliado` nulo. **Não apague.** Elas são a
 única evidência de quanto o erro custou, e o relatório de comissão vai
-ser conferido contra elas.
+ser conferido contra elas. São dois grupos, e a origem separa:
+
+| Quantas | `origem` | O quê |
+|---|---|---|
+| 7 | `fluxo` | as da manhã, do laço, antes da D-034 |
+| 9 | `auto_declarada` | as da tarde, publicadas pela tela (D-040) |
+
+As nove foram ao canal **duas ou três vezes cada**, porque o registro
+falhava calado e o dono clicava de novo. Foram marcadas como
+`auto_declarada` para o laço automático não mandar uma quarta vez, e
+essa origem é a verdade: um humano mandou, o sistema não registrou.
 
 ### 3. A sessão da Central de Afiliados expira
 
@@ -165,10 +204,10 @@ subcategoria**.
 
 Nesta ordem, e a ordem é por retorno sobre esforço:
 
-1. **Perguntar ao dono se solta o freio.** Nada mais importa enquanto o
-   canal está mudo.
-2. **Abrir canal de casa e de eletrônico.** É a maior perda do sistema
-   hoje, e é decisão dele, não sua.
+1. **Abrir canal de eletrônico.** A view `demanda_por_nicho` responde com
+   número em vez de palpite: eletrônico tem 132 produtos, 35 ofertas
+   detectadas e **29 perdidas por falta de canal**; casa vem em seguida
+   com 20. É decisão do dono, não sua, e é a maior perda do sistema.
 3. **Gravar só quando o preço muda** (D-037). Corta ~95% da escrita e
    destrava a base grande. Não depende de decisão nenhuma.
 4. **Descoberta por subcategoria.** Hoje são só as 28 raízes.

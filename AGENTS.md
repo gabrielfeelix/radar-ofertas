@@ -155,6 +155,19 @@ Atualizado em 01/08/2026. **Mantenha esta seção viva** — ela é o que uma se
 
 **O laço fechou: da queda detectada até a mensagem no canal, sem humano** (D-033). `scripts/publica-automatico.mjs` roda de hora em hora depois da coleta e da detecção. Quem aprova são as comportas, que são números em `parametro`. **A tela `/aprovar` continua existindo e não é mais o caminho** — virou conferência.
 
+**O freio de mão foi solto na tarde de 01/08** (`publicacao_automatica = 1`), com autorização do dono. O que segura o volume são três coisas que passaram a existir no mesmo dia: o **teto diário do canal** (que a D-033 dizia valer e o código nunca conferia), o intervalo do ritmo, e a **intercalação por variedade** (que existia em `lib/variedade.ts` e só a tela manual usava).
+
+**Quatro coisas mudaram na tarde de 01/08, e três delas eram regra escrita e não aplicada:**
+
+| O quê | Onde |
+|---|---|
+| A reputação do vendedor é relida junto com o preço. `melhorOferta` troca de vendedor de hora em hora, e as comportas aprovavam com dado de outra pessoa | `relePrecos`, migration 32 |
+| Teto diário e variedade entram no laço automático | `publica-automatico.mjs` |
+| A descoberta desce por subcategoria **onde existe canal**. `highlights` satura na raiz | `coleta-mercado-livre.mjs` |
+| Cupom colhido do texto dos canais e publicado como post próprio, com escopo por prefixo | D-039, migrations 33 a 35 |
+
+**Leia a D-040 antes de mexer em `/publicar`.** O link da tela era montado à mão, e por cima disso o registro de envio falhava calado por causa de uma constraint `not valid` — que **não é constraint desligada**. Nove publicações foram ao canal duas ou três vezes.
+
 **O WhatsApp não mudou e não vai mudar:** regra 3.2, envio manual. O laço automático nunca o toca.
 
 **Depois da primeira madrugada automática, cinco frentes de conserto.** Saíram três posts e dois eram de outro nicho. O diagnóstico, a pesquisa e o que cada frente virou estão em **`docs/otimizacao.md`** — leia antes de mexer em coleta, colheita ou classificação. O resumo:
@@ -313,7 +326,13 @@ Depois disso, um bloco que não é tela:
 
 ### Pendências desta sessão — leia antes de tocar em qualquer coisa
 
-**São 26 migrations.** As dez de 01/08 estão aplicadas na nuvem e conferidas contra ela com dado real.
+**São 35 migrations, todas aplicadas na nuvem.** As de 01/08 foram conferidas contra o banco com dado real. As quatro da tarde (32 a 35) entraram por `supabase db push` pelo **session pooler**, porque o Docker não sobe nesta máquina e o push remoto não precisa dele:
+
+```
+npx supabase db push --db-url "postgresql://postgres.<ref>:<senha>@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"
+```
+
+O aviso de Docker que aparece no fim é só o cache local do catálogo, não a aplicação.
 
 Antes disso, e o histórico continua valendo: A 16 (`publicacao`) está aplicada no local e na nuvem, e as constraints dela foram conferidas contra a nuvem uma a uma, com dado de verdade criado e apagado depois. Conferido no banco, não só no log: o modelo `Padrão` começa com `#publi · {loja}` na primeira linha, `anuncio.imagem_url` e `imagem_obtida_em` existem, e `expurga_imagens_expiradas` roda.
 
@@ -426,6 +445,8 @@ sozinho ou com um passo manual é o teste 1.
 | `docs/refino-visual.md` | Antes de mexer em interface. O diagnóstico visual e as frentes, com o que ficou de fora |
 | `docs/pesquisa-tecnica.md` | Antes de mexer em stack ou política de plataforma. O que está validado e o que está errado |
 | `docs/pesquisa-operacao.md` | Antes de mexer em cadência, horário, formato de mensagem ou canal. Como se toca um grupo de verdade |
+| `docs/pesquisa/` | Pesquisa de campo de 01/08, 521 fontes, oito frentes. Comece por `sintese.md`. `cupons-de-onde-vem.md` responde de onde sai `FULL3107`, e `o-que-muda-no-radar.md` diz o que ela cobra do projeto |
+| `docs/plano-automacao.md` | O plano de dez frentes que saiu da pesquisa, com o banco medido em vez de suposto. Diz o que foi executado, o que ficou de fora e por quê |
 | `docs/otimizacao.md` | Antes de mexer em coleta, colheita ou classificação de nicho. O diagnóstico da primeira madrugada automática, o que a pesquisa achou e o que cada frente virou |
 | `docs/onde-paramos.md` | **Primeiro de todos.** Estado de 01/08, o que está quebrado, o que está em aberto e os erros já cometidos |
 | `referencia-claude-deisgn/` | O protótipo, com as quatorze telas desenhadas. Abra antes de mexer em interface |

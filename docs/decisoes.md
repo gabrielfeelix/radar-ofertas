@@ -978,3 +978,128 @@ mas se incomodar, trocar as contas de teste resolve.
 qualquer segredo commitado por engano vira público no instante do push,
 e apagar depois não resolve — o histórico fica. A regra 3.1 deixou de
 ser higiene e virou fronteira.
+
+---
+
+## D-039 · O cupom é colhido do texto dos canais, e só sai com escopo conhecido
+**Data:** 01/08/2026
+
+A tabela `cupom`, a view `cupons_vivos` e a função `preco_com_cupom`
+existem desde a migration 17. O que nunca existiu foi **quem alimenta**:
+o comentário de `app/acoes/cupons.ts` explicava que *"cupom é digitado à
+mão porque nenhum marketplace expõe cupom por API"*.
+
+**Continua verdade sobre API.** A pesquisa varreu 15 rotas plausíveis do
+Mercado Livre e todas deram 404: o único endpoint de cupom documentado é
+o do **vendedor** gerenciando a própria campanha. Não é falta de
+permissão, é ausência de recurso.
+
+**Deixou de ser o único caminho.** O cupom é público, distribuído por
+banner e push dentro do app, e chega de graça pelos canais que a colheita
+já lê. O formato foi confirmado em campo, em dois dias e três canais:
+`<CATEGORIA><DDMM>` — `FULL3107`, `LOJASOFICIAIS0108`, `MODAEBELEZA0108`.
+
+### A âncora de extração é a data, e é ela que torna isto seguro
+
+Procurar "palavra em maiúscula" acharia PROMOÇÃO, OFERTA, FRETE e metade
+dos títulos de produto. Exigir quatro dígitos que formem **dia e mês
+válidos** derruba quase todo falso positivo sem lista de exceção.
+
+E o código traz a própria validade dentro dele, o que resolve o que o
+comentário da tabela já avisava: *"cupom sem prazo é o que fica publicado
+depois de morrer"*.
+
+### O escopo, que é o que impede repetir o erro da mangueira
+
+`cupom.nicho_id` tem a semântica "nulo = vale para qualquer nicho", e a
+extração **não sabe o nicho**: ela lê o prefixo da campanha, não o nosso.
+Tudo nascendo nulo faria `MODAEBELEZA0108` sair num canal de pet, que é a
+mangueira de jardim de novo.
+
+Então `cupom_prefixo` mapeia campanha para escopo, com a regra da D-036:
+**desconhecido separa**. Prefixo sem linha entra no banco e não é
+publicado até alguém olhar.
+
+### Só Mercado Livre, e a exclusão da Shopee é contratual
+
+Termo do Programa de Afiliados da Shopee: *"A divulgação ou
+compartilhamento de cupons nominais de afiliados terceiros pelo Afiliado
+será considerada violação"*, com rescisão imediata e retenção de comissão
+já ganha. O filtro de data já exclui os códigos dela (são leetspeak, sem
+data), mas a exclusão é deliberada e precisa continuar sendo.
+
+### Por que o post de cupom vale agora
+
+Ele **não depende de série de preço nenhuma**. Com a série tendo dois
+dias, quase toda oferta de hoje vem do `original_price` declarado pela
+loja. O cupom é verdade verificável no primeiro dia, e é o que os
+concorrentes publicam de madrugada.
+
+**A ingestão mora em `scripts/colhe-cupons.mjs`, no agendador horário**, e
+não na Edge Function `colheita-canais`, que também tem o código: a
+colheita **não é disparada por workflow nenhum**, roda à mão, e cupom que
+vale um dia não pode depender de alguém lembrar.
+
+**Mudaria se:** o ML publicar uma rota de cupom para terceiros, ou se a
+Central de Afiliados permitir gerar cupom próprio (a hipótese 4 de
+`docs/pesquisa/cupons-de-onde-vem.md`, ainda não testada).
+
+---
+
+## D-040 · O link vem do gerador em todo caminho, e falha de registro não é silenciosa
+**Data:** 01/08/2026
+
+A D-034 estabeleceu que o link de afiliado é **gerado, nunca montado**.
+Ela foi aplicada no laço automático e **não na tela** — `lib/publicacoes.ts`
+continuou remontando o link à mão com `montaLinkDeAfiliado`, ignorando a
+coluna `publicacao.link_afiliado`.
+
+O dono publicou pela tela e viu o sintoma: os links abriam o produto
+direto, sem passar pela página do afiliado. A diferença, conferida:
+
+```
+meli.la/1QPWrnS → 301 → mercadolivre.com.br/social/fega6031503
+                        ?matt_word=radarpet&ref=BCVd2UBeH...
+```
+
+Essa página intermediária é onde a atribuição acontece.
+
+### O segundo defeito, que era pior e ninguém via
+
+A constraint `publicacao_enviada_tem_link` é `not valid`, e **isso não
+quer dizer desligada**: ela não revalida linha antiga, mas vale para todo
+`UPDATE`. Então a cadeia era:
+
+1. a tela mandava a mensagem, e ela **chegava no grupo**
+2. o `UPDATE` para `enviada` era recusado pela constraint
+3. o erro não era conferido, a linha continuava `pendente`
+4. a tela mostrava "não enviada", e o dono clicava de novo
+5. **o grupo recebia a mesma oferta duas, três vezes**
+
+Nove publicações foram ao canal assim. O canal viu; o sistema não.
+
+### O que passou a valer
+
+- A tela usa `publicacao.link_afiliado`. Sem ele, devolve
+  `rastreado: false` com o motivo, e **não cai de volta na URL crua**:
+  publicar sem rastreio parece que funcionou e entrega a audiência de
+  graça.
+- `publicaLoteTelegram` recusa publicar quando o link não é rastreado.
+- `marcaEnviada` **confere o erro e lança**. Falha silenciosa aqui foi o
+  que multiplicou o estrago de uma mensagem para três.
+- As nove linhas ficaram como `enviada` com origem `auto_declarada`, que
+  é a verdade: um humano mandou, o sistema não registrou. Sem isso o laço
+  automático as mandaria uma quarta vez.
+
+**Duas imprecisões conhecidas, anotadas e não corrigidas:**
+
+- `desfazEnvio` volta a publicação para `pendente` mas **não desfaz**
+  `canal.ultima_publicacao_em`. O ritmo passa a achar que o canal acabou
+  de falar. Some sozinho no próximo intervalo.
+- O comentário da migration 29 diz que o WhatsApp fica de fora da
+  constraint, e **a constraint não tem cláusula de plataforma**. Envio de
+  WhatsApp sem link cai na mesma recusa. Agora ela é visível em vez de
+  silenciosa.
+
+**Mudaria se:** o gerador do ML deixar de existir, ou se aparecer uma API
+oficial de afiliados que dispense a sessão da Central.
