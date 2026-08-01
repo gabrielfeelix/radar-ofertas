@@ -152,7 +152,11 @@ type LinhaDePublicacao = {
       imagem_url: string | null;
       imagem_obtida_em: string | null;
       marketplace: { nome: string; slug: string } | null;
-      produto: { titulo_canonico: string; nicho: { slug: string } | null } | null;
+      produto: {
+        titulo_canonico: string;
+        nota_curador: string | null;
+        nicho: { slug: string } | null;
+      } | null;
     } | null;
   } | null;
 };
@@ -165,7 +169,7 @@ const SELECAO = `
     anuncio:anuncio_id (
       url_original, vendedor, imagem_url, imagem_obtida_em,
       marketplace:marketplace_id ( nome, slug ),
-      produto:produto_id ( titulo_canonico, nicho:nicho_id ( slug ) )
+      produto:produto_id ( titulo_canonico, nota_curador, nicho:nicho_id ( slug ) )
     )
   )
 `;
@@ -234,6 +238,7 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
         janelaDias: oferta.referencia_janela_dias,
         observadoDesde: oferta.detectada_em.slice(0, 10),
         podeAfirmarMinimo: oferta.pode_afirmar_minimo,
+        notaDoCurador: anuncio?.produto?.nota_curador ?? null,
       },
       precoNaFilaCentavos: linha.preco_na_fila_centavos,
       precoAgoraCentavos: precoAgora.get(oferta.anuncio_id) ?? oferta.preco_atual_centavos,

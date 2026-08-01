@@ -107,6 +107,8 @@ export type ProdutoLinha = {
   /** Nulo = não roteado para canal nenhum. É a fila da triagem. */
   nicho_id: string | null;
   titulo_canonico: string;
+  /** Opinião de quem entende, escrita à mão. Reusada em toda publicação. */
+  nota_curador: string | null;
   categoria: string | null;
   imagem_url: string | null;
   criado_em: string;
@@ -378,6 +380,8 @@ export type ModeloMensagemLinha = {
   lastro_sem: string;
   /** Usado quando a oferta veio de queda de hoje. Também não afirma histórico. */
   lastro_queda: string;
+  /** Abre a linha da nota do curador. */
+  nota_prefixo: string;
   ativo: boolean;
   criado_em: string;
   atualizado_em: string;

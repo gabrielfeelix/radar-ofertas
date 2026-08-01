@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { alternaAnuncioAtivo, defineNichoDoProduto } from "@/app/acoes/catalogo";
+import {
+  alternaAnuncioAtivo,
+  defineNichoDoProduto,
+  salvaNotaDoCurador,
+} from "@/app/acoes/catalogo";
 import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { EtiquetaDeLoja } from "@/app/componentes/Chip";
@@ -75,6 +79,40 @@ export default async function Produto({ params }: { params: Promise<{ id: string
             ← voltar ao catálogo
           </Link>
         </p>
+
+        {/*
+          A nota do curador — o que a máquina não sabe.
+
+          Os canais que funcionam publicam uma linha de opinião junto da
+          oferta: "amadeirado clássico, ideal pra fumante de Malboro".
+          Isso não sai de API nenhuma, e é a razão de alguém continuar
+          seguindo: preço qualquer um copia.
+
+          Fica no PRODUTO e não na publicação porque se escreve uma vez
+          e reusa para sempre — o mesmo item volta ao canal várias vezes
+          por ano.
+        */}
+        <section className="rounded-lg border border-borda bg-superficie p-5">
+          <h2 className="text-lg font-bold tracking-titulo">Sua nota sobre este produto</h2>
+          <p className="mt-1 mb-4 text-base text-texto-fraco">
+            Vai em toda publicação deste produto, sempre. É o que a ficha da loja não diz — para
+            quem serve, com o que se parece, o que você acha. <strong>Não fale de preço aqui:</strong>{" "}
+            ele muda a cada oferta e sai do modelo.
+          </p>
+          <form action={salvaNotaDoCurador} className="flex flex-col gap-3">
+            <input type="hidden" name="produto_id" value={produto.id} />
+            <textarea
+              name="nota_curador"
+              rows={3}
+              defaultValue={produto.nota_curador ?? ""}
+              placeholder="Amadeirado clássico. Ideal pra quem gosta de fumaça e couro — lembra Malboro."
+              className="w-full rounded-md border border-borda-forte bg-superficie px-3 py-2 text-base"
+            />
+            <Botao type="submit" variante="secundaria" tamanho="sm" className="self-start">
+              Salvar nota
+            </Botao>
+          </form>
+        </section>
 
         {/*
           O nicho vem primeiro porque é o que decide se este produto

@@ -22,6 +22,8 @@
 
 export type ModeloDeMensagem = {
   corpo: string;
+  /** O que abre a linha da nota. Sai junto quando não há nota. */
+  notaPrefixo?: string;
   lastroCom: string;
   lastroSem: string;
   /**
@@ -62,6 +64,15 @@ export type DadosDaMensagem = {
   podeAfirmarMinimo: boolean;
   /** O que fez a oferta existir. Ausente = série, que era o único caso antes. */
   gatilho?: GatilhoDaOferta;
+  /**
+   * A nota do curador, escrita à mão no produto.
+   *
+   * É o que a máquina não sabe — "amadeirado clássico, ideal pra
+   * fumante de Malboro" não sai de API nenhuma. Vazia na maioria dos
+   * produtos, e a linha inteira some quando não há nota: emoji órfão
+   * num canal que publica trinta por dia vira sujeira.
+   */
+  notaDoCurador?: string | null;
 };
 
 /** As variáveis que o corpo aceita, para a tela listar sem inventar. */
@@ -73,6 +84,7 @@ export const VARIAVEIS = [
   { chave: "loja", explica: "Mercado Livre, Shopee, Amazon" },
   { chave: "vendedor", explica: "quem vende no anúncio" },
   { chave: "lastro", explica: "a frase do histórico — muda com a série" },
+  { chave: "nota", explica: "a sua opinião sobre o produto, escrita na ficha dele. Some quando não há" },
   { chave: "link", explica: "o link com subid, do nosso redirecionador" },
 ] as const;
 
@@ -158,7 +170,15 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
     agora: reais(dados.precoCentavos),
   });
 
+  // A linha inteira some quando não há nota. Deixar o prefixo sozinho
+  // seria pior que não ter: um emoji solto numa mensagem por dia é
+  // detalhe, em trinta por dia é sujeira.
+  const nota = dados.notaDoCurador?.trim()
+    ? `${modelo.notaPrefixo ?? "💬"} ${dados.notaDoCurador.trim()}`
+    : "";
+
   return preenche(modelo.corpo, {
+    nota,
     produto: dados.produto,
     preco: reais(dados.precoCentavos),
     preco_antes: reais(dados.precoAntesCentavos),

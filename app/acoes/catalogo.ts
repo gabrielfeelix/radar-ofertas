@@ -80,3 +80,30 @@ export async function classificaProdutos(form: FormData): Promise<void> {
   revalidatePath("/produtos/sem-nicho");
   revalidatePath("/produtos");
 }
+
+/**
+ * Guarda a nota do curador no produto.
+ *
+ * É o que a máquina não sabe: "amadeirado clássico, ideal pra fumante
+ * de Malboro" não sai de API nenhuma, e é a razão de alguém continuar
+ * seguindo o canal — preço qualquer um copia.
+ *
+ * Escrita uma vez, reusada em toda publicação daquele produto. O mesmo
+ * perfume volta seis vezes por ano; redigitar a cada vez garantiria que
+ * a nota some.
+ */
+export async function salvaNotaDoCurador(form: FormData): Promise<void> {
+  const produtoId = String(form.get("produto_id") ?? "");
+  if (produtoId === "") return;
+
+  const nota = String(form.get("nota_curador") ?? "").trim();
+
+  const db = supabaseServidor();
+  await db
+    .from("produto")
+    .update({ nota_curador: nota === "" ? null : nota })
+    .eq("id", produtoId);
+
+  revalidatePath(`/produtos/${produtoId}`);
+  revalidatePath("/publicar");
+}

@@ -36,11 +36,11 @@ export async function modeloGlobal(): Promise<ModeloDeMensagem> {
   try {
     const { data } = await supabaseServidor()
       .from("modelo_mensagem")
-      .select("corpo, lastro_com, lastro_sem, lastro_queda")
+      .select("corpo, lastro_com, lastro_sem, lastro_queda, nota_prefixo")
       .is("canal_id", null)
       .maybeSingle();
 
-    const linha = data as Pick<ModeloMensagemLinha, "corpo" | "lastro_com" | "lastro_sem" | "lastro_queda"> | null;
+    const linha = data as Pick<ModeloMensagemLinha, "corpo" | "lastro_com" | "lastro_sem" | "lastro_queda" | "nota_prefixo"> | null;
     if (!linha) return RESERVA;
 
     return {
@@ -48,6 +48,7 @@ export async function modeloGlobal(): Promise<ModeloDeMensagem> {
       lastroCom: linha.lastro_com,
       lastroSem: linha.lastro_sem,
       lastroQueda: linha.lastro_queda,
+      notaPrefixo: linha.nota_prefixo,
     };
   } catch {
     return RESERVA;
