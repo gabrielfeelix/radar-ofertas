@@ -80,6 +80,24 @@ export async function publicaLoteTelegram(form: FormData): Promise<void> {
     if (publicacao.precoAgoraCentavos !== publicacao.precoNaFilaCentavos) continue;
     if ((await vagasDoCanal(publicacao.canal.id)) <= 0) continue;
 
+    /*
+      SEM LINK RASTREADO, NÃO SAI.
+
+      Duas coisas se somavam aqui, e juntas mandaram nove publicações
+      repetidas ao canal em 01/08:
+
+      1. o link ia montado à mão, e link montado não paga comissão
+         (D-034) — a mensagem chegava com um link que abre o produto
+         direto, sem passar pela página do afiliado;
+      2. o banco então recusava marcar a linha como enviada, porque a
+         constraint exige `link_afiliado` — e a tela dizia "não
+         enviada", convidando a clicar de novo.
+
+      Parar antes de enviar corta as duas: a oferta fica na fila, com o
+      motivo à vista, até o gerador produzir o link.
+    */
+    if (!publicacao.link.rastreado) continue;
+
     // O texto é montado ANTES de enviar e gravado como saiu. Remontar
     // depois daria outra mensagem, porque o modelo muda — e a que foi
     // ao canal é a que precisa ser auditável, inclusive para provar a

@@ -332,7 +332,28 @@ export async function marcaEnviada(
 ): Promise<void> {
   const db = supabaseServidor();
 
-  await db
+  /*
+    O ERRO É CONFERIDO, e a falta disso custou caro em 01/08.
+
+    A constraint `publicacao_enviada_tem_link` é `not valid`, e isso
+    **não quer dizer desligada**: ela não revalida linha antiga, mas
+    vale para todo UPDATE. Publicação sem `link_afiliado` marcada como
+    `enviada` pelo fluxo é recusada pelo banco.
+
+    Sem conferir o erro, a sequência era esta, e ela é silenciosa do
+    começo ao fim:
+
+      1. a tela manda a mensagem ao Telegram, e ela CHEGA no grupo
+      2. o UPDATE é recusado pela constraint
+      3. ninguém olha o erro, a linha continua `pendente`
+      4. a tela mostra "não enviada", o dono clica de novo
+      5. o grupo recebe a mesma oferta duas, três vezes
+
+    Nove publicações foram ao canal desse jeito. O canal viu; o sistema
+    não. Lançar aqui faz a tela mostrar o erro em vez de fingir que
+    nada aconteceu.
+  */
+  const { error } = await db
     .from("publicacao")
     .update({
       estado: "enviada",
@@ -343,6 +364,13 @@ export async function marcaEnviada(
       cancelada_em: null,
     })
     .eq("id", id);
+
+  if (error) {
+    throw new Error(
+      `A mensagem foi enviada ao canal mas NÃO consegui registrar: ${error.message}. ` +
+        "Não clique em enviar de novo, senão o grupo recebe repetido.",
+    );
+  }
 
   // O canal passa a contar a partir daqui: é o que alimenta "última
   // publicação" na tela de canais e o alerta de canal parado.
