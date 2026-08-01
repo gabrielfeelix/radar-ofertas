@@ -53,3 +53,19 @@ jobs:
           # ficaria velho na primeira renovação e a execução seguinte
           # falharia calada, dizendo só que pulou a loja.
         run: node scripts/coleta-mercado-livre.mjs
+
+      - name: Detecta quedas
+        # Sem este passo a coleta grava o preço novo e ninguém vira
+        # oferta: o preço cai, o sistema vê, e a fila continua vazia.
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          resposta=$(curl --silent --show-error --fail-with-body --max-time 120 \
+            -X POST "$URL/rest/v1/rpc/detecta_quedas" \
+            -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" \
+            -H "Content-Type: application/json" -d '{}')
+          echo "$resposta"
+          echo "### Quedas" >> "$GITHUB_STEP_SUMMARY"
+          echo "$resposta" >> "$GITHUB_STEP_SUMMARY"

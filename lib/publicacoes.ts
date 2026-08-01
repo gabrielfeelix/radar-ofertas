@@ -60,12 +60,37 @@ export type Publicacao = {
    * segunda implementação da coisa que paga o projeto.
    */
   link: LinkDeAfiliado;
-  /** LINK da foto, nunca o arquivo (regra 3.3). Nulo = publica sem imagem. */
+  /**
+   * LINK da foto, nunca o arquivo (regra 3.3).
+   *
+   * Vem nulo quando o link passou de 24 horas — é o prazo que a
+   * política de associados dá para guardar link de imagem, e o
+   * expurgo do banco roda uma vez por dia. Entre um expurgo e outro,
+   * quem garante o prazo é esta conta.
+   */
   imagemUrl: string | null;
   enviadaEm: string | null;
   origem: OrigemDoEnvio | null;
   cancelada: boolean;
 };
+
+/**
+ * O link da foto, se ainda estiver dentro do prazo.
+ *
+ * A política de associados permite guardar **link** de imagem por no
+ * máximo 24 horas — nunca o arquivo (regra 3.3). O expurgo do banco
+ * roda uma vez por dia, e entre uma passada e outra existe uma janela
+ * em que a linha ainda tem o link vencido. Publicar dali seria usar
+ * conteúdo além do prazo, então a conta é refeita na hora de publicar.
+ *
+ * Sem foto a publicação continua saindo, em texto. Perder a imagem
+ * custa alcance; publicar fora do prazo custa a conta de afiliado.
+ */
+function fotoAindaValida(url?: string | null, obtidaEm?: string | null): string | null {
+  if (!url || !obtidaEm) return null;
+  const horas = (Date.now() - new Date(obtidaEm).getTime()) / 3_600_000;
+  return horas <= 24 ? url : null;
+}
 
 /** Meia-noite de hoje em São Paulo, em UTC (regra 3.9). */
 function inicioDoDiaLocal(): string {
@@ -125,6 +150,7 @@ type LinhaDePublicacao = {
       url_original: string;
       vendedor: string | null;
       imagem_url: string | null;
+      imagem_obtida_em: string | null;
       marketplace: { nome: string; slug: string } | null;
       produto: { titulo_canonico: string; nicho: { slug: string } | null } | null;
     } | null;
@@ -137,7 +163,7 @@ const SELECAO = `
     id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em,
     anuncio:anuncio_id (
-      url_original, vendedor, imagem_url,
+      url_original, vendedor, imagem_url, imagem_obtida_em,
       marketplace:marketplace_id ( nome, slug ),
       produto:produto_id ( titulo_canonico, nicho:nicho_id ( slug ) )
     )
@@ -217,7 +243,7 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
         linha.subid,
         anuncio?.marketplace?.slug ?? "",
       ),
-      imagemUrl: anuncio?.imagem_url ?? null,
+      imagemUrl: fotoAindaValida(anuncio?.imagem_url, anuncio?.imagem_obtida_em),
       enviadaEm: linha.estado === "enviada" ? linha.enviada_em : null,
       origem: linha.estado === "enviada" ? (linha.origem as OrigemDoEnvio) : null,
       cancelada: linha.estado === "cancelada",
