@@ -20,6 +20,7 @@ import {
   temTravessao,
   identificacaoEstaEscondida,
   montaMensagem,
+  montaMensagemDeCupom,
   previa,
   temIdentificacaoPublicitaria,
 } from "../lib/mensagem.ts";
@@ -269,6 +270,66 @@ const freteNulo = montaMensagem(
   { ...dados, podeAfirmarMinimo: false, notaDoCurador: null, freteGratis: null },
 );
 confere("frete nulo some igual a falso", !freteNulo.includes("Frete grátis"));
+
+
+/*
+  O POST DE CUPOM.
+
+  O modelo padrão vem da migration 34. Está repetido aqui de propósito:
+  se alguém mudar o padrão no banco e quebrar a identificação
+  publicitária, é este teste que precisa gritar.
+*/
+console.log("\npost de cupom\n");
+
+const MODELO_CUPOM =
+  "#publi · Cupom {loja}\n\n🎟 <b>{codigo}</b>\n{percentual}% de desconto{onde}\n{condicoes}\n\nVale até {validade}. Ative na aba Cupons do app antes de fechar a compra.";
+
+const cupomCheio = montaMensagemDeCupom(MODELO_CUPOM, {
+  codigo: "LOJASOFICIAIS0108",
+  loja: "Mercado Livre",
+  percentual: 15,
+  minimoCentavos: 7900,
+  tetoCentavos: 2000,
+  onde: "Lojas Oficiais",
+  validade: "2026-08-01",
+});
+
+confere("identifica publicidade", temIdentificacaoPublicitaria(cupomCheio));
+confere("e a identificação não está escondida", !identificacaoEstaEscondida(cupomCheio));
+confere("não tem travessão (regra 3.11)", !temTravessao(cupomCheio));
+confere("não afirma mínimo histórico", !afirmaMinimoSemLastro(cupomCheio));
+confere("traz o código", cupomCheio.includes("LOJASOFICIAIS0108"));
+confere("traz o percentual", cupomCheio.includes("15% de desconto"));
+confere("diz onde vale", cupomCheio.includes("em Lojas Oficiais"));
+confere("diz a compra mínima", /R\$\s*79,00/.test(cupomCheio));
+confere("diz o teto", /at[ée] R\$\s*20,00/.test(cupomCheio));
+confere("diz a validade", cupomCheio.includes("01/08/26"));
+
+/*
+  O QUE NÃO FOI DECLARADO VIRA SILÊNCIO, não uma promessa melhor.
+
+  Cupom lido de canal alheio não traz todas as condições. Preencher a
+  lacuna com "sem mínimo" ou "sem limite" seria inventar uma condição
+  mais generosa do que a que foi lida, e o leitor descobre no carrinho.
+*/
+const cupomSeco = montaMensagemDeCupom(MODELO_CUPOM, {
+  codigo: "FULL3108",
+  loja: "Mercado Livre",
+  percentual: 25,
+  minimoCentavos: 0,
+  tetoCentavos: null,
+  onde: null,
+  validade: "2026-08-01",
+});
+
+confere("sem mínimo não promete 'sem mínimo'", !/m[íi]nim/i.test(cupomSeco));
+confere("sem teto não promete 'sem limite'", !/limite|至|sem teto/i.test(cupomSeco));
+confere("sem categoria não deixa 'em ' solto", !cupomSeco.includes("desconto em\n"));
+confere("continua identificando publicidade", temIdentificacaoPublicitaria(cupomSeco));
+confere(
+  "e não sobra buraco de linha em branco",
+  !cupomSeco.includes("\n\n\n"),
+);
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);

@@ -29,8 +29,13 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { geraLinks } from "../lib/gerador-ml.ts";
-import { montaMensagem } from "../lib/mensagem.ts";
-import { RITMO_PADRAO, inicioDoDiaEmSaoPaulo, podePublicarAgora } from "../lib/ritmo.ts";
+import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
+import {
+  RITMO_PADRAO,
+  diaEmSaoPaulo,
+  inicioDoDiaEmSaoPaulo,
+  podePublicarAgora,
+} from "../lib/ritmo.ts";
 import { intercalaPorVariedade } from "../lib/variedade.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
@@ -275,7 +280,9 @@ async function melhorPrateleira(db, oferta) {
   // Modelo e canais, uma vez só.
   const { data: modeloLinha } = await db
     .from("modelo_mensagem")
-    .select("corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo")
+    .select(
+      "corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo, corpo_cupom",
+    )
     .eq("ativo", true)
     .limit(1)
     .maybeSingle();
@@ -288,6 +295,7 @@ async function melhorPrateleira(db, oferta) {
     lastroDeclarado: modeloLinha.lastro_declarado,
     linhaFrete: modeloLinha.linha_frete,
     notaPrefixo: modeloLinha.nota_prefixo,
+    corpoCupom: modeloLinha.corpo_cupom,
   };
 
   /*
@@ -728,8 +736,107 @@ async function melhorPrateleira(db, oferta) {
     console.log(`  ✓ ${canal.nome}: ${anuncio.produto?.titulo_canonico?.slice(0, 46)} (pendente)`);
   }
 
+  /*
+    TERCEIRA PASSADA: O POST DE CUPOM.
+
+    Vem por último de propósito. Oferta é o produto do canal; cupom é
+    complemento, e um cupom ocupando a vaga de uma oferta boa seria
+    troca ruim.
+
+    ELE NÃO DEPENDE DE SÉRIE NENHUMA, e é por isso que existe agora: a
+    série de preço tem dois dias, então quase toda oferta de hoje vem do
+    desconto que a loja declara. O cupom é verdade verificável no
+    primeiro dia.
+
+    UM POR CANAL POR RODADA. `cupom_publicado` tem constraint única por
+    (cupom, canal), então o mesmo cupom não sai duas vezes nem se o
+    script rodar duas vezes na mesma hora.
+  */
+  const { data: cupons } = await db
+    .from("cupons_vivos")
+    .select("id, codigo, valor, valor_minimo_centavos, teto_desconto_centavos, vigente_ate, nicho_id, nicho_slug, geral, marketplace_nome")
+    .eq("tipo", "percentual")
+    .order("valor", { ascending: false });
+
+  let cuponsPublicados = 0;
+
+  for (const canal of canais ?? []) {
+    if (canal.plataforma !== "telegram") continue;
+    if (!modelo.corpoCupom) continue;
+    if (noTetoDiario(canal)) continue;
+
+    const veredito = podePublicarAgora(
+      new Date(),
+      canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
+      ritmo,
+    );
+    if (!veredito.pode) continue;
+
+    const nichosDoCanal = new Set((canal.canal_nicho ?? []).map((cn) => cn.nicho_id));
+
+    /*
+      A MESMA COMPORTA DE NICHO DAS OFERTAS, e pelo mesmo motivo.
+
+      `geral` é o cupom que atravessa categoria (Full, Lojas Oficiais).
+      O de nicho só sai onde o canal declara aquele nicho. E cupom sem
+      mapa não é nem um nem outro: ele fica no banco, aparece na tela, e
+      não vai ao ar até alguém decidir o que ele é.
+    */
+    const elegiveis = (cupons ?? []).filter(
+      (c) => c.geral || (c.nicho_id && nichosDoCanal.has(c.nicho_id)),
+    );
+
+    if (elegiveis.length === 0) continue;
+
+    // Quais este canal já recebeu.
+    const { data: jaFoi } = await db
+      .from("cupom_publicado")
+      .select("cupom_id")
+      .eq("canal_id", canal.id);
+    const vistos = new Set((jaFoi ?? []).map((x) => x.cupom_id));
+
+    const cupom = elegiveis.find((c) => !vistos.has(c.id));
+    if (!cupom) continue;
+
+    const texto = montaMensagemDeCupom(modelo.corpoCupom, {
+      codigo: cupom.codigo,
+      loja: cupom.marketplace_nome ?? "Mercado Livre",
+      percentual: cupom.valor,
+      minimoCentavos: cupom.valor_minimo_centavos ?? 0,
+      tetoCentavos: cupom.teto_desconto_centavos,
+      onde: cupom.geral ? null : (cupom.nicho_slug ?? null),
+      /*
+        A VALIDADE É O DIA EM SÃO PAULO, e não o pedaço da ISO.
+
+        `vigente_ate` é 23:59:59 de São Paulo, que em UTC já é o dia
+        seguinte. Cortar a string em dez caracteres dava um dia a mais
+        de validade ao leitor: o cupom `...0108` saía anunciado como
+        "vale até 02/08". Prometer prazo que não existe é o mesmo erro
+        de família da regra 3.4, do lado do calendário.
+      */
+      validade: diaEmSaoPaulo(new Date(cupom.vigente_ate)),
+    });
+
+    const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, null);
+    if (!envio.ok) {
+      console.log(`  ✗ cupom ${cupom.codigo} em ${canal.nome}: ${envio.motivo}`);
+      continue;
+    }
+
+    const quando = new Date().toISOString();
+    await db
+      .from("cupom_publicado")
+      .insert({ cupom_id: cupom.id, canal_id: canal.id, enviada_em: quando, mensagem: texto });
+    await db.from("canal").update({ ultima_publicacao_em: quando }).eq("id", canal.id);
+    canal.ultima_publicacao_em = quando;
+    enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
+
+    cuponsPublicados++;
+    console.log(`  ✓ ${canal.nome}: cupom ${cupom.codigo} (${cupom.valor}%)`);
+  }
+
   console.log(
-    `\n${publicadas} publicadas · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
+    `\n${publicadas} publicadas · ${cuponsPublicados} cupons · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
       `${noTeto} no teto do dia · ${semLink} sem link · ${trocas} trocaram de prateleira`,
   );
   for (const canal of canais ?? []) {

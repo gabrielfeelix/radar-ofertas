@@ -8,6 +8,7 @@ import {
   limpaTitulo,
   pareceLinkDeProduto,
   resolveLink,
+  validadeDoCupom,
   type PostDoCanal,
 } from "../_compartilhado/telegram-web.ts";
 
@@ -346,29 +347,11 @@ async function guardaCupons(
   if (achados.length === 0) return 0;
 
   const agora = new Date();
-  const anoAtual = agora.getUTCFullYear();
   let novos = 0;
 
   for (const c of achados) {
-    // Fim do dia DD/MM no fuso de São Paulo, que é onde o cupom vale
-    // (regra 3.9). O `-03:00` é fixo: não há horário de verão no
-    // Brasil desde 2019.
-    const mm = String(c.mes).padStart(2, "0");
-    const dd = String(c.dia).padStart(2, "0");
-    let vigenteAte = new Date(`${anoAtual}-${mm}-${dd}T23:59:59-03:00`);
-
-    // Data inválida (31 de fevereiro, por exemplo) não vira cupom.
-    if (Number.isNaN(vigenteAte.getTime())) continue;
-
-    // A virada do ano: cupom que "venceu" há mais de seis meses é, na
-    // verdade, do ano que vem.
-    if (agora.getTime() - vigenteAte.getTime() > 180 * 24 * 3_600_000) {
-      vigenteAte = new Date(`${anoAtual + 1}-${mm}-${dd}T23:59:59-03:00`);
-    }
-
-    // Cupom já vencido não entra: ele nasceria morto e só sujaria a
-    // tela de cupons.
-    if (vigenteAte.getTime() <= agora.getTime()) continue;
+    const vigenteAte = validadeDoCupom(c.dia, c.mes, agora);
+    if (!vigenteAte) continue;
 
     const { error } = await db.from("cupom").upsert(
       {

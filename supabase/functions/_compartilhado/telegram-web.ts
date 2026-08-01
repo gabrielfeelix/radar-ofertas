@@ -382,6 +382,37 @@ export function extraiCupons(texto: string): CupomLido[] {
   return [...achados.values()];
 }
 
+/**
+ * Até quando vale um cupom cujo código carrega `DDMM`.
+ *
+ * Devolve nulo quando a data não existe (31 de fevereiro) ou quando o
+ * cupom já venceu — cupom vencido não deve nascer, só sujaria a tela.
+ *
+ * O ano não está no código, então é o corrente. A exceção é a virada:
+ * um `CUPOM0101` lido em 31 de dezembro é de janeiro do ano que vem, e
+ * sem esse ajuste ele nasceria vencido há doze meses.
+ *
+ * O fim do dia é no fuso de São Paulo (regra 3.9), e o `-03:00` é fixo
+ * porque não há horário de verão no Brasil desde 2019.
+ */
+export function validadeDoCupom(dia: number, mes: number, agora: Date): Date | null {
+  const mm = String(mes).padStart(2, "0");
+  const dd = String(dia).padStart(2, "0");
+
+  const monta = (ano: number) => new Date(`${ano}-${mm}-${dd}T23:59:59-03:00`);
+
+  let ate = monta(agora.getUTCFullYear());
+  if (Number.isNaN(ate.getTime())) return null;
+
+  // "Venceu há mais de meio ano" é, na verdade, do ano que vem.
+  if (agora.getTime() - ate.getTime() > 180 * 24 * 3_600_000) {
+    ate = monta(agora.getUTCFullYear() + 1);
+    if (Number.isNaN(ate.getTime())) return null;
+  }
+
+  return ate.getTime() > agora.getTime() ? ate : null;
+}
+
 /** O primeiro valor em reais que aparece depois de uma expressão. */
 function valorApos(texto: string, gatilho: RegExp): number | null {
   const m = texto.match(new RegExp(`${gatilho.source}[^R\\d]{0,20}R?\\$?\\s*([\\d.]+(?:,\\d{2})?)`, "i"));

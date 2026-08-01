@@ -325,17 +325,46 @@ os casos inventados deixaram passar: o canal escreve `(Limite de R$ 20)` e o
 regex só cobria "limitado a", então o teto saía nulo. **Caso inventado não
 pega esse tipo de erro.**
 
-**O que falta, e é a metade que entrega valor:**
+**A Edge Function não pôde ser implantada, e a ingestão mudou de casa por
+causa disso.** O token do CLI guardado na máquina é de outra conta: ele lista
+"Rodapé" e "Ponto", e não enxerga o `radar-ofertas`, que vive na 4YU Systems.
 
-1. **Publicar a Edge Function.** A colheita roda como função no Supabase; o
-   código está no repositório e não foi implantado.
-2. **A mensagem não sabe falar de cupom.** `lib/mensagem.ts` não tem nenhuma
-   menção a ele. Duas formas, e recomendo a primeira:
-   - **Post de cupom próprio**, que é o que os concorrentes publicam de
-     madrugada e não depende de histórico de preço nenhum.
-   - Anexar cupom a uma oferta. **Mais arriscado:** o cupom é por categoria e
-     aplicar fora dela falha, o que a pesquisa listou como armadilha e vira
-     reclamação de seguidor.
+Isso expôs algo melhor que o bloqueio: **a colheita não é disparada por
+workflow nenhum**, ela roda à mão. Um cupom do ML vale um dia, então depender
+de alguém lembrar de rodar a colheita seria o mesmo que não colher.
+
+Então a ingestão virou `scripts/colhe-cupons.mjs`, no agendador horário, junto
+da coleta e da publicação. A extração continua sendo a mesma função em
+`_compartilhado`, usada pelos dois caminhos.
+
+**O post de cupom está construído** (migrations 34 e 35, aplicadas):
+
+- `cupom_prefixo` diz de que categoria é cada campanha. A regra é a da D-036:
+  **desconhecido separa**. Prefixo sem linha entra no banco e não é publicado.
+- `cupom_publicado` impede o mesmo cupom de sair de hora em hora.
+- `modelo_mensagem.corpo_cupom` guarda o texto, editável na tela.
+- `montaMensagemDeCupom` em `lib/mensagem.ts`, com 15 casos de teste.
+
+**Provado contra produção, sem publicar** (o freio de mão segue puxado):
+
+```
+cupons vivos: 2
+  MODAEBELEZA0108    20%  nicho=moda
+  LOJASOFICIAIS0108  15%  geral
+
+Radar Pet: 1 elegível de 2
+  BARRADO MODAEBELEZA0108 (nicho moda não é do canal)
+```
+
+A comporta de nicho funcionou: moda não entra em canal de pet, que é
+exatamente o erro da mangueira de jardim que a Frente B matou uma vez.
+
+**E a prova achou um defeito que teria ido ao ar:** o post dizia *"Vale até
+02/08"* para um cupom `...0108`. O `vigente_ate` é 23:59 de São Paulo, que em
+UTC já é o dia seguinte, e eu cortava a data em UTC. Prometer um dia a mais de
+prazo é o mesmo erro de família da regra 3.4, do lado do calendário.
+
+**O que falta é uma decisão, não código:** soltar `publicacao_automatica`.
 
 **Lacuna conhecida:** o `@sddescontos` escreve o teto num formato que o regex
 ainda não cobre, e por isso sai nulo. Teto nulo é seguro — a mensagem

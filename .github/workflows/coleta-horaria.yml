@@ -95,6 +95,23 @@ jobs:
             echo "- \`$funcao\` $resposta" >> "$GITHUB_STEP_SUMMARY"
           done
 
+      - name: Colhe cupons dos canais
+        # Vem antes da publicação porque o post de cupom lê o que este
+        # passo gravou. E é barato: uma página por canal.
+        #
+        # A extração também existe em `colheita-canais`, que é Edge
+        # Function e NÃO é disparada por nenhum workflow. Um cupom do
+        # Mercado Livre vale um dia, então depender de alguém lembrar de
+        # rodar a colheita à mão seria o mesmo que não colher.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node --experimental-strip-types \
+               --disable-warning=ExperimentalWarning \
+               --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+               scripts/colhe-cupons.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Publica no Telegram
         # O laço fecha aqui. Não há aprovação humana no caminho (D-033):
         # quem aprova são as comportas de confiança, e quem controla o

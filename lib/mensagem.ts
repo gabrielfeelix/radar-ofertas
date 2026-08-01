@@ -259,6 +259,68 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
   return texto.replace(/\n{3,}/g, "\n\n").trim();
 }
 
+/** O que um post de cupom precisa saber. */
+export type DadosDoCupom = {
+  codigo: string;
+  loja: string;
+  percentual: number;
+  /** Zero quer dizer sem mínimo declarado, e a condição some. */
+  minimoCentavos: number;
+  /** Nulo quer dizer sem teto declarado, e a condição some. */
+  tetoCentavos: number | null;
+  /** O nome da categoria, quando o cupom é de uma. Vazio se é geral. */
+  onde?: string | null;
+  /** `YYYY-MM-DD` do último dia em que vale. */
+  validade: string;
+};
+
+/**
+ * O post de cupom.
+ *
+ * POR QUE ELE EXISTE COMO MENSAGEM PRÓPRIA, e não como linha dentro de
+ * uma oferta: o cupom do Mercado Livre é **por categoria**, e colá-lo
+ * num produto que não é daquela categoria faz o desconto falhar no
+ * carrinho. A pesquisa listou isso como a armadilha mais comum de quem
+ * republica cupom alheio, e o custo dela é reclamação de seguidor, que
+ * é o que a regra 3.4 existe para evitar em outro contexto.
+ *
+ * Como post separado, ele diz o que é e o leitor decide onde usar.
+ *
+ * E ele resolve um problema de calendário: a série de preço tem dois
+ * dias, então quase toda oferta hoje vem do desconto que a loja
+ * declara. O cupom **não depende de série nenhuma** e é conteúdo
+ * verdadeiro no primeiro dia.
+ *
+ * NADA AQUI AFIRMA PREÇO. O cupom é um percentual sobre o que o leitor
+ * escolher, então não há "de/por" para inflar, e a regra 3.4 não tem
+ * como ser violada por esta mensagem.
+ */
+export function montaMensagemDeCupom(corpoCupom: string, dados: DadosDoCupom): string {
+  /*
+    AS CONDIÇÕES SÃO SÓ AS DECLARADAS.
+
+    Mínimo zero e teto nulo não viram "sem mínimo" nem "sem limite":
+    viram silêncio. Nós lemos o cupom do texto de um canal, e o que ele
+    não disse nós não sabemos — afirmar ausência de limite seria
+    inventar uma condição melhor do que a que foi lida.
+  */
+  const condicoes = [
+    dados.minimoCentavos > 0 ? `Compra mínima de ${reais(dados.minimoCentavos)}` : null,
+    dados.tetoCentavos != null ? `desconto de até ${reais(dados.tetoCentavos)}` : null,
+  ].filter(Boolean);
+
+  const texto = preenche(corpoCupom, {
+    codigo: dados.codigo,
+    loja: dados.loja,
+    percentual: String(dados.percentual),
+    onde: dados.onde?.trim() ? ` em ${dados.onde.trim()}` : "",
+    condicoes: condicoes.length > 0 ? `${condicoes.join(", ")}.` : "",
+    validade: formataDia(dados.validade),
+  });
+
+  return texto.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 /**
  * A prévia: o mesmo modelo, nos dois estados da série.
  *
