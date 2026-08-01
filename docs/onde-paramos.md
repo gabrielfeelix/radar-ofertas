@@ -62,7 +62,15 @@ Depois, com os grupos já abertos ao público, mais quatro coisas:
   O dono viu uma delas; a outra, no gatilho `queda`, tinha o mesmo
   defeito e teria aparecido no primeiro post por queda.
 
-E um defeito achado no caminho, que valia mais que os quatro:
+E um segundo, achado ao conferir o catálogo depois da primeira rodada:
+**a descoberta gastava as 600 vagas por ordem de lista.** Com 4.239
+candidatos e 28 filhas só em Pet Shop, as primeiras raízes enchiam o
+teto e Brinquedos, Bebês e Beleza não recebiam nada — `beleza=2`,
+`esporte=2`, `brinquedo=1` contra `eletronico=242`. Concatenar em ordem
+funcionava com um canal; com sete virou decisão de negócio disfarçada de
+detalhe. Agora é rodízio, um balde por raiz.
+
+E um defeito achado no caminho, que valia mais que os dois:
 **`fetch` do Node não tem timeout**, e a descoberta ficou quarenta
 minutos pendurada numa única chamada, sem CPU e sem log. No agendador
 isso não é chatice, é a rotina diária pendurada até o teto de seis horas
