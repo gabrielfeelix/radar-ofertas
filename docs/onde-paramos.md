@@ -79,11 +79,20 @@ aba Network, e trocar os dois valores.
 importar. Se ele pedir para fechar essa porta, é sair da conta e entrar
 de novo, e o valor antigo morre.
 
-### 4. O GitHub Actions já está estourando (D-038)
+### 4. ~~O GitHub Actions está estourando~~ — RESOLVIDO em 01/08
 
-Repositório **privado** = 2.000 min/mês. O cron horário gasta 2.160 a
-3.600. **Isso é hoje, não é futuro.** O caminho mais barato é tornar o
-repositório público (segredos já estão em Secrets). Decisão pendente.
+O dono **tornou o repositório público**, então os minutos são
+ilimitados e o agendador fica onde está (D-038).
+
+**O que isso obriga daqui para frente:** o histórico do Git é legível
+por qualquer pessoa. Varri antes de fechar, comparando os valores reais
+do `.env` contra todos os commits: **os 12 segredos estão limpos** e
+nenhum arquivo `.env` jamais entrou. A regra 3.1 deixou de ser higiene e
+virou fronteira — segredo commitado por engano agora é público no
+instante do push, e apagar depois não resolve.
+
+Único incômodo: os **e-mails das contas de teste** aparecem no
+histórico. Não é credencial, mas se incomodar, trocar as contas resolve.
 
 ### 5. Só existe um canal, e ele é de pet
 
@@ -98,6 +107,36 @@ Direção aprovada, desenho proposto, nada construído. Os dois consertos
 que não dependem de decisão de custo: **gravar só quando o preço muda**
 (hoje grava sempre, ~95% de escrita desperdiçada) e **descoberta por
 subcategoria**.
+
+### 7. O que nunca foi provado, e não invente que foi
+
+- **Nenhuma comissão foi confirmada.** O sistema publica com link
+  gerado desde 01/08, e o relatório do ML atualiza a cada 24 horas.
+  Ninguém conferiu ainda se a etiqueta `radarpet` registrou clique.
+- **O `matt_word` montado à mão nunca foi testado**, e a evidência diz
+  que não funciona. Não gaste tempo testando: já está decidido (D-034).
+- **`ofertas_por_dia` não tem uma semana de dados.** O critério da
+  Fase 1 (30 ofertas/dia por uma semana) não pode ser declarado
+  atingido nem falhado ainda.
+- **`pnpm telas` não foi rodado hoje.** Mexi em `lib/mensagem.ts` e nas
+  telas de modelo; nenhuma foi aberta no navegador. `pnpm verifica` não
+  vê layout.
+
+---
+
+## O que fazer primeiro, se ninguém te disser nada
+
+Nesta ordem, e a ordem é por retorno sobre esforço:
+
+1. **Perguntar ao dono se solta o freio.** Nada mais importa enquanto o
+   canal está mudo.
+2. **Abrir canal de casa e de eletrônico.** É a maior perda do sistema
+   hoje, e é decisão dele, não sua.
+3. **Gravar só quando o preço muda** (D-037). Corta ~95% da escrita e
+   destrava a base grande. Não depende de decisão nenhuma.
+4. **Descoberta por subcategoria.** Hoje são só as 28 raízes.
+5. **Conferir o relatório de comissão** contra as 7 publicações erradas
+   e as 3 certas. É o que fecha a Fase 0.
 
 ---
 

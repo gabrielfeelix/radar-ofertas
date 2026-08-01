@@ -900,8 +900,8 @@ chutar "muitos".
 
 ---
 
-## D-038 · O agendador precisa sair do GitHub Actions
-**Data:** 01/08/2026 · **EM ABERTO, decisão do dono pendente**
+## D-038 · O repositório virou público, e o agendador fica
+**Data:** 01/08/2026 · **RESOLVIDO no mesmo dia**
 
 A D-015 escolheu GitHub Actions em vez de `pg_cron`, e os motivos dela
 continuam válidos (mantém o Supabase acordado, falha de forma visível).
@@ -936,3 +936,45 @@ por razão técnica, não só por custo.
 grupo der resultado, a gente muda pro modo pago. Dando lucro, eu não
 tenho problema de pagar ferramentas."* Então o critério aqui não é
 economizar, é **não pagar antes de ter receita**.
+
+### Como ficou
+
+**O dono tornou o repositório público em 01/08.** Conferido: a API do
+GitHub responde 200 e `visibility: public`. Com isso os minutos de
+Actions são **ilimitados**, e a D-015 continua valendo inteira: o
+agendador fica onde está, sem migração e sem custo.
+
+Os outros caminhos ficam registrados para o dia em que um cron de 5
+minutos virar requisito de verdade — aí o GitHub sai por **razão
+técnica**, não por custo: agendamento dele atrasa rotineiramente abaixo
+de uns 10 minutos.
+
+### A varredura de segredos que isso obrigou
+
+Repositório público significa **histórico legível por qualquer um**,
+não só o código de hoje. Varri antes de anotar, comparando os valores
+reais do `.env` contra todos os commits.
+
+**Os 12 segredos de verdade estão limpos**, nenhum aparece em nenhum
+commit:
+
+`SUPABASE_SERVICE_ROLE_KEY` · `SUPABASE_DB_PASSWORD` ·
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` · `ML_CLIENT_SECRET` ·
+`ML_REFRESH_TOKEN` · `TELEGRAM_BOT_TOKEN` · `COLETA_SEGREDO` ·
+`SAL_HASH_IP` · `CONTA_PAINEL_SENHA` · `CONTA_DE_CAPTURA_SENHA` ·
+`URL_BASE_REDIRECIONADOR` · `VERCEL_OIDC_TOKEN`
+
+Nenhum arquivo `.env` jamais entrou no Git — só o `.env.example`. A
+regra 3.1 foi cumprida desde o começo, e agora tem prova.
+
+**O que aparece no histórico e não é segredo:** `ML_CLIENT_ID` (está no
+AGENTS de propósito), `SUPABASE_PROJECT_REF` e `NEXT_PUBLIC_SUPABASE_URL`
+(vão no navegador de qualquer jeito), `PAINEL_URL`, `TZ`, e os
+**e-mails das contas de teste**. Os e-mails são o único incômodo real:
+são endereços pessoais agora públicos. Não é vazamento de credencial,
+mas se incomodar, trocar as contas de teste resolve.
+
+**O que a mudança obriga daqui para frente:** com o repositório aberto,
+qualquer segredo commitado por engano vira público no instante do push,
+e apagar depois não resolve — o histórico fica. A regra 3.1 deixou de
+ser higiene e virou fronteira.
