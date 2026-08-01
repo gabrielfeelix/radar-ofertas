@@ -1035,10 +1035,44 @@ dias, quase toda oferta de hoje vem do `original_price` declarado pela
 loja. O cupom é verdade verificável no primeiro dia, e é o que os
 concorrentes publicam de madrugada.
 
-**A ingestão mora em `scripts/colhe-cupons.mjs`, no agendador horário**, e
-não na Edge Function `colheita-canais`, que também tem o código: a
-colheita **não é disparada por workflow nenhum**, roda à mão, e cupom que
-vale um dia não pode depender de alguém lembrar.
+**A ingestão mora em `scripts/colhe-cupons.mjs`, no agendador horário**,
+porque cupom que vale um dia não pode depender de alguém lembrar. A Edge
+Function `colheita-canais` tem o mesmo código e foi implantada em 01/08 à
+tarde, junto de um passo novo na rotina diária: ela existia desde 28/07 e
+**não era chamada por workflow nenhum**. Numa invocação trouxe 35 anúncios
+novos, catálogo que simplesmente não entrava.
+
+### Os três formatos de canal, e o erro que eles pegaram
+
+Ler canal de verdade derrubou a primeira versão da extração. Os canais
+escrevem de três jeitos, e qualquer regra de direção fixa erra em um:
+
+| Canal | Formato |
+|---|---|
+| `@canaldeofertasecupons` | valores **depois** do código |
+| `@promotop` | valores **antes**, dois cupons na mesma mensagem |
+| `@CupomDoGnu` | valores antes, com linha em branco no meio |
+
+Procurando para a frente primeiro, o `@promotop` dava ao `MODAEBELEZA` os
+15% do `LOJASOFICIAIS` — o percentual do bloco de baixo fica logo depois
+do código de cima. **Isso publicaria desconto que não existe.** A busca
+passou a ser por linha, saindo do código e alternando os lados, com o
+mínimo e o teto saindo do mesmo bloco do percentual.
+
+### Quando os canais discordam, vale o que promete menos
+
+E eles discordam, no mesmo cupom e no mesmo dia:
+
+```
+@CupomDoGnu   MODAEBELEZA0108  20%  mínimo R$ 59  teto R$ 20
+@promotop     MODAEBELEZA0108  20%  mínimo R$ 49  teto R$ 30
+```
+
+Não dá para saber qual está certo: lemos de terceiro, não do Mercado
+Livre. Errar para o lado generoso custa a confiança do grupo, porque quem
+chega no carrinho com R$ 50 esperando desconto não volta; errar para o
+lado apertado custa uma surpresa boa. A agregação fica com o **maior
+mínimo, o menor teto e o menor percentual**.
 
 **Mudaria se:** o ML publicar uma rota de cupom para terceiros, ou se a
 Central de Afiliados permitir gerar cupom próprio (a hipótese 4 de

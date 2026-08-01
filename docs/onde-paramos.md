@@ -78,9 +78,9 @@ O primeiro é o grave: `melhorOferta` reordena os vendedores a cada hora, e o
 sistema gravava o preço do novo mantendo a reputação do antigo. **As
 comportas aprovavam olhando o histórico da pessoa errada.**
 
-**Duas migrations escritas e NÃO aplicadas** (32 e 33). O código funciona sem
-elas — `reputacao_nula_reprova ?? 1` nasce ligado. Aplicar é decisão do dono,
-seção 8.
+**As migrations 32 a 35 foram aplicadas** na tarde do mesmo dia, com
+autorização do dono, por `supabase db push` pelo session pooler (o Docker
+não sobe nesta máquina e o push remoto não precisa dele).
 
 **E uma correção de rumo que vale mais que as três:** o plano dizia que 262
 produtos sem nicho eram buraco de mapeamento. **Não são.** São 203 anúncios
@@ -102,6 +102,13 @@ NexGard, chocadeira, suplemento equino).
 **Cupom, de ponta a ponta** (D-039). Colhido do texto dos canais que a
 colheita já lê, com escopo por prefixo para não repetir a mangueira, e
 publicado como post próprio. Não depende de série de preço nenhuma.
+
+**A Edge Function saiu do bloqueio.** O token do CLI da máquina é de
+outra conta; o da 4YU está em `~/dev/4yu-apps/.secrets/4yu.env`, na
+chave `SUPABASE_ACCESS_TOKEN`, e com ele o `colheita-canais` foi
+implantado. **E a colheita entrou na rotina diária** — ela existia desde
+28/07 e não era chamada por workflow nenhum. Numa invocação trouxe 35
+anúncios novos.
 
 **O link da tela** (D-040), e o estrago que ele causou. Leia a decisão
 antes de mexer em `/publicar`: nove publicações foram ao canal duas ou
@@ -154,6 +161,13 @@ aba Network, e trocar os dois valores.
 **O cookie atual foi colado no chat pelo dono**, que disse não se
 importar. Se ele pedir para fechar essa porta, é sair da conta e entrar
 de novo, e o valor antigo morre.
+
+Os valores também vivem em `~/dev/4yu-apps/.secrets/`, nos arquivos
+`ml-afiliados.cookie` e `ml-afiliados.env`. **Essa pasta é a casa dos
+segredos da 4YU** e resolve mais de uma coisa: o `SUPABASE_ACCESS_TOKEN`
+que está lá é o que permite implantar Edge Function e listar o projeto
+pelo CLI (o token que o CLI guarda em `~/.supabase` é de outra conta e
+não enxerga o `radar-ofertas`). Nada dela entra no Git.
 
 ### 4. ~~O GitHub Actions está estourando~~ — RESOLVIDO em 01/08
 
