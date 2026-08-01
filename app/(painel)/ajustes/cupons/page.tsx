@@ -91,7 +91,7 @@ export default async function Cupons() {
     <Pagina
       trilha="Ajustes"
       titulo="Cupons"
-      subtitulo="Nenhuma loja publica cupom por API — estes são digitados à mão. O que o sistema faz sozinho é tirá-los das mensagens quando vencem."
+      subtitulo="Você gera o cupom no painel da loja, com o seu prefixo, e cadastra aqui. Nenhuma loja devolve cupom por API. O que o sistema faz sozinho é tirá-los das mensagens quando vencem."
       medida="media"
       acoes={
         <Modal rotuloDoGatilho="Cadastrar cupom" titulo="Cupom novo">
@@ -110,8 +110,9 @@ export default async function Cupons() {
       {lista.length === 0 ? (
         <Cartao>
           <p className="text-base text-texto-fraco">
-            Nenhum cupom cadastrado. Quando a loja soltar um, cadastre aqui com a data de validade —
-            o sistema tira das mensagens sozinho quando vencer.
+            Nenhum cupom cadastrado. Gere um na Central de Afiliados do Mercado Livre, com o seu
+            prefixo, e cadastre aqui com a data de validade. O sistema tira das mensagens sozinho
+            quando vencer.
           </p>
         </Cartao>
       ) : (

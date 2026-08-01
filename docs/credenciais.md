@@ -276,6 +276,34 @@ completo** — no curto o número fica oculto.
 
 ---
 
+## 4d. Cupons do Mercado Livre — resolvido em 01/08/2026
+
+**O afiliado GERA o cupom, não o encontra.** Descoberto olhando a
+Central de Afiliados: *"Gere códigos de cupons, compartilhe-os com seu
+público e ganhe por venda."*
+
+O fluxo é: criar um **prefixo de até 9 caracteres**, uma vez, e depois
+gerar códigos com ele. É o que explica o padrão exato dos concorrentes,
+que parecia fonte secreta: `TODOSITE31072` e `FULL3107` são prefixo
+(`TODOSITE`, `FULL`) mais data (`3107` = 31/07). Não há garimpo, há
+gerador.
+
+**O que isso muda no sistema:** a tabela `cupom` (migration 17) continua
+certa, mas o texto que diz "digitado à mão porque a loja não expõe" está
+incompleto. O correto é: o cupom nasce no painel do ML, com o seu
+prefixo, e é cadastrado aqui com regra e validade.
+
+**O que continua fechado:** a API não devolve cupom. Foram varridos 13
+endpoints plausíveis em 31/07 e 01/08, todos 404. E a página `/cupons`
+do site exige login, então não é legível de fora como a colheita lê
+`t.me/s/`. Cadastro à mão segue sendo o caminho.
+
+**Falta escolher o prefixo.** Ele aparece em todo cupom que você
+distribuir, então é marca: `RADAR` deixa 4 caracteres para a data, e
+combina com as etiquetas `radar*` já criadas.
+
+---
+
 ## 4b. Mercado Livre (API) — ✅ FUNCIONANDO desde 31/07/2026
 
 > **O caminho é indireto, e ninguém o encontra sozinho.** O ML fechou
