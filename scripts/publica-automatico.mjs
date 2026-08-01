@@ -14,8 +14,8 @@
  *   1. pega as ofertas novas
  *   2. reprova as que não passam nas comportas de confiança
  *   3. cria a publicação nos canais elegíveis, com subid
- *   4. respeita o ritmo do canal (intervalo, não cota)
- *   5. publica no Telegram, com foto
+ *   4. monta a fila de envio: o cupom primeiro, depois as ofertas
+ *   5. publica no Telegram DORMINDO entre os posts, no ritmo do canal
  *
  * O WhatsApp NUNCA entra aqui. Regra 3.2: o sistema monta o texto e um
  * humano aperta enviar. Isso não é limitação técnica, é o que protege
@@ -377,6 +377,7 @@ async function melhorPrateleira(db, oferta) {
   let semLink = 0;
   let trocas = 0;
   let noTeto = 0;
+  let cuponsPublicados = 0;
   const motivos = {};
 
   for (const oferta of ordenadas) {
@@ -479,220 +480,113 @@ async function melhorPrateleira(db, oferta) {
 
       if (erroPub || !pub || pub.estado === "enviada") continue;
 
-      // 4. WhatsApp NUNCA sai daqui (regra 3.2). Fica pendente, e um
-      // humano envia pela tela.
-      if (canal.plataforma !== "telegram") continue;
-
-      // 5. O teto diário, que é o combinado com o parceiro. Ele vem
-      // antes do ritmo porque é mais duro: o ritmo adia, o teto encerra
-      // o dia do canal.
-      if (noTetoDiario(canal)) {
-        noTeto++;
-        continue;
-      }
-
-      // 6. O ritmo. Intervalo, não cota: a fila não sai toda de uma vez.
-      const veredito = podePublicarAgora(
-        new Date(),
-        canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
-        ritmo,
-      );
-      if (!veredito.pode) {
-        esperando++;
-        continue;
-      }
-
       /*
-        ANTES DO LINK, A PRATELEIRA. A ordem importa: gerar link para o
-        anúncio errado gastaria uma chamada ao painel do ML e ainda
-        publicaria o preço pior.
+        E PARA AQUI. Esta passada só CRIA a linha; quem envia é o laço
+        espaçado mais abaixo.
+
+        Antes ela também publicava, e disso vinha o teto de um post por
+        hora: o primeiro envio mexia no relógio do canal e o próprio
+        ritmo barrava o resto da rodada.
+
+        O WhatsApp nunca sai de lugar nenhum daqui (regra 3.2): fica
+        pendente, e um humano envia pela tela.
       */
-      const escolha = await melhorPrateleira(db, oferta);
-
-      if (!escolha.usar) {
-        const dela = escolha.melhorSemLastro;
-        console.log(
-          `  ⤫ ${canal.nome}: existe prateleira melhor sem lastro próprio ` +
-            `(R$ ${(dela.preco_leitura_centavos / 100).toFixed(2)} contra ` +
-            `R$ ${(oferta.preco_atual_centavos / 100).toFixed(2)})`,
-        );
-        await db
-          .from("oferta")
-          .update({
-            status: "rejeitada",
-            motivo_rejeicao: "prateleira_melhor_sem_lastro",
-            decidida_em: new Date().toISOString(),
-          })
-          .eq("id", oferta.id);
-        motivos.prateleira_melhor_sem_lastro = (motivos.prateleira_melhor_sem_lastro ?? 0) + 1;
-        reprovadas++;
-        continue;
-      }
-
-      const aPublicar = escolha.usar;
-      const trocou = escolha.trocou;
-
-      // Quando troca, os três números vêm TODOS da prateleira nova.
-      // Misturar o preço de uma com o "de" de outra seria inventar
-      // desconto com dois números verdadeiros que nunca conviveram.
-      const precoFinal = trocou ? aPublicar.preco_leitura_centavos : oferta.preco_atual_centavos;
-      const referenciaFinal = trocou
-        ? aPublicar.preco_original_centavos
-        : oferta.preco_referencia_centavos;
-      const descontoFinal = trocou
-        ? Math.round((1 - precoFinal / referenciaFinal) * 100)
-        : Math.round(Number(oferta.desconto_pct));
-
-      if (trocou) {
-        trocas++;
-        console.log(
-          `  ⇄ prateleira melhor: R$ ${(precoFinal / 100).toFixed(2)} contra ` +
-            `R$ ${(oferta.preco_atual_centavos / 100).toFixed(2)}`,
-        );
-      }
-
-      /*
-        O LINK É GERADO AQUI, POR ÚLTIMO, e a posição importa.
-
-        Só chega neste ponto o que já passou pelas comportas de
-        confiança, achou canal do nicho e ganhou a vez no ritmo. São
-        algumas dezenas por dia, e não milhares: gerar antes da
-        curadoria seria pedir link para produto que nunca vai sair.
-
-        Se a geração falhar, a publicação NÃO sai e fica pendente com o
-        motivo gravado. Link montado à mão não atribui comissão, então
-        publicar sem ele é entregar audiência de graça.
-      */
-      if (!canal.etiqueta_afiliado) {
-        console.log(`  ✗ ${canal.nome}: sem etiqueta de afiliado cadastrada`);
-        continue;
-      }
-
-      const jaTinha = pub.link_afiliado;
-      let curto = jaTinha;
-
-      if (!curto) {
-        const { gerados, falhas } = await geraLinks(
-          [aPublicar.url_original],
-          canal.etiqueta_afiliado,
-          sessao,
-        );
-
-        if (gerados.length === 0) {
-          const motivo = falhas[0]?.motivo ?? "gerador não respondeu";
-          console.log(`  ✗ ${canal.nome}: link não gerado (${motivo})`);
-          semLink++;
-          continue;
-        }
-
-        curto = gerados[0].curto;
-        await db
-          .from("publicacao")
-          .update({ link_afiliado: curto, link_afiliado_em: new Date().toISOString() })
-          .eq("id", pub.id);
-      }
-
-      const link = { url: curto };
-
-      const texto = montaMensagem(modelo, {
-        produto: aPublicar.produto?.titulo_canonico ?? "",
-        precoCentavos: precoFinal,
-        precoAntesCentavos: referenciaFinal,
-        descontoPct: descontoFinal,
-        loja: aPublicar.marketplace?.nome ?? "",
-        vendedor: aPublicar.loja_oficial ? "Loja oficial" : (aPublicar.vendedor ?? ""),
-        janelaDias: oferta.referencia_janela_dias,
-        observadoDesde: oferta.detectada_em.slice(0, 10),
-        podeAfirmarMinimo: trocou ? false : oferta.pode_afirmar_minimo,
-        gatilho: trocou ? "declarado" : oferta.gatilho,
-        notaDoCurador: aPublicar.produto?.nota_curador,
-        freteGratis: aPublicar.frete_gratis,
-        link: link.url,
-      });
-
-      const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, fotoValida(aPublicar));
-
-      // Falha NÃO marca como enviada: a publicação fica pendente com o
-      // canal mudo, que é visível, em vez de sumir da fila em silêncio.
-      if (!envio.ok) {
-        console.log(`  ✗ ${canal.nome}: ${envio.motivo}`);
-        continue;
-      }
-
-      const agora = new Date().toISOString();
-      await db
-        .from("publicacao")
-        .update({ estado: "enviada", origem: "fluxo", enviada_em: agora, mensagem: texto })
-        .eq("id", pub.id);
-      await db.from("canal").update({ ultima_publicacao_em: agora }).eq("id", canal.id);
-      canal.ultima_publicacao_em = agora;
-      enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
-
-      publicadas++;
-      console.log(`  ✓ ${canal.nome}: ${anuncio.produto?.titulo_canonico?.slice(0, 46)}`);
     }
   }
 
   /*
-    SEGUNDA PASSADA: as publicações que ficaram pendentes.
+    O ENVIO, ESPAÇADO EM TEMPO REAL DENTRO DA JANELA DO CRON.
 
-    Sem isto o laço tem um buraco que só aparece com o canal cheio: a
-    oferta vira `aprovada` antes da checagem de ritmo, então a rodada
-    seguinte, que só procura ofertas `novas`, nunca mais a encontra. A
-    publicação fica pendente para sempre e o canal perde a oferta em
-    silêncio.
+    ISTO CONSERTA UM DESCOMPASSO ENTRE O RITMO E O AGENDADOR, e ele
+    fazia o canal render muito menos do que o configurado.
 
-    Aprovar e enviar são atos separados, e a fila de envio precisa ser
-    varrida por conta própria.
+    O ritmo diz "um post a cada 10 minutos no pico". O agendador roda de
+    hora em hora. E o script publicava um e saía: depois do primeiro
+    envio, `ultima_publicacao_em` virava agora, e a iteração seguinte era
+    barrada pelo próprio ritmo. O teto real ficava em **um post por
+    hora**, qualquer que fosse o intervalo configurado. Medido em 01/08:
+    23 ofertas aprovadas na fila e uma publicação na rodada das 18h.
+
+    E o cupom, que vinha por último, nunca pegava a vaga: ela já tinha
+    sido gasta pela primeira oferta.
+
+    Agora a execução **fica viva e dorme entre os posts**, respeitando o
+    mesmo intervalo. Uma rodada de pico entrega até cinco ou seis posts
+    em vez de um. A janela é menor que a hora de propósito, para uma
+    execução nunca alcançar a seguinte.
+
+    Os minutos do GitHub Actions são ilimitados desde que o repositório
+    virou público (D-038), então dormir aqui não custa dinheiro.
   */
-  const { data: pendentes } = await db
-    .from("publicacao")
-    .select(`id, subid, canal_id, link_afiliado, oferta:oferta_id ( ${SELECAO} )`)
-    .eq("estado", "pendente")
-    .order("criado_em");
+  const JANELA_MIN = Number(process.env.PUBLICA_JANELA_MIN ?? 50);
+  const limite = Date.now() + JANELA_MIN * 60_000;
+  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  for (const pub of pendentes ?? []) {
+  const doTelegram = (canais ?? []).filter((c) => c.plataforma === "telegram");
+
+  /* Envia uma oferta pendente. Devolve se saiu. */
+  async function enviaOferta(pub, canal) {
     const oferta = pub.oferta;
     const anuncio = oferta?.anuncio;
-    const canal = (canais ?? []).find((c) => c.id === pub.canal_id);
-    if (!oferta || !anuncio || !canal || canal.plataforma !== "telegram") continue;
+    if (!oferta || !anuncio) return false;
 
-    // O teto vale igual aqui: sem isto a fila pendente seria a porta
-    // dos fundos por onde o combinado com o parceiro é furado.
-    if (noTetoDiario(canal)) {
-      noTeto++;
-      continue;
-    }
-
-    const veredito = podePublicarAgora(
-      new Date(),
-      canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
-      ritmo,
-    );
-    if (!veredito.pode) {
-      esperando++;
-      continue;
-    }
-
-    // Mesma regra da primeira passada: sem link gerado, não sai. E
-    // reaproveita o que já foi gerado antes, para não pedir duas vezes
-    // o mesmo link ao painel de outra empresa.
     if (!canal.etiqueta_afiliado) {
       console.log(`  ✗ ${canal.nome}: sem etiqueta de afiliado cadastrada`);
-      continue;
+      return false;
     }
+
+    /*
+      A PRATELEIRA VEM ANTES DO LINK, e ela passou a valer aqui também.
+
+      Até 01/08 a troca de prateleira só acontecia no caminho que
+      publicava na mesma rodada em que a oferta era detectada. O que
+      caía na fila e saía depois pulava a comparação — mesmo defeito da
+      D-036, por outra porta.
+    */
+    const escolha = await melhorPrateleira(db, oferta);
+
+    if (!escolha.usar) {
+      const dela = escolha.melhorSemLastro;
+      console.log(
+        `  ⤫ ${canal.nome}: existe prateleira melhor sem lastro próprio ` +
+          `(R$ ${(dela.preco_leitura_centavos / 100).toFixed(2)})`,
+      );
+      await db
+        .from("oferta")
+        .update({
+          status: "rejeitada",
+          motivo_rejeicao: "prateleira_melhor_sem_lastro",
+          decidida_em: new Date().toISOString(),
+        })
+        .eq("id", oferta.id);
+      motivos.prateleira_melhor_sem_lastro = (motivos.prateleira_melhor_sem_lastro ?? 0) + 1;
+      reprovadas++;
+      return false;
+    }
+
+    const aPublicar = escolha.usar;
+    const trocou = escolha.trocou;
+    if (trocou) trocas++;
+
+    const precoFinal = trocou ? aPublicar.preco_leitura_centavos : oferta.preco_atual_centavos;
+    const referenciaFinal = trocou
+      ? aPublicar.preco_original_centavos
+      : oferta.preco_referencia_centavos;
+    const descontoFinal = trocou
+      ? Math.round((1 - precoFinal / referenciaFinal) * 100)
+      : Math.round(Number(oferta.desconto_pct));
 
     let curto = pub.link_afiliado;
     if (!curto) {
       const { gerados, falhas } = await geraLinks(
-        [anuncio.url_original],
+        [aPublicar.url_original],
         canal.etiqueta_afiliado,
         sessao,
       );
       if (gerados.length === 0) {
         console.log(`  ✗ ${canal.nome}: link não gerado (${falhas[0]?.motivo ?? "sem resposta"})`);
         semLink++;
-        continue;
+        return false;
       }
       curto = gerados[0].curto;
       await db
@@ -702,25 +596,25 @@ async function melhorPrateleira(db, oferta) {
     }
 
     const texto = montaMensagem(modelo, {
-      produto: anuncio.produto?.titulo_canonico ?? "",
-      precoCentavos: oferta.preco_atual_centavos,
-      precoAntesCentavos: oferta.preco_referencia_centavos,
-      descontoPct: Math.round(Number(oferta.desconto_pct)),
-      loja: anuncio.marketplace?.nome ?? "",
-      vendedor: anuncio.loja_oficial ? "Loja oficial" : (anuncio.vendedor ?? ""),
+      produto: aPublicar.produto?.titulo_canonico ?? "",
+      precoCentavos: precoFinal,
+      precoAntesCentavos: referenciaFinal,
+      descontoPct: descontoFinal,
+      loja: aPublicar.marketplace?.nome ?? "",
+      vendedor: aPublicar.loja_oficial ? "Loja oficial" : (aPublicar.vendedor ?? ""),
       janelaDias: oferta.referencia_janela_dias,
       observadoDesde: oferta.detectada_em.slice(0, 10),
-      podeAfirmarMinimo: oferta.pode_afirmar_minimo,
-      gatilho: oferta.gatilho,
-      notaDoCurador: anuncio.produto?.nota_curador,
-      freteGratis: anuncio.frete_gratis,
+      podeAfirmarMinimo: trocou ? false : oferta.pode_afirmar_minimo,
+      gatilho: trocou ? "declarado" : oferta.gatilho,
+      notaDoCurador: aPublicar.produto?.nota_curador,
+      freteGratis: aPublicar.frete_gratis,
       link: curto,
     });
 
-    const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, fotoValida(anuncio));
+    const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, fotoValida(aPublicar));
     if (!envio.ok) {
       console.log(`  ✗ ${canal.nome}: ${envio.motivo}`);
-      continue;
+      return false;
     }
 
     const quando = new Date().toISOString();
@@ -728,76 +622,17 @@ async function melhorPrateleira(db, oferta) {
       .from("publicacao")
       .update({ estado: "enviada", origem: "fluxo", enviada_em: quando, mensagem: texto })
       .eq("id", pub.id);
-    await db.from("canal").update({ ultima_publicacao_em: quando }).eq("id", canal.id);
-    canal.ultima_publicacao_em = quando;
-    enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
 
     publicadas++;
-    console.log(`  ✓ ${canal.nome}: ${anuncio.produto?.titulo_canonico?.slice(0, 46)} (pendente)`);
+    console.log(
+      `  ✓ ${canal.nome}: ${aPublicar.produto?.titulo_canonico?.slice(0, 46)}` +
+        (trocou ? " (trocou de prateleira)" : ""),
+    );
+    return true;
   }
 
-  /*
-    TERCEIRA PASSADA: O POST DE CUPOM.
-
-    Vem por último de propósito. Oferta é o produto do canal; cupom é
-    complemento, e um cupom ocupando a vaga de uma oferta boa seria
-    troca ruim.
-
-    ELE NÃO DEPENDE DE SÉRIE NENHUMA, e é por isso que existe agora: a
-    série de preço tem dois dias, então quase toda oferta de hoje vem do
-    desconto que a loja declara. O cupom é verdade verificável no
-    primeiro dia.
-
-    UM POR CANAL POR RODADA. `cupom_publicado` tem constraint única por
-    (cupom, canal), então o mesmo cupom não sai duas vezes nem se o
-    script rodar duas vezes na mesma hora.
-  */
-  const { data: cupons } = await db
-    .from("cupons_vivos")
-    .select("id, codigo, valor, valor_minimo_centavos, teto_desconto_centavos, vigente_ate, nicho_id, nicho_slug, geral, marketplace_nome")
-    .eq("tipo", "percentual")
-    .order("valor", { ascending: false });
-
-  let cuponsPublicados = 0;
-
-  for (const canal of canais ?? []) {
-    if (canal.plataforma !== "telegram") continue;
-    if (!modelo.corpoCupom) continue;
-    if (noTetoDiario(canal)) continue;
-
-    const veredito = podePublicarAgora(
-      new Date(),
-      canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
-      ritmo,
-    );
-    if (!veredito.pode) continue;
-
-    const nichosDoCanal = new Set((canal.canal_nicho ?? []).map((cn) => cn.nicho_id));
-
-    /*
-      A MESMA COMPORTA DE NICHO DAS OFERTAS, e pelo mesmo motivo.
-
-      `geral` é o cupom que atravessa categoria (Full, Lojas Oficiais).
-      O de nicho só sai onde o canal declara aquele nicho. E cupom sem
-      mapa não é nem um nem outro: ele fica no banco, aparece na tela, e
-      não vai ao ar até alguém decidir o que ele é.
-    */
-    const elegiveis = (cupons ?? []).filter(
-      (c) => c.geral || (c.nicho_id && nichosDoCanal.has(c.nicho_id)),
-    );
-
-    if (elegiveis.length === 0) continue;
-
-    // Quais este canal já recebeu.
-    const { data: jaFoi } = await db
-      .from("cupom_publicado")
-      .select("cupom_id")
-      .eq("canal_id", canal.id);
-    const vistos = new Set((jaFoi ?? []).map((x) => x.cupom_id));
-
-    const cupom = elegiveis.find((c) => !vistos.has(c.id));
-    if (!cupom) continue;
-
+  /* Envia um post de cupom. Devolve se saiu. */
+  async function enviaCupom(cupom, canal) {
     const texto = montaMensagemDeCupom(modelo.corpoCupom, {
       codigo: cupom.codigo,
       loja: cupom.marketplace_nome ?? "Mercado Livre",
@@ -806,34 +641,149 @@ async function melhorPrateleira(db, oferta) {
       tetoCentavos: cupom.teto_desconto_centavos,
       onde: cupom.geral ? null : (cupom.nicho_slug ?? null),
       /*
-        A VALIDADE É O DIA EM SÃO PAULO, e não o pedaço da ISO.
-
-        `vigente_ate` é 23:59:59 de São Paulo, que em UTC já é o dia
-        seguinte. Cortar a string em dez caracteres dava um dia a mais
-        de validade ao leitor: o cupom `...0108` saía anunciado como
-        "vale até 02/08". Prometer prazo que não existe é o mesmo erro
-        de família da regra 3.4, do lado do calendário.
+        A validade é o dia em SÃO PAULO, e não o pedaço da ISO.
+        `vigente_ate` é 23:59:59 daqui, que em UTC já é o dia seguinte:
+        cortar a string dava um dia a mais de prazo ao leitor.
       */
       validade: diaEmSaoPaulo(new Date(cupom.vigente_ate)),
     });
 
     const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, null);
     if (!envio.ok) {
-      console.log(`  ✗ cupom ${cupom.codigo} em ${canal.nome}: ${envio.motivo}`);
-      continue;
+      console.log(`  ✗ ${canal.nome}: cupom ${cupom.codigo}: ${envio.motivo}`);
+      return false;
     }
 
-    const quando = new Date().toISOString();
     await db
       .from("cupom_publicado")
-      .insert({ cupom_id: cupom.id, canal_id: canal.id, enviada_em: quando, mensagem: texto });
-    await db.from("canal").update({ ultima_publicacao_em: quando }).eq("id", canal.id);
-    canal.ultima_publicacao_em = quando;
-    enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
+      .insert({ cupom_id: cupom.id, canal_id: canal.id, enviada_em: new Date().toISOString(), mensagem: texto });
 
     cuponsPublicados++;
     console.log(`  ✓ ${canal.nome}: cupom ${cupom.codigo} (${cupom.valor}%)`);
+    return true;
   }
+
+  /*
+    A FILA DE CADA CANAL: o cupom primeiro, depois as ofertas.
+
+    O cupom vem na frente porque ele é o item PERECÍVEL. O do Mercado
+    Livre vale um dia e morre à meia-noite; a oferta continua valendo
+    amanhã. Deixá-lo por último foi o que fez zero cupom sair hoje,
+    mesmo com quatro vivos no banco.
+
+    Um por rodada, no máximo: cupom é complemento, não o produto do
+    canal.
+  */
+  const { data: cupons } = await db
+    .from("cupons_vivos")
+    .select(
+      "id, codigo, valor, valor_minimo_centavos, teto_desconto_centavos, vigente_ate, nicho_id, nicho_slug, geral, marketplace_nome",
+    )
+    .eq("tipo", "percentual")
+    .order("valor", { ascending: false });
+
+  const { data: pendentes } = await db
+    .from("publicacao")
+    .select(`id, subid, canal_id, link_afiliado, oferta:oferta_id ( ${SELECAO} )`)
+    .eq("estado", "pendente")
+    .order("criado_em");
+
+  const filaDoCanal = new Map();
+
+  for (const canal of doTelegram) {
+    const fila = [];
+
+    if (modelo.corpoCupom) {
+      const nichosDoCanal = new Set((canal.canal_nicho ?? []).map((cn) => cn.nicho_id));
+      const elegiveis = (cupons ?? []).filter(
+        (c) => c.geral || (c.nicho_id && nichosDoCanal.has(c.nicho_id)),
+      );
+
+      if (elegiveis.length > 0) {
+        const { data: jaFoi } = await db
+          .from("cupom_publicado")
+          .select("cupom_id")
+          .eq("canal_id", canal.id);
+        const vistos = new Set((jaFoi ?? []).map((x) => x.cupom_id));
+        const cupom = elegiveis.find((c) => !vistos.has(c.id));
+        if (cupom) fila.push({ tipo: "cupom", cupom });
+      }
+    }
+
+    // As ofertas do canal, intercaladas para não sair oito parecidas em
+    // sequência (o mesmo motivo de `lib/variedade.ts`).
+    const minhas = (pendentes ?? []).filter((p) => p.canal_id === canal.id && p.oferta?.anuncio);
+    const emOrdem = intercalaPorVariedade(
+      minhas.map((p) => ({
+        grupo: p.oferta?.anuncio?.produto?.nicho_id ?? null,
+        precoCentavos: p.oferta?.preco_atual_centavos ?? 0,
+        pub: p,
+      })),
+    ).map((x) => ({ tipo: "oferta", pub: x.pub }));
+
+    fila.push(...emOrdem);
+    filaDoCanal.set(canal.id, fila);
+  }
+
+  /*
+    O LAÇO QUE DORME.
+
+    A cada volta escolhe o canal que pode falar mais cedo. Se ninguém
+    pode agora, dorme até o primeiro poder — desde que caiba na janela.
+    Não cabendo, encerra: o que sobrar sai na rodada seguinte, que é o
+    comportamento certo, e a fila não se perde porque ela é lida do
+    banco.
+  */
+  while (Date.now() < limite) {
+    let melhor = null;
+
+    for (const canal of doTelegram) {
+      const fila = filaDoCanal.get(canal.id);
+      if (!fila || fila.length === 0) continue;
+      if (noTetoDiario(canal)) {
+        noTeto++;
+        filaDoCanal.set(canal.id, []);
+        continue;
+      }
+
+      const veredito = podePublicarAgora(
+        new Date(),
+        canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
+        ritmo,
+      );
+      const faltamMs = veredito.pode ? 0 : (veredito.faltamMinutos ?? 1) * 60_000;
+      if (!melhor || faltamMs < melhor.faltamMs) melhor = { canal, faltamMs };
+    }
+
+    if (!melhor) break;
+
+    if (melhor.faltamMs > 0) {
+      if (Date.now() + melhor.faltamMs >= limite) {
+        esperando += filaDoCanal.get(melhor.canal.id)?.length ?? 0;
+        break;
+      }
+      console.log(`  … ${melhor.canal.nome}: esperando ${Math.ceil(melhor.faltamMs / 60_000)} min`);
+      // Um segundo a mais para não acordar no limiar e recalcular igual.
+      await espera(melhor.faltamMs + 1_000);
+      continue;
+    }
+
+    const canal = melhor.canal;
+    const item = filaDoCanal.get(canal.id).shift();
+
+    const saiu =
+      item.tipo === "cupom" ? await enviaCupom(item.cupom, canal) : await enviaOferta(item.pub, canal);
+
+    // O relógio do canal só anda quando algo REALMENTE saiu. Andar na
+    // falha faria o item seguinte esperar por um post que não houve.
+    if (saiu) {
+      const quando = new Date().toISOString();
+      await db.from("canal").update({ ultima_publicacao_em: quando }).eq("id", canal.id);
+      canal.ultima_publicacao_em = quando;
+      enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
+    }
+  }
+
 
   console.log(
     `\n${publicadas} publicadas · ${cuponsPublicados} cupons · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
