@@ -137,6 +137,7 @@ type LinhaDePublicacao = {
   estado: string;
   origem: string;
   enviada_em: string | null;
+  link_afiliado: string | null;
   oferta: {
     id: string;
     anuncio_id: string;
@@ -163,6 +164,7 @@ type LinhaDePublicacao = {
 
 const SELECAO = `
   id, oferta_id, canal_id, subid, preco_na_fila_centavos, estado, origem, enviada_em,
+  link_afiliado,
   oferta:oferta_id (
     id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em,
@@ -173,6 +175,55 @@ const SELECAO = `
     )
   )
 `;
+
+/**
+ * O link que vai para o canal.
+ *
+ * ISTO ERA UM BURACO QUE CUSTAVA COMISSÃO, e não dava erro nenhum.
+ *
+ * A tela montava o link à mão, com `montaLinkDeAfiliado`, colando
+ * `?matt_word=<subid>&matt_tool=...` na URL do produto. A D-034 provou
+ * que **isso não atribui comissão**: passando o nosso link pelo gerador
+ * oficial, ele descarta o `matt_word` e cria um `ref=` cifrado, e é
+ * dentro do `ref` que a atribuição mora.
+ *
+ * O laço automático já fazia certo desde a D-034: gera pelo painel e
+ * guarda em `publicacao.link_afiliado`. A tela continuou remontando, e
+ * o resultado é o que o dono viu ao publicar pela tela: o link abre o
+ * produto direto, sem passar pela página do afiliado.
+ *
+ * O link certo passa. Conferido em 01/08:
+ *
+ *   meli.la/1QPWrnS  →  301  →  mercadolivre.com.br/social/fega6031503
+ *                                ?matt_word=radarpet&ref=BCVd2UBeH...
+ *
+ * SEM LINK GERADO, A TELA AVISA EM VEZ DE PUBLICAR. Devolver a URL crua
+ * "para não deixar sem link" é o pior dos mundos: publica, parece que
+ * funcionou, e entrega a audiência de graça. Fica `rastreado: false`
+ * com o motivo, que é o que a tela já sabe mostrar.
+ */
+function linkAPublicar(
+  linha: LinhaDePublicacao,
+  urlDoAnuncio: string,
+  marketplaceSlug: string,
+): LinkDeAfiliado {
+  if (linha.link_afiliado) {
+    return { url: linha.link_afiliado, rastreado: true };
+  }
+
+  // Marketplace sem gerador ainda cai no caminho antigo, e lá o próprio
+  // `montaLinkDeAfiliado` já devolve `rastreado: false` com o motivo.
+  if (marketplaceSlug !== "mercado_livre") {
+    return montaLinkDeAfiliado(urlDoAnuncio, linha.subid, marketplaceSlug);
+  }
+
+  return {
+    url: urlDoAnuncio,
+    rastreado: false,
+    motivo:
+      "o link de afiliado ainda não foi gerado — publicar assim não paga comissão (D-034)",
+  };
+}
 
 /**
  * A fila de hoje: o que ainda não saiu, mais o que saiu hoje.
@@ -243,11 +294,7 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
       precoNaFilaCentavos: linha.preco_na_fila_centavos,
       precoAgoraCentavos: precoAgora.get(oferta.anuncio_id) ?? oferta.preco_atual_centavos,
       subid: linha.subid,
-      link: montaLinkDeAfiliado(
-        anuncio?.url_original ?? "",
-        linha.subid,
-        anuncio?.marketplace?.slug ?? "",
-      ),
+      link: linkAPublicar(linha, anuncio?.url_original ?? "", anuncio?.marketplace?.slug ?? ""),
       imagemUrl: fotoAindaValida(anuncio?.imagem_url, anuncio?.imagem_obtida_em),
       enviadaEm: linha.estado === "enviada" ? linha.enviada_em : null,
       origem: linha.estado === "enviada" ? (linha.origem as OrigemDoEnvio) : null,
