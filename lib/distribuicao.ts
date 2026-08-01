@@ -45,6 +45,8 @@ export type Canal = {
   splitOperacaoPct: number;
   /** Como a pessoa escreveu, no fuso de São Paulo (regra 3.9). */
   horarios: string;
+  /** `@canal` ou o id numérico. É para onde o bot publica. */
+  telegramChatId: string | null;
   ativo: boolean;
   ultimaPublicacaoEm: string | null;
 };
@@ -78,6 +80,7 @@ type LinhaDeCanal = {
   split_operacao_pct: number;
   horarios_permitidos: number[] | null;
   ativo: boolean;
+  telegram_chat_id: string | null;
   ultima_publicacao_em: string | null;
   parceiro: { nome: string } | null;
   canal_nicho: { nicho: { slug: string } | null }[] | null;
@@ -86,7 +89,7 @@ type LinhaDeCanal = {
 const SELECAO = `
   id, nome, plataforma, posts_por_dia_max, membros_estimados,
   split_audiencia_pct, split_operacao_pct, horarios_permitidos,
-  ativo, ultima_publicacao_em,
+  ativo, telegram_chat_id, ultima_publicacao_em,
   parceiro:parceiro_id ( nome ),
   canal_nicho ( nicho:nicho_id ( slug ) )
 `;
@@ -110,6 +113,7 @@ function montaCanal(linha: LinhaDeCanal, publicadasHoje: number): Canal {
     horarios: (linha.horarios_permitidos ?? [])
       .map((h) => `${String(h).padStart(2, "0")}:00`)
       .join(", "),
+    telegramChatId: linha.telegram_chat_id,
     ativo: linha.ativo,
     ultimaPublicacaoEm: linha.ultima_publicacao_em,
   };

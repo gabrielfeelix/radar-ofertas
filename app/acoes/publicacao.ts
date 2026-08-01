@@ -12,7 +12,10 @@ import {
   publicacoesDaFila,
   vagasDoCanal,
 } from "@/lib/publicacoes";
+import { montaMensagem } from "@/lib/mensagem";
+import { modeloGlobal } from "@/lib/modelo";
 import { usuarioAtual } from "@/lib/sessao";
+import { publicaNoTelegram } from "@/lib/telegram";
 
 /**
  * Ações da fila de publicação.
@@ -23,10 +26,13 @@ import { usuarioAtual } from "@/lib/sessao";
  * registrar que o envio aconteceu.
  *
  * No Telegram é diferente — a API oficial permite postar sozinho, e
- * é o que a ação de lote vai fazer quando existir bot de verdade. Hoje
- * ela também só registra: publicar de verdade é Fase 2.
+ * desde 01/08 a ação de lote **publica de verdade**, pelo bot
+ * `@radar4yu_bot`.
  *
- * Desde 31/07 o registro é no banco, em `publicacao`.
+ * A regra que sustenta isso: envio que falha **não é marcado como
+ * enviado**. A publicação fica na fila com o motivo à vista. Marcar
+ * assim mesmo esvaziaria a tela deixando o canal mudo — o pior
+ * desfecho possível, porque parece sucesso.
  */
 
 /** Registra o envio feito pelo fluxo — o operador passou pelo botão. */
@@ -61,6 +67,7 @@ export async function registraEnvio(form: FormData): Promise<void> {
 export async function publicaLoteTelegram(form: FormData): Promise<void> {
   const canalAlvo = String(form.get("canal_id") ?? "");
   const usuario = await usuarioAtual();
+  const modelo = await modeloGlobal();
 
   // O teto é recontado a cada item, e não lido uma vez antes do laço:
   // cada envio consome uma vaga, e um teto lido de véspera deixaria o
@@ -73,7 +80,23 @@ export async function publicaLoteTelegram(form: FormData): Promise<void> {
     if (publicacao.precoAgoraCentavos !== publicacao.precoNaFilaCentavos) continue;
     if ((await vagasDoCanal(publicacao.canal.id)) <= 0) continue;
 
-    await marcaEnviada(publicacao.id, "fluxo", undefined, usuario?.id);
+    // O texto é montado ANTES de enviar e gravado como saiu. Remontar
+    // depois daria outra mensagem, porque o modelo muda — e a que foi
+    // ao canal é a que precisa ser auditável, inclusive para provar a
+    // identificação publicitária da regra 3.10.
+    const texto = montaMensagem(modelo, {
+      ...publicacao.dadosDaMensagem,
+      link: publicacao.link.url,
+    });
+
+    const envio = await publicaNoTelegram(publicacao.canal.telegramChatId ?? "", texto);
+
+    // Falhou: NÃO marca como enviada. A publicação fica na fila com o
+    // motivo à vista. Marcar assim mesmo esvaziaria a tela deixando o
+    // canal mudo, que é o pior desfecho possível.
+    if (!envio.ok) continue;
+
+    await marcaEnviada(publicacao.id, "fluxo", texto, usuario?.id);
   }
 
   revalidatePath("/publicar");
