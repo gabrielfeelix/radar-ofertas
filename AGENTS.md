@@ -139,6 +139,16 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 ## 9. Estado atual
 
+> **Chegou agora? Leia `docs/onde-paramos.md` primeiro.** Ele tem o
+> estado de 01/08, o que está quebrado, as decisões em aberto e os
+> erros que já foram cometidos para não se repetirem.
+>
+> **E leia isto:** o dono autorizou explicitamente mudar as regras deste
+> arquivo e da documentação quando a realidade as contrariar. Elas
+> foram escritas por vários agentes que não conversaram entre si.
+> Continuam intocáveis sem conversa apenas as que protegem a conta ou o
+> dinheiro: 3.1, 3.2, 3.3, 3.4 e 3.10.
+
 Atualizado em 01/08/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
 
 ### O que a sessão de 01/08/2026 mudou — leia isto primeiro
@@ -417,6 +427,7 @@ sozinho ou com um passo manual é o teste 1.
 | `docs/pesquisa-tecnica.md` | Antes de mexer em stack ou política de plataforma. O que está validado e o que está errado |
 | `docs/pesquisa-operacao.md` | Antes de mexer em cadência, horário, formato de mensagem ou canal. Como se toca um grupo de verdade |
 | `docs/otimizacao.md` | Antes de mexer em coleta, colheita ou classificação de nicho. O diagnóstico da primeira madrugada automática, o que a pesquisa achou e o que cada frente virou |
+| `docs/onde-paramos.md` | **Primeiro de todos.** Estado de 01/08, o que está quebrado, o que está em aberto e os erros já cometidos |
 | `referencia-claude-deisgn/` | O protótipo, com as quatorze telas desenhadas. Abra antes de mexer em interface |
 
 ### Como rodar

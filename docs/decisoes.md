@@ -715,3 +715,224 @@ muda, e o número da pesquisa de 28/07 segue valendo para ele.
 **Mudaria se:** os números do Telegram derrubarem engajamento na prática. A
 medida honesta é a taxa de clique por post, e ela só existe depois do
 redirecionador.
+
+---
+
+## D-034 · O link de afiliado é gerado, nunca montado
+**Data:** 01/08/2026
+
+Nós montávamos o link colando `?matt_word=<subid>&matt_tool=66367903`
+numa URL comum de produto. **Isso não atribui comissão.** Três
+evidências independentes:
+
+1. O material do próprio programa diz que link comum, sem passar pelo
+   gerador, não paga.
+2. Passando o NOSSO link pelo gerador, ele **descartou** o nosso
+   `matt_word` e criou um `ref=` cifrado. Se os parâmetros bastassem,
+   esse token não precisaria existir.
+3. A resposta traz `type_url: SOCIAL_PROFILE_ENCRYPTED` — a atribuição
+   vive dentro do `ref`, não na query.
+
+**Sete publicações saíram com o link errado** antes disso ficar claro.
+Elas ficam no banco: a constraint `publicacao_enviada_tem_link` entrou
+`not valid` de propósito, porque apagá-las esconderia a evidência de
+quanto o erro custou.
+
+**Não existe API oficial de afiliados.** 15 rotas varridas em
+`api.mercadolibre.com`, todas 404, e nada no portal do desenvolvedor. O
+caminho é o endpoint interno da Central:
+
+```
+POST /affiliate-program/api/v2/affiliates/createLink
+{"urls": ["..."], "tag": "radarpet"}
+```
+
+Aceita lote (4 testados numa chamada). Repetir a mesma URL com a mesma
+etiqueta devolve o mesmo `meli.la`, então não duplica. A sessão vive em
+`credencial_rotativa`, **expira sozinha**, e quando expirar nada é
+publicado — que é o desfecho certo.
+
+**O link é gerado por ÚLTIMO**, só do que já passou nas comportas e
+ganhou a vez no ritmo. São dezenas por dia, não milhares.
+
+**Mudaria se:** o ML publicar uma API de afiliados, ou se a sessão
+virar inviável de manter.
+
+---
+
+## D-035 · A granularidade do subid é por canal, não por publicação
+**Data:** 01/08/2026
+
+Esta era a pergunta que a Fase 0 devia responder, e ela ficou
+respondida por teste, não por opinião. Chamando o gerador com uma
+etiqueta inventada:
+
+```
+{"message":"Tag is not associated with this affiliate.","error_code":109}
+```
+
+A etiqueta precisa estar cadastrada na Central. Logo **o Mercado Livre
+não oferece atribuição por publicação** — o mais fino que existe é por
+etiqueta.
+
+**Uma etiqueta por canal.** Isso entrega o que o negócio precisa: saber
+qual grupo gerou qual venda, que é a base do split (`docs/negocio.md`).
+
+**Saber qual POST vendeu vem do nosso lado**, com o redirecionador
+próprio da Fase 2: o link do canal aponta para o nosso domínio com o
+subid, contamos o clique, e redirecionamos para o link do ML com a
+etiqueta do canal. Os dois níveis convivem.
+
+A **regra 3.6 continua valendo**. O que muda é onde ela é cumprida.
+
+---
+
+## D-036 · O produto tem identidade, e o diagnóstico que a criou estava errado
+**Data:** 01/08/2026
+
+O dono perguntou por que o canal publicou uma ração a R$ 130,00 se
+existia outra a R$ 119,90. Eu respondi que era o mesmo saco em dois
+catálogos do ML. **Metade estava certo.**
+
+**O que era verdade:** o `docs/dados.md` sempre disse que `produto` é
+"a identidade da coisa", e o código chaveava `produto` pelo **título do
+catálogo**. Cada título virava um produto nosso, e a comparação de
+preço nunca atravessava entre eles. O modelo estava certo no papel e
+errado na implementação.
+
+**O que era falso:** aquela ração não é o mesmo produto. Eu comparei
+quatro atributos e concluí "idênticos". A lista completa desmente:
+`PACKAGING_TYPE` Saco contra Sachê, `NET_WEIGHT` 10 kg contra 10,1 kg,
+e fórmulas diferentes em `NUTRIENTS_SUPPLY`.
+
+### A lição, e ela é de método
+
+A primeira versão da chave usava uma **lista branca** de atributos. Ela
+errou três vezes contra o catálogo real:
+
+| Casou errado | Faltava na lista |
+|---|---|
+| Galaxy A17 128GB com 256GB (R$ 925 vs R$ 1.877) | `INTERNAL_MEMORY` |
+| Cabo HDMI 5m com 20m | o comprimento |
+| Essência de Bambu com a de Lavanda | `FRAGRANCE` |
+
+Cada correção consertava o caso visto e deixava o próximo passar,
+porque cada domínio do ML tem o seu atributo discriminante e são
+milhares. **A lista virou preta:** atributo desconhecido agora
+**separa** em vez de ser ignorado.
+
+Mais duas travas: as quantidades do título precisam bater, e a decisão
+final é **aos pares**, olhando os atributos dos dois catálogos — o que
+uma chave calculada com um produto por vez não consegue fazer.
+
+### O resultado
+
+A primeira fusão juntou 23 produtos. A revisão com as regras estritas
+**separou 27 prateleiras de volta**, e sobrou **zero duplicata real** na
+base. O mecanismo está construído e testado com 28 casos, e hoje não
+encontra nada: é guarda para quando o caso aparecer, não economia em
+curso. A view `economia_por_identidade` é onde ela apareceria.
+
+**Mudaria se:** `economia_por_identidade` deixar de ser vazia.
+
+---
+
+## D-037 · A base própria substitui a dependência de canais alheios
+**Data:** 01/08/2026 · **PROPOSTA, não implementada**
+
+Decisão de direção do dono: *"faz mais sentido a gente puxar vários
+produtos do Mercado Livre, e qualquer flutuação nesses produtos a gente
+já manda no grupo. Daí a gente não fica à mercê de outros grupos."*
+
+**Concordo, e o motivo mais forte não foi citado:** a colheita de canais
+é **derivativa**. Republicamos o que outro canal já publicou, então
+nunca somos os primeiros. Base própria é a única forma de ser primeiro.
+
+E o `original_price` (D da migration 23) reforça: um produto vira
+candidato **na primeira leitura**, sem esperar duas. Base grande paga no
+mesmo dia em que entra.
+
+### O que eu corrijo na proposta
+
+*"Consultar a cada cinco minutos"* mistura duas coisas:
+
+- **Largura** aumenta *quantas* ofertas existem.
+- **Frequência** aumenta o *frescor*, a chance de a oferta ainda estar
+  viva quando publicamos.
+
+Ler 500 produtos a cada 5 minutos encontra menos que ler 10.000 a cada
+meia hora. **Largura primeiro.**
+
+### O que foi medido
+
+**A API do ML aguenta muito mais do que usamos:**
+
+```
+ 4 em paralelo:  19 chamadas/s
+ 8 em paralelo:  31 chamadas/s
+16 em paralelo:  57 chamadas/s   ← zero bloqueio 429
+```
+
+A 57/s, **10.000 anúncios levam 3 minutos**. Largura é barata do lado
+do ML.
+
+**O gargalo é a nossa escrita**, e é defeito de desenho: o coletor grava
+dois RPC por anúncio **toda vez**, mesmo com o preço parado. Com 10.000
+a cada 5 minutos são 5,76 milhões de chamadas por dia para gravar quase
+sempre o mesmo número. Medido nas rodadas de 01/08: **entre 0% e 5% dos
+preços mexem** entre leituras. Gravar só o que mudou corta ~95%.
+
+### O desenho proposto
+
+| Ritmo | O quê | Quando |
+|---|---|---|
+| Varredura larga | a base inteira | a cada 30 min |
+| Lista quente | o que mexeu em 24h e o de nota alta | a cada 10 min |
+
+Com três consertos juntos: gravar só o que muda; descoberta por
+subcategoria (hoje são só as 28 raízes); e expurgo mais agressivo do
+`preco_ponto`.
+
+**Mudaria se:** a medida de `ofertas_por_dia` mostrar que a base atual
+já basta para as 30/dia da Fase 1. Hoje esse número não tem uma semana
+de dados, e é ele que diz quantos produtos são necessários em vez de
+chutar "muitos".
+
+---
+
+## D-038 · O agendador precisa sair do GitHub Actions
+**Data:** 01/08/2026 · **EM ABERTO, decisão do dono pendente**
+
+A D-015 escolheu GitHub Actions em vez de `pg_cron`, e os motivos dela
+continuam válidos (mantém o Supabase acordado, falha de forma visível).
+**O que mudou foi a escala.**
+
+**O repositório é privado** (conferido: a API do GitHub responde 404 sem
+autenticação). Isso dá **2.000 minutos/mês grátis**. O cron de hora em
+hora, com coleta e publicação, gasta entre 3 e 5 minutos por execução:
+
+```
+24 execuções/dia × 3 a 5 min = 72 a 120 min/dia = 2.160 a 3.600 min/mês
+```
+
+**Já estamos no limite ou passando dele hoje**, antes de qualquer
+ampliação de base. Um cron de 5 minutos seriam ~26.000 min/mês.
+
+### Os caminhos, e o que cada um custa
+
+| Caminho | Custo | Observação |
+|---|---|---|
+| **Tornar o repositório público** | zero | Minutos ilimitados. Os segredos já vivem em Secrets, não no código. É o mais barato de longe |
+| Cloudflare Workers + Cron Triggers | US$ 5/mês | Combina com a stack (o painel já vai para Workers). Limite de CPU por invocação exige quebrar a varredura em fila |
+| Máquina pequena sempre ligada | US$ 5 a 10/mês | Sem limite de duração, cron confiável no minuto |
+| `pg_cron` no Supabase | incluso | Desfaz a D-015: falha silenciosa volta a ser o padrão |
+
+**Uma coisa vale dita de qualquer jeito:** o cron do GitHub Actions
+**não é confiável abaixo de uns 10 minutos** — agendamentos atrasam
+rotineiramente. Se 5 minutos virar requisito de verdade, ele está fora
+por razão técnica, não só por custo.
+
+**A posição do dono sobre custo, registrada:** *"se em dois meses esse
+grupo der resultado, a gente muda pro modo pago. Dando lucro, eu não
+tenho problema de pagar ferramentas."* Então o critério aqui não é
+economizar, é **não pagar antes de ter receita**.
