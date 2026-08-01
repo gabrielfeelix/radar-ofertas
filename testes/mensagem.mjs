@@ -188,46 +188,45 @@ confere(
   temIdentificacaoPublicitaria(dois.comLastro) && temIdentificacaoPublicitaria(dois.semLastro),
 );
 
-// =============================================================
+console.log("\ngatilho da queda\n");
 
-console.log(`\n${passou} passaram, ${falhou} falharam`);
-if (falhou > 0) process.exit(1);
-console.log("todos os casos passaram");
-
-/* =============================================================
-   O gatilho da queda — a regra que não pode regredir
-
-   Oferta de queda tem horas de vida. Escrevê-la como "menor preço
-   que observamos" é a mentira que a regra 3.4 existe para impedir,
-   e é a que queima o canal.
-   ============================================================= */
-
-secao("o gatilho decide o lastro");
-
-const MODELO_TRES = {
+/*
+  Oferta de queda tem horas de vida. Escrevê-la como "menor preço que
+  observamos" é a mentira que a regra 3.4 existe para impedir — e é a
+  que queima o canal. Esta é a regra que não pode regredir.
+*/
+const modeloTres = {
   corpo: "{produto} · {lastro} · {link}",
   lastroCom: "Menor preço em {janela} dias.",
   lastroSem: "Menor preço que observamos desde {desde}.",
   lastroQueda: "Caiu de {antes} para {agora} hoje.",
 };
 
-const BASE_QUEDA = { ...EXEMPLO, precoCentavos: 3878, precoAntesCentavos: 4407 };
+const daQueda = { ...dados, precoCentavos: 3878, precoAntesCentavos: 4407 };
 
-verifica(
-  "queda usa o lastro da queda",
-  montaMensagem(MODELO_TRES, { ...BASE_QUEDA, podeAfirmarMinimo: false, gatilho: "queda" }).includes(
-    "Caiu de R$ 44,07 para R$ 38,78 hoje.",
-  ),
-);
+const textoDaQueda = montaMensagem(modeloTres, {
+  ...daQueda,
+  podeAfirmarMinimo: false,
+  gatilho: "queda",
+});
 
-verifica(
-  "queda NUNCA usa o lastro com minimo, mesmo com podeAfirmarMinimo verdadeiro",
-  !montaMensagem(MODELO_TRES, { ...BASE_QUEDA, podeAfirmarMinimo: true, gatilho: "queda" }).includes(
+confere("queda usa o lastro da queda", textoDaQueda.includes("Caiu de"));
+confere("e cita os dois preços, o de antes e o de agora", textoDaQueda.includes("38,78") && textoDaQueda.includes("44,07"));
+
+confere(
+  "queda NUNCA afirma mínimo, nem com podeAfirmarMinimo verdadeiro",
+  !montaMensagem(modeloTres, { ...daQueda, podeAfirmarMinimo: true, gatilho: "queda" }).includes(
     "Menor preço",
   ),
 );
 
-verifica(
-  "sem gatilho continua como antes, pela serie",
-  montaMensagem(MODELO_TRES, { ...EXEMPLO, podeAfirmarMinimo: true }).includes("Menor preço em"),
+confere(
+  "sem gatilho, continua decidindo pela série",
+  montaMensagem(modeloTres, { ...dados, podeAfirmarMinimo: true }).includes("Menor preço em"),
 );
+
+// =============================================================
+
+console.log(`\n${passou} passaram, ${falhou} falharam`);
+if (falhou > 0) process.exit(1);
+console.log("todos os casos passaram");
