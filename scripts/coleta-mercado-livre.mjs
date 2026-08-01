@@ -246,6 +246,36 @@ async function maisVendidos(categoria) {
   return (d.content ?? []).filter((c) => c.type === "PRODUCT").map((c) => c.id);
 }
 
+/**
+ * As subcategorias de uma raiz.
+ *
+ * POR QUE ISTO É O MAIOR GANHO DE LARGURA DISPONÍVEL HOJE, e o número
+ * explica: `highlights` devolve algumas dezenas de campeões por
+ * categoria e **satura**. Pedir os mais vendidos de "Pet Shop" traz o
+ * topo de uma categoria com 4,2 milhões de itens — sempre os mesmos, e
+ * justamente os de preço mais estável, que é o pior insumo possível
+ * para detectar queda.
+ *
+ * "Pet Shop" tem **28 filhas**: Cães, Gatos, Coleiras, Petiscos,
+ * Escovas e Pentes, Recipiente para Ração… Cada uma tem o próprio topo,
+ * e o topo de "Coleiras" nunca aparece no topo de "Pet Shop". A mesma
+ * chamada, descida um nível, vê produto que a raiz esconde.
+ *
+ * Medido em 01/08 nas raízes que importam: Pet Shop 28 filhas, Casa 13,
+ * Eletrônicos 16, Informática 21, Celulares 10, Eletrodomésticos 8.
+ *
+ * A árvore não muda no meio da rodada, então a resposta é guardada.
+ */
+const FILHAS_DE = new Map();
+async function subcategorias(raiz) {
+  if (FILHAS_DE.has(raiz)) return FILHAS_DE.get(raiz);
+
+  const c = await api(`categories/${raiz}`).catch(() => null);
+  const filhas = (c?.children_categories ?? []).map((f) => f.id);
+  FILHAS_DE.set(raiz, filhas);
+  return filhas;
+}
+
 /** Ids de produto por termo de busca. É o que faz a base crescer. */
 async function porBusca(termo) {
   const d = await api(
@@ -698,13 +728,54 @@ async function main() {
   const idsPrioritarios = [];
   const ids = [];
 
+  /*
+    A DESCIDA POR SUBCATEGORIA, e ela só acontece onde existe canal.
+
+    `highlights` satura: são algumas dezenas de campeões por categoria,
+    e o topo de "Pet Shop" é sempre o mesmo punhado de itens de preço
+    estável. Descendo às 28 filhas, a mesma chamada vê o topo de
+    "Coleiras", de "Petiscos", de "Escovas e Pentes" — produto que a
+    raiz nunca mostra.
+
+    **Só para as raízes com canal**, e por dois motivos que se somam:
+    o custo em chamadas multiplica pelo número de filhas, e produto de
+    nicho sem canal já é o que enche `nenhum_canal_do_nicho`. Onde não
+    há canal, continua sendo uma chamada na raiz — a base cresce
+    devagar, que é o certo enquanto não há onde publicar.
+
+    `ML_SUBCATEGORIAS=0` desliga, se algum dia o custo apertar.
+  */
+  const DESCE = process.env.ML_SUBCATEGORIAS !== "0";
+  let filhasUsadas = 0;
+
   for (const cat of categoriasEmOrdem) {
-    try {
-      const achados = await maisVendidos(cat);
-      (temCanal(cat) ? idsPrioritarios : ids).push(...achados);
-    } catch (e) {
-      problemas.push(`categoria ${cat}: ${e.message}`);
+    const prioritaria = temCanal(cat);
+    const alvos = [cat];
+
+    if (DESCE && prioritaria) {
+      try {
+        const filhas = await subcategorias(cat);
+        alvos.push(...filhas);
+        filhasUsadas += filhas.length;
+      } catch (e) {
+        problemas.push(`subcategorias de ${cat}: ${e.message}`);
+      }
     }
+
+    for (const alvo of alvos) {
+      try {
+        const achados = await maisVendidos(alvo);
+        (prioritaria ? idsPrioritarios : ids).push(...achados);
+      } catch (e) {
+        // Folha sem destaque não é problema: nem toda subcategoria tem
+        // campeão de venda. Só a raiz falhando merece registro.
+        if (alvo === cat) problemas.push(`categoria ${cat}: ${e.message}`);
+      }
+    }
+  }
+
+  if (filhasUsadas > 0) {
+    console.log(`desceu para ${filhasUsadas} subcategorias das raízes com canal`);
   }
   // A busca por termo não sabe em que nicho vai cair, então ela entra
   // depois do que tem canal e antes do que não tem.

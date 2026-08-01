@@ -306,11 +306,41 @@ varredura pelo aviso, e é o que permite ser primeiro em vez de derivativo.
 
 Depende de endpoint público, que a Edge Function já resolve.
 
-### P7 · Descoberta por subcategoria (largura antes de frequência)
+### P7 · Descoberta por subcategoria `EXECUTADO E PROVADO`
 
-D-037, proposta e não construída. Hoje são 28 raízes. A medição do D-037 diz
-que a API do ML aguenta 57 chamadas/s e que 10.000 anúncios levam 3 minutos.
-Largura primeiro, frequência depois.
+D-037 propunha largura antes de frequência. O gargalo era mais simples do que
+a proposta imaginava: `highlights` **satura**. Pedir os mais vendidos de "Pet
+Shop" traz o topo de uma categoria de 4,2 milhões de itens — sempre os mesmos,
+e justamente os de preço mais estável, que é o pior insumo possível para
+detectar queda.
+
+Pet Shop tem **28 filhas**. O topo de "Coleiras" nunca aparece no topo de
+"Pet Shop".
+
+**O que mudou:** para as raízes que têm canal ativo, a descoberta desce um
+nível e pede os destaques de cada filha. Onde não há canal, continua sendo
+uma chamada na raiz — a base cresce devagar, que é o certo enquanto não há
+onde publicar. `ML_SUBCATEGORIAS=0` desliga.
+
+**Medido rodando contra produção em 01/08**, com orçamento de 25 descobertas:
+
+```
+prioridade de descoberta: 1 categoria(s) com canal ativo (MLB1071)
+desceu para 28 subcategorias das raízes com canal
+descoberta — 25 produtos de 1338 achados (25 de nicho com canal)
+17 produtos novos · 18 anúncios novos · 25 pontos de preço
+```
+
+**1.338 candidatos** contra os ~900 de antes, todos os 25 escolhidos de pet, e
+**68% deles inéditos** — o que mostra que a base estava longe de saturada. E o
+que apareceu é visivelmente mais fundo: Bravecto, NexGard e Simparic
+(farmácia), chocadeira, néctar de beija-flor, suplemento equino. Nada disso
+sai do topo da raiz.
+
+**A releitura, na mesma rodada, provou o P1:** dos anúncios tocados, todos
+ganharam `vendas_estimadas` e 87% ganharam reputação. Os 13% restantes são
+vendedores sem nível de reputação no ML — nulo legítimo, e exatamente quem a
+comporta nova barra.
 
 ### P8 · Amazon: nascer na Creators API
 
