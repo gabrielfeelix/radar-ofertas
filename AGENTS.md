@@ -164,7 +164,7 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 | O quê | Estado em 31/07 | Falta |
 |---|---|---|
 | **Supabase nuvem** | ✅ `radar-ofertas`, São Paulo, ref `fcdkczueohekmgaaacdr`, 15 migrations aplicadas | nada |
-| **Mercado Livre — afiliado** | ✅ aprovado na hora, `fega6031503` | ler "Administrar etiquetas" para descobrir o formato do subid |
+| **Mercado Livre — afiliado** | ✅ aprovado, `fega6031503`. **Etiquetas resolvidas em 01/08** | falta gerar um link com cada etiqueta, para extrair o número de rastreamento |
 | **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
 | **Shopee — afiliado** | ⏳ cadastro enviado, até 3 dias úteis | esperar e-mail |
 | **Shopee — Open API** | ⛔ bloqueado | exige o ID de afiliado, que só existe depois de aprovar. **Depois disso, até 2 semanas** |

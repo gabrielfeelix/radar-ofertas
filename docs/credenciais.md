@@ -184,6 +184,62 @@ Shopee". A tela *Precisa de atenção* passa a mostrar a coleta como concluída.
 > tamanho máximo e formato aceito da etiqueta são metade das respostas da Fase 0,
 > e essa metade sai de graça, sem esperar relatório.
 
+## 4a. Etiquetas do Mercado Livre — ✅ RESPONDIDO em 01/08/2026
+
+Esta era **a pergunta central da Fase 0**: dá para saber qual canal gerou
+qual venda? Resposta: **dá, e sem redirecionador.**
+
+A ajuda do ML diz, com todas as letras: *"vamos atribuir um número de
+rastreamento que ficará atrelado a todos os links que você gerar para a
+mesma etiqueta — esse número ficará **visível no link completo** e estará
+oculto no link curto."*
+
+Ou seja: a etiqueta viaja **dentro da URL**. O `radio button` de "etiqueta
+em uso" no painel só decide qual o painel usa quando alguém gera à mão; o
+que conta é o número no link. Então o sistema pode montar link por canal
+sozinho.
+
+**Formato aceito:** só letras e números, minúsculas, sem espaço nem
+caractere especial, **máximo 30 caracteres**.
+
+> Isto valida o `gera_subid()` da migration 16 sem nenhuma adaptação: ele
+> produz 8 caracteres de `abcdefghjkmnpqrstuvwxyz23456789`, todos
+> minúsculos e alfanuméricos. Cabe folgado nos 30.
+
+### As 8 etiquetas criadas em 01/08/2026
+
+| Etiqueta | Para |
+|---|---|
+| `fega6031503` | a original, criada sozinha ao ativar a conta |
+| `radarpet` | canal de pet |
+| `radartech` | tecnologia |
+| `radarmoda` | moda |
+| `radargeral` | geral |
+| `radaranime` | animes |
+| `radarmercado` | mercado |
+| `radaresporte` | esporte |
+
+**Etiqueta é por CANAL, não por nicho.** Dois canais de tecnologia pedem
+`radartech` e `radartech2` — senão os dois somam no mesmo relatório e não
+há como saber qual rendeu.
+
+**Trate como definitivo.** O número de rastreamento nasce colado à
+etiqueta; renomear ou apagar provavelmente perde o histórico daquele
+número. Não foi testado, e até saber o contrário vale a suposição
+conservadora.
+
+### O que ainda falta
+
+**Um link completo gerado com cada etiqueta**, para extrair o número de
+rastreamento de cada uma e gravá-lo no canal correspondente. Sem isso o
+sistema sabe que a etiqueta existe, mas não sabe qual número usar.
+
+Gera-se no **"Gerador de links"** da Central de Afiliados e Criadores:
+cola a URL do produto, ele devolve o link completo e o curto. **Use o
+completo** — no curto o número fica oculto.
+
+---
+
 ## 4b. Mercado Livre (API) — ✅ FUNCIONANDO desde 31/07/2026
 
 > **O caminho é indireto, e ninguém o encontra sozinho.** O ML fechou
