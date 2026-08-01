@@ -139,7 +139,30 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 ## 9. Estado atual
 
-Atualizado em 31/07/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+Atualizado em 01/08/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+
+### O que a sessão de 01/08/2026 mudou — leia isto primeiro
+
+**O laço fechou: da queda detectada até a mensagem no canal, sem humano** (D-033). `scripts/publica-automatico.mjs` roda de hora em hora depois da coleta e da detecção. Quem aprova são as comportas, que são números em `parametro`. **A tela `/aprovar` continua existindo e não é mais o caminho** — virou conferência.
+
+**O WhatsApp não mudou e não vai mudar:** regra 3.2, envio manual. O laço automático nunca o toca.
+
+**Depois da primeira madrugada automática, cinco frentes de conserto.** Saíram três posts e dois eram de outro nicho. O diagnóstico, a pesquisa e o que cada frente virou estão em **`docs/otimizacao.md`** — leia antes de mexer em coleta, colheita ou classificação. O resumo:
+
+| O quê | Onde ficou |
+|---|---|
+| O nicho vem do `domain_id` do marketplace, não de quem achou o produto | tabela `nicho_dominio`, migration 24 |
+| Segundo gatilho de oferta: o desconto que a **loja** declara | `detecta_declarados`, migration 23 |
+| A colheita escava o histórico do canal com `?before=` | `telegram-web.ts`, migration 25 |
+| A medida do critério da Fase 1 | views `ofertas_por_dia` e `motivo_de_rejeicao` |
+
+**Três coisas que valem saber antes de tocar em qualquer uma delas:**
+
+1. **`original_price` do ML é frequentemente inflado.** Ele é peneira de entrada, a mensagem **atribui a alegação à loja** (`lastro_declarado`), e desconto acima de 70% é recusado. Nunca o use como o "de" da mensagem por conta própria: é a regra 3.4.
+2. **Domínio sem mapeamento dá nicho nulo, e nicho nulo não publica.** É deliberado. A fila de trabalho é a view `dominio_sem_mapeamento`, e o coletor lista os novos ao fim de cada rodada.
+3. **Não adivinhe nome de domínio do ML.** `MLB-PET_TOYS` e `MLB-COOKWARE` não existem; são `MLB-DOG_TOY_BONES` e `MLB-KITCHEN_POTS`. Pergunte a `products/{id}`.
+
+**O maior desperdício do sistema hoje não é código:** só existe um canal, e ele é de pet. Numa rodada, 43 ofertas viraram 1 publicação e **24 foram reprovadas por `nenhum_canal_do_nicho`**. O radar acha oferta de casa, eletrônico e suplemento, e não há onde publicar.
 
 **Fase 0 em andamento** (contas de afiliado e prova de subid: trabalho manual do dono), com a base da Fase 1 construída em paralelo. As duas não conflitam — o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
@@ -274,7 +297,9 @@ Depois disso, um bloco que não é tela:
 
 ### Pendências desta sessão — leia antes de tocar em qualquer coisa
 
-**São 16 migrations.** A 16 (`publicacao`) está aplicada no local e na nuvem, e as constraints dela foram conferidas contra a nuvem uma a uma, com dado de verdade criado e apagado depois. Conferido no banco, não só no log: o modelo `Padrão` começa com `#publi · {loja}` na primeira linha, `anuncio.imagem_url` e `imagem_obtida_em` existem, e `expurga_imagens_expiradas` roda.
+**São 26 migrations.** As dez de 01/08 estão aplicadas na nuvem e conferidas contra ela com dado real.
+
+Antes disso, e o histórico continua valendo: A 16 (`publicacao`) está aplicada no local e na nuvem, e as constraints dela foram conferidas contra a nuvem uma a uma, com dado de verdade criado e apagado depois. Conferido no banco, não só no log: o modelo `Padrão` começa com `#publi · {loja}` na primeira linha, `anuncio.imagem_url` e `imagem_obtida_em` existem, e `expurga_imagens_expiradas` roda.
 
 **Nunca use `pnpm db:reset` para aplicar migration.** Ele não aplica — apaga e recria o banco inteiro. Foi assim que os dados colhidos se perderam em 28/07: 6 produtos, 6 anúncios, 3 fontes e 35 menções. O que aplica é:
 
@@ -385,6 +410,7 @@ sozinho ou com um passo manual é o teste 1.
 | `docs/refino-visual.md` | Antes de mexer em interface. O diagnóstico visual e as frentes, com o que ficou de fora |
 | `docs/pesquisa-tecnica.md` | Antes de mexer em stack ou política de plataforma. O que está validado e o que está errado |
 | `docs/pesquisa-operacao.md` | Antes de mexer em cadência, horário, formato de mensagem ou canal. Como se toca um grupo de verdade |
+| `docs/otimizacao.md` | Antes de mexer em coleta, colheita ou classificação de nicho. O diagnóstico da primeira madrugada automática, o que a pesquisa achou e o que cada frente virou |
 | `referencia-claude-deisgn/` | O protótipo, com as quatorze telas desenhadas. Abra antes de mexer em interface |
 
 ### Como rodar

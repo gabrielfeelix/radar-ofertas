@@ -1,6 +1,8 @@
 # Otimização do radar — diagnóstico e plano
 
 **Escrito em 01/08/2026**, depois da primeira madrugada de operação automática.
+**Executado no mesmo dia, as cinco frentes.** O que cada uma virou está
+na seção 6, no fim, junto com o que foi medido e o que ficou aberto.
 
 O pedido do dono foi direto: *"consegui categorizar certo, consegui
 encontrar bastante produto, consegui ter uma boa periodicidade de
@@ -298,3 +300,131 @@ o canal vazio, e quem resolve isso é C.
 - **Cota diária por nicho.** Tentador para forçar variedade, mas o
   `lib/variedade.ts` já existe para isso e cota mata a tarde, que foi a
   discussão da D-033.
+
+---
+
+## 6. O que foi feito, e o que foi medido
+
+As cinco frentes foram executadas em 01/08, na ordem proposta. Esta
+seção é o registro do que mudou de fato, com os números conferidos
+contra produção, não estimados.
+
+### A · Roteamento
+
+- `Radar Pet` ficou só com o nicho `pet`. Estava nos três, e por isso
+  a mangueira e o whey eram elegíveis para ele.
+- O cron passou de `0 11-23,0-2` para `0 * * * *`. O
+  `intervalo_madrugada_min` criado na D-033 nunca disparava: das 00h às
+  07h não havia execução nenhuma.
+- A comporta de nicho ficou explícita no laço, e **reprova com motivo**
+  em vez de ignorar. Produto sem nicho ficava `nova` para sempre,
+  reavaliado de hora em hora sem nunca sair nem aparecer.
+
+### B · Nicho pelo domínio
+
+Nova tabela `nicho_dominio`, no banco e não no código (D-023). A
+primeira versão da semente trazia domínios inventados por semelhança
+(`MLB-PET_TOYS`, `MLB-COOKWARE`) e **quase nenhum existia** — o ML
+chama as mesmas coisas de `MLB-DOG_TOY_BONES` e `MLB-KITCHEN_POTS`.
+A lista final saiu de perguntar à API o domínio dos 474 produtos do
+banco: **100 domínios reais**, 72 mapeados e 28 marcados como
+"conhecido e não roteia".
+
+`scripts/reclassifica-nichos.mjs` passou na base:
+
+| | Antes | Depois |
+|---|---|---|
+| pet | 143 | 137 |
+| casa | 147 | 83 |
+| eletrônico | 180 | 131 |
+| sem nicho | 12 | 131 |
+
+**124 produtos mudaram de nicho.** Um quarto do catálogo estava errado.
+
+### C · Desconto declarado
+
+O `original_price` vinha na mesma resposta já lida e era descartado.
+Na mesma rodada, sobre os mesmos 200 anúncios relidos:
+
+| Detecção | Ofertas |
+|---|---|
+| `detecta_quedas` (mede) | 3 |
+| `detecta_declarados` (a loja alega) | 40 |
+
+**Este é o conserto da fila vazia.** As três amarras contra o "de"
+inflado estão na migration 23 e valem repetir: é peneira de entrada e
+não argumento de venda; a mensagem atribui a alegação à loja; e
+desconto acima de 70% é recusado.
+
+A mensagem que saiu, conferida no canal:
+
+```
+❌ De R$ 74,90
+✅ Por R$ 49,97  (−33%)
+
+a loja marcou de R$ 74,90 por R$ 49,97
+```
+
+### D · Escavação do histórico
+
+`t.me/s/<canal>` aceita `?before=`, e a colheita lia só a primeira
+página. Duas leituras por canal agora: uma atualiza do topo, outra
+escava a partir da borda de baixo.
+
+**E duas das oito fontes não eram canais distintos.** `t.me/s/promobit`
+devolve o conteúdo de `ofertasdecomputador`, e `chinasuperofertas`
+devolve o de `nerdofertas`. A página responde 200 com posts perfeitos,
+então metade do orçamento lia o mesmo canal duas vezes. `leCanalPublico`
+passou a conferir quem foi servido e falha alto.
+
+Saíram as duas, entraram sete conferidos um a um: CupomDoGnu, cjpromos,
+OfertasDoDia, pechinchou, cuponsoferta, TudoPromo, promoemcasa. Todos
+**sem nicho**, porque são genéricos e quem classifica é o domínio.
+
+| | Antes | Depois |
+|---|---|---|
+| produtos | 482 | 596 |
+| menções | 68 | 774 |
+| fontes ativas distintas | 6 | 13 |
+| histórico alcançado | 1 hora | 19/07 |
+
+### E · Base e medida
+
+- A descoberta virou **uma passada plana**, com teto por rodada. Ela era
+  por nicho porque o nicho vinha de quem achava; agora categoria e
+  termo só dizem *onde procurar*.
+- **Doze categorias em vez de oito**, incluindo Beleza, Ferramentas e
+  Alimentos, que antes não entravam por não ter nicho onde encaixar.
+- **`suplemento` virou nicho.** Era o maior domínio sem nicho da base,
+  com 61 produtos, e não por acaso: as buscas por "racao" arrastaram a
+  prateleira de suplemento humano inteira. Os 61 produtos já têm série
+  de preço correndo; falta só um canal.
+- Duas views para o critério da Fase 1: `ofertas_por_dia`, com o
+  gatilho de cada uma, e `motivo_de_rejeicao`. Sem elas, "poucas
+  ofertas" e "muitas ofertas reprovadas" pareciam o mesmo problema, e
+  são opostos.
+
+---
+
+## 7. O que ficou aberto
+
+**1. Só existe um canal, e ele é de pet.** Na primeira rodada com tudo
+ligado, 43 ofertas viraram 1 publicação, e **24 foram reprovadas por
+`nenhum_canal_do_nicho`**. O radar está achando oferta de casa,
+eletrônico e agora suplemento, e não há onde publicar. Isso não é
+defeito de código: é decisão de negócio sobre abrir canal, e é hoje o
+maior desperdício do sistema.
+
+**2. O ML erra a categoria dele mesmo, às vezes.** Três produtos
+"Molho Ração Cachorro Petisco" estão em `MLB-SAUCES_AND_DRESSINGS`.
+Como esse domínio não roteia, eles não publicam. É o lado certo de
+errar, mas vale saber que existe.
+
+**3. `dominio_sem_mapeamento` é a fila de trabalho.** Toda categoria
+nova traz domínios que ninguém olhou, e produto de domínio não mapeado
+não publica. A view ordena pelo que dói mais, e o coletor lista os
+novos ao fim de cada rodada.
+
+**4. A medida honesta ainda não existe.** `ofertas_por_dia` responde o
+critério da Fase 1, mas "o canal está engajando?" só se responde por
+taxa de clique, e ela depende do redirecionador (Fase 2).

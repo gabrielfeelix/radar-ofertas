@@ -38,19 +38,38 @@ import { readFileSync, writeFileSync } from "node:fs";
 const API = "https://api.mercadolibre.com";
 
 /**
- * De onde sai o catálogo de cada nicho.
+ * De onde sai o catálogo.
  *
  * Categoria do Mercado Livre, e não palavra-chave, porque
  * "mais vendidos da categoria" é uma lista curada por eles a partir de
  * venda real — e produto que vende é produto cujo preço vale a pena
  * acompanhar. Busca por palavra traz o que o texto casa, que é outra
  * coisa.
+ *
+ * ERA UM MAPA POR NICHO, E VIROU UMA LISTA. Enquanto o nicho vinha de
+ * quem achou o produto, cada categoria precisava declarar em que nicho
+ * o resultado cairia — e foi assim que "mais vendidos de Saúde" virou
+ * nicho casa, e o whey acabou publicado no canal de pet. Agora o nicho
+ * sai do `domain_id`, então a categoria só responde ONDE PROCURAR.
+ *
+ * Isso barateou ampliar: doze categorias em vez de oito, incluindo
+ * Beleza, Ferramentas e Alimentos, que antes não tinham nicho onde
+ * encaixar e por isso ficavam de fora.
  */
-const CATEGORIAS = {
-  pet: ["MLB1071"],
-  casa: ["MLB1574", "MLB264586", "MLB1499"],
-  eletronico: ["MLB1000", "MLB1648", "MLB1051", "MLB1276"],
-};
+const CATEGORIAS = [
+  "MLB1071", // Animais
+  "MLB1574", // Casa, Móveis e Decoração
+  "MLB5726", // Eletrodomésticos
+  "MLB1000", // Eletrônicos, Áudio e Vídeo
+  "MLB1648", // Informática
+  "MLB1051", // Celulares e Telefones
+  "MLB264586", // Saúde
+  "MLB1246", // Beleza e Cuidado Pessoal
+  "MLB1276", // Esportes e Fitness
+  "MLB263532", // Ferramentas
+  "MLB1403", // Alimentos e Bebidas
+  "MLB1499", // Indústria e Comércio
+];
 
 /**
  * Busca por palavra, para engrossar a base.
@@ -69,23 +88,20 @@ const CATEGORIAS = {
  * dezenas por categoria e mudam devagar. `products/search` não satura,
  * e é o que faz a base crescer de verdade.
  */
-const BUSCAS = {
-  pet: [
-    "racao cachorro", "racao gato", "tapete higienico", "antipulgas", "coleira cachorro",
-    "brinquedo pet", "cama pet", "comedouro", "areia gato", "shampoo cachorro",
-    "petisco cachorro", "casinha cachorro", "arranhador gato", "caixa transporte pet",
-  ],
-  casa: [
-    "air fryer", "panela antiaderente", "jogo de cama", "toalha banho", "organizador",
-    "cortina blackout", "tapete sala", "liquidificador", "cafeteira", "ferro de passar",
-    "aspirador de po", "pote hermetico", "escorredor", "luminaria", "ventilador",
-  ],
-  eletronico: [
-    "fone bluetooth", "smartwatch", "carregador rapido", "cabo usb c", "power bank",
-    "caixa de som bluetooth", "mouse sem fio", "teclado", "webcam", "ssd",
-    "cartao de memoria", "suporte celular", "smart tv", "roteador wifi", "pen drive",
-  ],
-};
+const BUSCAS = [
+  // Pet
+  "racao cachorro", "racao gato", "tapete higienico", "antipulgas", "coleira cachorro",
+  "brinquedo pet", "cama pet", "comedouro", "areia gato", "shampoo cachorro",
+  "petisco cachorro", "casinha cachorro", "arranhador gato", "caixa transporte pet",
+  // Casa e cozinha
+  "air fryer", "panela antiaderente", "jogo de cama", "toalha banho", "organizador",
+  "cortina blackout", "tapete sala", "liquidificador", "cafeteira", "ferro de passar",
+  "aspirador de po", "pote hermetico", "escorredor", "luminaria", "ventilador",
+  // Eletrônico
+  "fone bluetooth", "smartwatch", "carregador rapido", "cabo usb c", "power bank",
+  "caixa de som bluetooth", "mouse sem fio", "teclado", "webcam", "ssd",
+  "cartao de memoria", "suporte celular", "smart tv", "roteador wifi", "pen drive",
+];
 
 /** Produtos por termo de busca. */
 const POR_BUSCA = Number(process.env.ML_PRODUTOS_POR_BUSCA ?? 20);
@@ -102,9 +118,6 @@ const POR_BUSCA = Number(process.env.ML_PRODUTOS_POR_BUSCA ?? 20);
  * `ML_SO_PRECOS=1` pula a descoberta.
  */
 const SO_PRECOS = process.env.ML_SO_PRECOS === "1";
-
-/** Quantos produtos por nicho. Baixo de propósito: a série vale mais que a largura. */
-const POR_NICHO = Number(process.env.ML_PRODUTOS_POR_NICHO ?? 20);
 
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -461,9 +474,6 @@ async function main() {
   if (refreshNovo && refreshNovo !== (credencial?.valor ?? refreshToken)) {
     await guardaRefresh(refreshNovo, mkt.id);
   }
-  const { data: nichos } = await db.from("nicho").select("id, slug");
-  const porSlug = new Map((nichos ?? []).map((n) => [n.slug, n.id]));
-
   /*
     O mapa que decide o nicho, carregado uma vez.
 
@@ -486,34 +496,49 @@ async function main() {
   let pontos = 0;
   const problemas = [];
 
-  for (const [slug, categorias] of Object.entries(CATEGORIAS)) {
-    // O slug ainda comanda ONDE PROCURAR. O que ele não decide mais é
-    // o que o produto É: isso agora sai do domínio que o ML devolve.
-    if (!porSlug.has(slug)) {
-      problemas.push(`nicho "${slug}" não existe no banco`);
-      continue;
-    }
+  /*
+    A DESCOBERTA VIROU UMA PASSADA SÓ, e não uma por nicho.
 
-    const ids = [];
-    for (const cat of SO_PRECOS ? [] : categorias) {
-      try {
-        ids.push(...(await maisVendidos(cat)));
-      } catch (e) {
-        problemas.push(`categoria ${cat}: ${e.message}`);
-      }
-    }
-    for (const termo of SO_PRECOS ? [] : (BUSCAS[slug] ?? [])) {
-      try {
-        ids.push(...(await porBusca(termo)));
-      } catch (e) {
-        problemas.push(`busca "${termo}": ${e.message}`);
-      }
-    }
+    Enquanto o nicho vinha de quem achou o produto, o laço TINHA que
+    ser por nicho: era ele quem carimbava o resultado. Agora quem
+    carimba é o domínio, então categoria e termo respondem só "onde
+    procurar", e um laço plano faz o mesmo trabalho sem a mentira no
+    meio.
 
+    O que se ganha com isso é poder ampliar: doze categorias, incluindo
+    Beleza, Ferramentas e Alimentos, que antes não entravam por não ter
+    nicho onde encaixar.
+  */
+  const ids = [];
+
+  for (const cat of SO_PRECOS ? [] : CATEGORIAS) {
+    try {
+      ids.push(...(await maisVendidos(cat)));
+    } catch (e) {
+      problemas.push(`categoria ${cat}: ${e.message}`);
+    }
+  }
+  for (const termo of SO_PRECOS ? [] : BUSCAS) {
+    try {
+      ids.push(...(await porBusca(termo)));
+    } catch (e) {
+      problemas.push(`busca "${termo}": ${e.message}`);
+    }
+  }
+
+  {
     // Já conhecidos saem fora: relê-los aqui gastaria a cota que faz a
     // base crescer, e o preço deles é atualizado no mesmo laço abaixo.
-    const escolhidos = [...new Set(ids)];
-    console.log(`\n${slug} — ${escolhidos.length} produtos`);
+    //
+    // O teto existe porque cada produto custa quatro chamadas (produto,
+    // ofertas, vendedor, avaliações) e a rotina diária tem uma janela.
+    // Sem ele, ampliar as categorias transformaria "descobre menos do
+    // que cabe" em "estoura o tempo e não grava nada".
+    const escolhidos = [...new Set(ids)].slice(
+      0,
+      Number(process.env.ML_DESCOBERTAS_POR_RODADA ?? 600),
+    );
+    console.log(`\ndescoberta — ${escolhidos.length} produtos de ${new Set(ids).size} achados`);
 
     for (const produtoId of escolhidos) {
       try {
