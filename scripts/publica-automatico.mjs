@@ -50,6 +50,10 @@ if (!url || !chave) {
 const db = createClient(url, chave, { auth: { persistSession: false } });
 const TELEGRAM = "https://api.telegram.org";
 
+/** A trava de execução (migration 45). Só quem tomou é que solta. */
+const TRAVA = "publica-automatico";
+let travaMinha = false;
+
 /** Os parâmetros globais, num objeto só. */
 async function parametros() {
   const { data } = await db.from("parametro").select("chave, valor").is("nicho_id", null);
@@ -167,6 +171,36 @@ async function main() {
     console.log("publicacao_automatica = 0 — freio de mão puxado, nada sai.");
     return;
   }
+
+  /*
+    UMA EXECUÇÃO POR VEZ (migration 45).
+
+    Observado em 01/08: com duas instâncias no ar, os sete canais
+    publicaram duas vezes cada com 44 segundos de intervalo, contra os
+    cinco minutos configurados. O ritmo não está errado — cada processo
+    lê `canal.ultima_publicacao_em` uma vez e guarda a própria cópia, e
+    o que a outra instância grava ele nunca vê. Com N processos o canal
+    fala N vezes mais.
+
+    E o estrago pior é outro: as duas leem a mesma fila de `publicacao`
+    pendente, e nada impede as duas de mandarem a MESMA mensagem. É a
+    D-040 outra vez.
+
+    Desistir é o certo, e não esperar: a fila mora no banco e a rodada
+    seguinte pega o que sobrou.
+  */
+  const { data: tomou } = await db.rpc("toma_trava", {
+    p_nome: TRAVA,
+    p_dono: `${process.env.GITHUB_RUN_ID ? `actions:${process.env.GITHUB_RUN_ID}` : "manual"}:${process.pid}`,
+    p_minutos: Number(process.env.PUBLICA_JANELA_MIN ?? 50) + 5,
+  });
+
+  if (!tomou) {
+    console.log("outra execução do publicador está no ar. Saindo sem publicar.");
+    return;
+  }
+
+  travaMinha = true;
 
   const ritmo = {
     intervaloPicoMin: par.intervalo_pico_min ?? RITMO_PADRAO.intervaloPicoMin,
@@ -935,4 +969,21 @@ async function melhorPrateleira(db, oferta) {
   if (reprovadas > 0) console.log(`motivos: ${JSON.stringify(motivos)}`);
 }
 
-await main();
+/*
+  A trava é solta no `finally`, e não no fim de `main`.
+
+  Erro no meio do laço não pode deixar a trava presa: ela venceria
+  sozinha em cinquenta e poucos minutos, mas até lá a rodada seguinte
+  desistiria de publicar, e o sintoma seria canal mudo por uma hora
+  depois de um erro que já passou.
+
+  `travaMinha` existe para não soltar a trava de OUTRO processo: quem
+  não tomou também não solta.
+*/
+try {
+  await main();
+} finally {
+  if (travaMinha) {
+    await db.rpc("solta_trava", { p_nome: TRAVA }).catch(() => {});
+  }
+}
