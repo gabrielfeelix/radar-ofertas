@@ -196,6 +196,32 @@ function fotoDoProduto(produto) {
   return foto.url ?? foto.secure_url ?? null;
 }
 
+/**
+ * Reputação do vendedor, de 0 a 1.
+ *
+ * O ML dá a reputação em duas escalas que se completam: o `level_id`
+ * (`5_green` é o topo, `1_red` o fundo) e o `power_seller_status`
+ * (`platinum`, `gold`, `silver`). Aqui elas viram um número só, porque
+ * é isso que a comporta `reputacao_minima` compara.
+ *
+ * Vendedor sem histórico fica **nulo, não zero**. Zero significaria
+ * "medimos e é péssimo"; nulo é "não sabemos" — e a comporta só
+ * reprova o que ela mediu.
+ */
+function reputacaoDoVendedor(usuario) {
+  const r = usuario?.seller_reputation;
+  if (!r) return null;
+
+  const porNivel = { "5_green": 1.0, "4_light_green": 0.8, "3_yellow": 0.6, "2_orange": 0.35, "1_red": 0.1 };
+  const base = porNivel[r.level_id];
+  if (base === undefined) return null;
+
+  // O selo de power seller sobe um degrau dentro do nível: distingue
+  // quem chegou agora ao verde de quem está lá há anos.
+  const bonus = r.power_seller_status === "platinum" ? 0.05 : r.power_seller_status === "gold" ? 0.03 : 0;
+  return Math.min(1, Number((base + bonus).toFixed(2)));
+}
+
 async function main() {
   const { data: operacao } = await db.from("operacao").select("id").limit(1).single();
   const { data: mkt } = await db
@@ -254,6 +280,19 @@ async function main() {
           continue;
         }
 
+        // Quem vende e o que o público achou. É o que alimenta as
+        // comportas `reputacao_minima` e `avaliacao_minima`, que
+        // existem no motor desde 27/07 e nunca reprovaram nada porque
+        // estes campos ficavam vazios.
+        //
+        // Falha aqui não derruba a coleta: sem o dado, a comporta não
+        // reprova, e o preço continua entrando na série. Perder um
+        // sinal é melhor que perder a série.
+        const [vendedor, avaliacoes] = await Promise.all([
+          api(`users/${oferta.seller_id}`).catch(() => null),
+          api(`reviews/item/${oferta.item_id}`).catch(() => null),
+        ]);
+
         // O produto: chave é o título canônico dentro da operação.
         let { data: linha } = await db
           .from("produto")
@@ -296,8 +335,12 @@ async function main() {
               marketplace_id: mkt.id,
               sku_externo: sku,
               url_original: `https://www.mercadolivre.com.br/p/${produtoId}`,
-              vendedor: oferta.official_store_id ? "loja oficial" : `vendedor ${oferta.seller_id}`,
+              vendedor: vendedor?.nickname ?? `vendedor ${oferta.seller_id}`,
               loja_oficial: Boolean(oferta.official_store_id),
+              reputacao_vendedor: reputacaoDoVendedor(vendedor),
+              vendas_estimadas: vendedor?.seller_reputation?.transactions?.total ?? null,
+              avaliacao: avaliacoes?.rating_average ?? null,
+              avaliacao_qtd: avaliacoes?.paging?.total ?? null,
               ultima_coleta_em: new Date().toISOString(),
               // O LINK da imagem, nunca o arquivo (regra 3.3). Ele
               // expira pela política da loja, e `imagem_obtida_em` é o
@@ -317,6 +360,15 @@ async function main() {
               ultima_coleta_em: new Date().toISOString(),
               imagem_url: fotoDoProduto(produto),
               imagem_obtida_em: new Date().toISOString(),
+              // Reputação e nota mudam com o tempo, e a curadoria
+              // decide com a de agora: vendedor que caiu de nível
+              // precisa parar de passar hoje, não na próxima vez que
+              // o anúncio for cadastrado.
+              vendedor: vendedor?.nickname ?? undefined,
+              reputacao_vendedor: reputacaoDoVendedor(vendedor),
+              vendas_estimadas: vendedor?.seller_reputation?.transactions?.total ?? null,
+              avaliacao: avaliacoes?.rating_average ?? null,
+              avaliacao_qtd: avaliacoes?.paging?.total ?? null,
             })
             .eq("id", anuncio.id);
         }
