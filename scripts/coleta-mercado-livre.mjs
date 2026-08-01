@@ -938,7 +938,7 @@ async function main() {
 
   {
     // Já conhecidos saem fora: relê-los aqui gastaria a cota que faz a
-    // base crescer, e o preço deles é atualizado no mesmo laço abaixo.
+    // base crescer, e quem atualiza o preço deles é `relePrecos`.
     //
     // O teto existe porque cada produto custa quatro chamadas (produto,
     // ofertas, vendedor, avaliações) e a rotina diária tem uma janela.
@@ -952,7 +952,48 @@ async function main() {
     );
     const idsPrioritarios = rodizio(porRaizIntercalada);
     const todos = [...new Set([...idsPrioritarios, ...ids])];
-    const escolhidos = todos.slice(0, Number(process.env.ML_DESCOBERTAS_POR_RODADA ?? 600));
+
+    /*
+      O QUE JÁ ESTÁ NO BANCO SAI FORA, e isto faltava.
+
+      O comentário logo acima sempre disse "já conhecidos saem fora" e o
+      filtro nunca existiu. O sintoma demorou a aparecer porque, com a
+      base pequena, quase tudo era novo mesmo. Com 1.714 produtos ele
+      ficou explícito: a quinta rodada da noite de 01/08 escolheu 600
+      produtos e trouxe **zero novos**.
+
+      A causa é o `slice`: sem filtro, ele pega sempre os primeiros 600
+      do rodízio, que são exatamente os que a rodada anterior já
+      ingeriu. Havia 4.239 candidatos e a base parou de crescer em
+      1.714 — e "a base pequena é o gargalo, não o algoritmo" é a frase
+      que abre a lista de buscas deste arquivo.
+
+      O preço dos conhecidos não se perde: quem cuida disso é
+      `relePrecos`, que roda de hora em hora e é ordenada pelo anúncio
+      lido há mais tempo. Descoberta descobre; releitura relê.
+    */
+    const conhecidos = new Set();
+    for (let de = 0; ; de += 1000) {
+      const { data: pagina } = await db
+        .from("anuncio")
+        .select("url_original")
+        .eq("marketplace_id", mkt.id)
+        .range(de, de + 999);
+      if (!pagina || pagina.length === 0) break;
+      for (const a of pagina) {
+        const id = (a.url_original ?? "").match(/\/p\/(MLB\d+)/)?.[1];
+        if (id) conhecidos.add(id);
+      }
+      if (pagina.length < 1000) break;
+    }
+
+    const ineditos = todos.filter((id) => !conhecidos.has(id));
+    const escolhidos = ineditos.slice(0, Number(process.env.ML_DESCOBERTAS_POR_RODADA ?? 600));
+
+    console.log(
+      `\n${conhecidos.size} produtos de catálogo já no banco · ` +
+        `${todos.length - ineditos.length} candidatos descartados por já existirem`,
+    );
 
     const prioritariosEscolhidos = escolhidos.filter((id) =>
       new Set(idsPrioritarios).has(id),
