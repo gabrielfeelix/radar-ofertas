@@ -69,3 +69,21 @@ jobs:
           echo "$resposta"
           echo "### Quedas" >> "$GITHUB_STEP_SUMMARY"
           echo "$resposta" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publica no Telegram
+        # O laço fecha aqui. Não há aprovação humana no caminho (D-033):
+        # quem aprova são as comportas de confiança, e quem controla o
+        # volume é o intervalo do ritmo.
+        #
+        # O WhatsApp nunca sai daqui — regra 3.2, e é o que protege o
+        # número do parceiro.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ML_MATT_TOOL: ${{ secrets.ML_MATT_TOOL }}
+        run: |
+          node --experimental-strip-types \
+               --disable-warning=ExperimentalWarning \
+               --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+               scripts/publica-automatico.mjs | tee -a "$GITHUB_STEP_SUMMARY"
