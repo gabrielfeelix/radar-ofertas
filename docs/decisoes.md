@@ -629,3 +629,89 @@ da primeira publicação real em canal com audiência**. Nesse dia, uma de duas:
 
 **Mudaria se:** a Vercel passar a permitir uso comercial no plano gratuito, o que
 não deve acontecer.
+
+---
+
+## D-033 · Curadoria automática e ritmo de publicação
+**Data:** 2026-08-01
+
+O dono encerrou a aprovação manual: *"ninguém vai ficar na minha equipe
+vasculhando sobre o vendedor. Isso tem que ser automático."* Está certo:
+aprovação a mão não sobrevive a trinta ofertas por dia, e muito menos a
+sete canais.
+
+Isso substitui o desenho anterior, em que `/aprovar` era a casa do dono.
+**A tela continua existindo e deixa de ser obrigatória** — vira conferência
+e correção, não porta.
+
+### Os critérios que substituem o olho humano
+
+Aprovados pelo dono em 01/08. Todos vivem em `parametro`, para calibrar
+sem publicar versão (D-023).
+
+| Critério | Valor | Por quê |
+|---|---|---|
+| Nota do produto | ≥ 3,5 | do dono. Produto ruim queima o canal igual a preço falso |
+| Avaliações do produto | ≥ 20 | 5,0 com duas avaliações é ruído, não sinal |
+| Reputação do vendedor | ≥ 0,6 | corta vermelho e laranja, deixa amarelo para cima |
+| Vendas do vendedor | ≥ 100 | verde com 16 vendas é novato sortudo, não histórico |
+| Produto novo | sim | desconto em usado não é a mesma oferta |
+
+**A dispensa que o dono pediu, e ela é sólida:** loja oficial ou vendedor
+platinum **dispensa a exigência de avaliações do produto**. Se a Anker está
+vendendo, produto lançado ontem com zero avaliação pode ir. A confiança vem
+da marca, não do histórico do item.
+
+### O que foi recusado, e por quê
+
+O dono propôs: se o mesmo produto tem um vendedor ótimo e um mediano,
+publicar o mediano também, porque o produto já se provou.
+
+**Não.** A nota é do **produto de catálogo**, agregada entre todos os
+vendedores — o mediano está pegando emprestada a reputação dos outros. E o
+risco que o vendedor carrega não é o produto ser bom: é **chegar**, ser
+**original** e ter **troca**. Produto comprovadamente bom vendido por gente
+duvidosa é a descrição de falsificação e de não entrega, e a nota alta é
+justamente o que dá confiança falsa.
+
+**A intuição estava certa apontada para o outro lado:** publique o anúncio
+do vendedor bom, não o do mediano. Não se perde a oferta, troca-se de
+vendedor.
+
+Isso expôs um defeito: `melhorOferta` escolhe **o menor preço**, ponto. Hoje
+o vendedor de nível vermelho com 16 vendas ganharia por dois reais de
+diferença. Passa a escolher a melhor combinação de preço e vendedor, com
+tolerância de até 5% mais caro para ficar com o vendedor bom.
+
+### O ritmo
+
+A pesquisa de 28/07 fixou **5 a 8 por dia**, e isso era sobre **WhatsApp**.
+Canal de Telegram é outra coisa: não notifica como grupo, o membro não vê
+badge de não lido do mesmo jeito, e a referência de mercado para canal de
+nicho é **20 a 50 por dia**. Aplicar o número do WhatsApp ao Telegram
+desperdiçaria o canal; aplicar o do Telegram ao WhatsApp mataria o grupo.
+
+**Então o ritmo é por plataforma e por faixa do dia**, e o que ele controla
+é o **intervalo mínimo entre posts**, não uma cota:
+
+| Faixa (São Paulo) | Telegram | Por quê |
+|---|---|---|
+| Pico (07–09, 12–13, 19–22) | 1 a cada 10 min | é quando a pessoa está no celular |
+| Normal (09–19, 22–00) | 1 a cada 30 min | mantém vivo sem cansar |
+| Madrugada (00–07) | 1 a cada 90 min | o dono confirmou que os concorrentes publicam de madrugada e ele mesmo vê |
+
+Intervalo, e não cota diária, porque cota gasta tudo de manhã e deixa a
+tarde muda. O teto diário do canal (`posts_por_dia_max`) continua valendo
+por cima — é o combinado com o parceiro.
+
+**Dia de pico** (Black Friday, 8.8, Dia das Mães) é a exceção que o dono
+levantou: *"é o dia que a galera está maluca"*. Vira um multiplicador ligado
+à mão, que divide os intervalos por três. Ligado à mão de propósito: sistema
+que decide sozinho que hoje é dia especial vai errar no dia comum.
+
+**O WhatsApp continua manual e continua em 5 a 8 por dia.** A regra 3.2 não
+muda, e o número da pesquisa de 28/07 segue valendo para ele.
+
+**Mudaria se:** os números do Telegram derrubarem engajamento na prática. A
+medida honesta é a taxa de clique por post, e ela só existe depois do
+redirecionador.

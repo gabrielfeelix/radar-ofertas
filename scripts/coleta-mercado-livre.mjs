@@ -163,12 +163,22 @@ async function maisVendidos(categoria) {
   return (d.content ?? []).filter((c) => c.type === "PRODUCT").map((c) => c.id);
 }
 
+/** Quanto a mais vale pagar para ficar com o vendedor melhor (D-033). */
+const TOLERANCIA_PCT = Number(process.env.ML_TOLERANCIA_VENDEDOR_PCT ?? 5);
+
 /**
  * A melhor oferta viva de um produto.
  *
- * O menor preço entre vendedores, e não o primeiro da lista: é o preço
- * que a pessoa do grupo vai encontrar se clicar. Item usado fica de
- * fora — desconto em usado não é a mesma oferta.
+ * ANTES ERA SÓ O MENOR PREÇO, E ISSO ERA UM DEFEITO. O vendedor de
+ * nível vermelho com 16 vendas ganhava por dois reais de diferença, e
+ * era ele que ia para o canal. A nota do produto não protege disso: ela
+ * é do produto de catálogo, agregada entre todos os vendedores, então o
+ * vendedor ruim pega emprestada a reputação dos outros (D-033).
+ *
+ * Agora: entre os que estão até 5% do menor preço, ganha o de melhor
+ * reputação. Não se perde a oferta, troca-se de vendedor.
+ *
+ * Item usado fica de fora: desconto em usado não é a mesma oferta.
  */
 async function melhorOferta(produtoId) {
   const d = await api(`products/${produtoId}/items?limit=50`);
@@ -176,7 +186,28 @@ async function melhorOferta(produtoId) {
     (i) => i.condition === "new" && typeof i.price === "number" && i.price > 0,
   );
   if (vivas.length === 0) return null;
-  return vivas.reduce((menor, i) => (i.price < menor.price ? i : menor));
+
+  const menorPreco = Math.min(...vivas.map((i) => i.price));
+  const aceitaveis = vivas.filter((i) => i.price <= menorPreco * (1 + TOLERANCIA_PCT / 100));
+
+  // Uma consulta de vendedor por candidato, e só entre os aceitáveis:
+  // pedir a reputação dos cinquenta gastaria cota para descartar
+  // quarenta e cinco.
+  const comReputacao = await Promise.all(
+    aceitaveis.slice(0, 8).map(async (i) => {
+      const u = await api(`users/${i.seller_id}`).catch(() => null);
+      return { item: i, reputacao: reputacaoDoVendedor(u) ?? 0, oficial: Boolean(i.official_store_id) };
+    }),
+  );
+
+  comReputacao.sort((a, b) => {
+    // Loja oficial ganha de todo mundo: é a marca vendendo.
+    if (a.oficial !== b.oficial) return a.oficial ? -1 : 1;
+    if (b.reputacao !== a.reputacao) return b.reputacao - a.reputacao;
+    return a.item.price - b.item.price;
+  });
+
+  return comReputacao[0]?.item ?? null;
 }
 
 /**
