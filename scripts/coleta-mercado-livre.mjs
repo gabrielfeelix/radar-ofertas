@@ -827,6 +827,21 @@ async function main() {
     de cada, até o teto. Raiz que se esgota sai do rodízio e as outras
     dividem o que sobra, então nada se perde quando uma categoria é
     pequena.
+
+    E O RODÍZIO É DE DOIS NÍVEIS, porque a primeira versão consertou
+    entre raízes e deixou o mesmo defeito uma camada abaixo. Sintoma:
+    `beleza=33` e **`perfume=1`**, com um canal de perfume no ar.
+
+    A causa é a mesma, com outros números. "Beleza e Cuidado Pessoal"
+    tem 13 filhas, e "Perfumes" é a décima segunda. Concatenando as
+    filhas em ordem, os ids de perfume ficam na posição ~400 do balde
+    de beleza; o rodízio entre onze raízes tira só as ~55 primeiras de
+    cada uma, e nunca chega lá.
+
+    Então cada ALVO (raiz ou filha) tem balde próprio, e o rodízio
+    acontece duas vezes: entre as filhas de uma raiz, e entre as raízes.
+    Assim "Perfumes" aparece na 12ª rodada do balde de beleza, e não na
+    posição 400.
   */
   const baldesPrioritarios = new Map();
   const ids = [];
@@ -886,8 +901,8 @@ async function main() {
       try {
         const achados = await maisVendidos(alvo);
         if (prioritaria) {
-          if (!baldesPrioritarios.has(cat)) baldesPrioritarios.set(cat, []);
-          baldesPrioritarios.get(cat).push(...achados);
+          if (!baldesPrioritarios.has(cat)) baldesPrioritarios.set(cat, new Map());
+          baldesPrioritarios.get(cat).set(alvo, achados);
         } else {
           ids.push(...achados);
         }
@@ -931,7 +946,11 @@ async function main() {
     // que cabe" em "estoura o tempo e não grava nada".
     // O `Set` sobre a concatenação preserva a primeira aparição, então
     // um produto que existe nas duas listas conta como prioritário.
-    const idsPrioritarios = rodizio(baldesPrioritarios);
+    // Primeiro entre as filhas de cada raiz, depois entre as raízes.
+    const porRaizIntercalada = new Map(
+      [...baldesPrioritarios].map(([cat, filhas]) => [cat, rodizio(filhas)]),
+    );
+    const idsPrioritarios = rodizio(porRaizIntercalada);
     const todos = [...new Set([...idsPrioritarios, ...ids])];
     const escolhidos = todos.slice(0, Number(process.env.ML_DESCOBERTAS_POR_RODADA ?? 600));
 
