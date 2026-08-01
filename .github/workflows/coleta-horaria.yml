@@ -107,6 +107,12 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          # `pipefail` porque o `| tee` mascara o codigo de saida do
+          # node: sem ele, o step passa como sucesso mesmo quando o
+          # script morre. Foi assim que um TypeError no publicador ficou
+          # invisivel em 01/08 — a unica pista era a trava presa no
+          # banco. Falha silenciosa e exatamente o que a D-015 recusa.
+          set -o pipefail
           node --experimental-strip-types \
                --disable-warning=ExperimentalWarning \
                --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
@@ -125,6 +131,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           ML_MATT_TOOL: ${{ secrets.ML_MATT_TOOL }}
         run: |
+          set -o pipefail
           node --experimental-strip-types \
                --disable-warning=ExperimentalWarning \
                --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \

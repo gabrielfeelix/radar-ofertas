@@ -984,6 +984,24 @@ try {
   await main();
 } finally {
   if (travaMinha) {
-    await db.rpc("solta_trava", { p_nome: TRAVA }).catch(() => {});
+    /*
+      `try` em volta, e não `.catch()` no fim.
+
+      `db.rpc()` do supabase-js devolve um `PostgrestFilterBuilder`. Ele
+      é *thenable* — dá para dar `await` — mas **não é Promise**, e não
+      tem `.catch()`. A primeira versão disto escrevia
+      `.rpc(...).catch(() => {})` e morria com
+      `TypeError: db.rpc(...).catch is not a function` dentro do próprio
+      `finally`, deixando a trava presa até vencer.
+
+      O erro é do tipo mais chato: só aparece no caminho de limpeza, e
+      só depois de a execução inteira ter dado certo.
+    */
+    try {
+      await db.rpc("solta_trava", { p_nome: TRAVA });
+    } catch {
+      // Trava presa vence sozinha em `janela + 5`. Não vale derrubar a
+      // execução por causa da faxina.
+    }
   }
 }
