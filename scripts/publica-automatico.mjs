@@ -148,7 +148,7 @@ async function main() {
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em, gatilho,
     anuncio:anuncio_id (
       url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
-      avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas,
+      avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis,
       marketplace:marketplace_id ( nome, slug ),
       produto:produto_id ( titulo_canonico, nota_curador, nicho_id )
     )`;
@@ -164,7 +164,7 @@ async function main() {
   // Modelo e canais, uma vez só.
   const { data: modeloLinha } = await db
     .from("modelo_mensagem")
-    .select("corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, nota_prefixo")
+    .select("corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo")
     .eq("ativo", true)
     .limit(1)
     .maybeSingle();
@@ -175,6 +175,7 @@ async function main() {
     lastroSem: modeloLinha.lastro_sem,
     lastroQueda: modeloLinha.lastro_queda,
     lastroDeclarado: modeloLinha.lastro_declarado,
+    linhaFrete: modeloLinha.linha_frete,
     notaPrefixo: modeloLinha.nota_prefixo,
   };
 
@@ -321,6 +322,7 @@ async function main() {
         podeAfirmarMinimo: oferta.pode_afirmar_minimo,
         gatilho: oferta.gatilho,
         notaDoCurador: anuncio.produto?.nota_curador,
+        freteGratis: anuncio.frete_gratis,
         link: link.url,
       });
 

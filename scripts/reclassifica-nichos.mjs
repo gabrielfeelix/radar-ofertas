@@ -71,7 +71,33 @@ async function main() {
     .eq("marketplace_id", mktId);
 
   const porDominio = new Map((mapeamento ?? []).map((m) => [m.dominio_externo, m.nicho_id]));
-  console.log(`${porDominio.size} domínios mapeados`);
+
+  const { data: porRaiz } = await db
+    .from("nicho_categoria")
+    .select("categoria_raiz, nicho_id")
+    .eq("marketplace_id", mktId);
+
+  const porCategoria = new Map((porRaiz ?? []).map((c) => [c.categoria_raiz, c.nicho_id]));
+  console.log(`${porDominio.size} domínios e ${porCategoria.size} categorias raiz mapeados`);
+
+  /** A raiz de uma categoria, com cache. */
+  const raizDe = new Map();
+  async function categoriaRaiz(id) {
+    if (!id) return null;
+    if (raizDe.has(id)) return raizDe.get(id);
+    const c = await fetch(`${API}/categories/${id}`, { headers: cabecalho })
+      .then((r) => r.json())
+      .catch(() => null);
+    const raiz = c?.path_from_root?.[0]?.id ?? null;
+    raizDe.set(id, raiz);
+    return raiz;
+  }
+
+  /** Fina vence grossa, e "não roteia" bloqueia as duas. */
+  function decideNicho(dominio, raiz) {
+    if (dominio && porDominio.has(dominio)) return porDominio.get(dominio) ?? null;
+    return raiz ? (porCategoria.get(raiz) ?? null) : null;
+  }
 
   const { data: anuncios } = await db
     .from("anuncio")
@@ -94,10 +120,18 @@ async function main() {
       pedaco.map(async (a) => {
         const produtoId = (a.url_original ?? "").match(/\/p\/(MLB\d+)/)?.[1];
         if (!produtoId) return null;
-        const p = await fetch(`${API}/products/${produtoId}`, { headers: cabecalho })
-          .then((r) => r.json())
-          .catch(() => null);
-        return p?.domain_id ? { anuncio: a, dominio: p.domain_id } : null;
+        const [p, itens] = await Promise.all([
+          fetch(`${API}/products/${produtoId}`, { headers: cabecalho }).then((r) => r.json()).catch(() => null),
+          fetch(`${API}/products/${produtoId}/items?limit=1`, { headers: cabecalho }).then((r) => r.json()).catch(() => null),
+        ]);
+        const item = itens?.results?.[0];
+        if (!p?.domain_id) return null;
+        return {
+          anuncio: a,
+          dominio: p.domain_id,
+          folha: item?.category_id ?? null,
+          frete: item?.shipping?.free_shipping ?? null,
+        };
       }),
     );
 
@@ -105,17 +139,24 @@ async function main() {
       if (!r) continue;
       lidos++;
 
-      const { anuncio, dominio } = r;
+      const { anuncio, dominio, folha, frete } = r;
+      const raiz = await categoriaRaiz(folha);
 
-      if (!porDominio.has(dominio)) {
-        semMapa.set(dominio, (semMapa.get(dominio) ?? 0) + 1);
-      }
+      if (raiz && !porCategoria.has(raiz)) semMapa.set(raiz, (semMapa.get(raiz) ?? 0) + 1);
 
-      const nichoNovo = porDominio.get(dominio) ?? null;
+      const nichoNovo = decideNicho(dominio, raiz);
       const nichoAntigo = anuncio.produto?.nicho_id ?? null;
 
       if (!SECO) {
-        await db.from("anuncio").update({ dominio_externo: dominio }).eq("id", anuncio.id);
+        await db
+          .from("anuncio")
+          .update({
+            dominio_externo: dominio,
+            categoria_raiz: raiz,
+            categoria_folha: folha,
+            frete_gratis: frete,
+          })
+          .eq("id", anuncio.id);
       }
 
       if (nichoNovo === nichoAntigo) continue;
@@ -139,11 +180,11 @@ async function main() {
   );
 
   if (semMapa.size > 0) {
-    console.log(`\n${semMapa.size} domínio(s) sem mapeamento, do mais frequente:`);
+    console.log(`\n${semMapa.size} categoria(s) raiz sem mapeamento, da mais frequente:`);
     for (const [d, n] of [...semMapa].sort((a, b) => b[1] - a[1]).slice(0, 20)) {
       console.log(`  ${String(n).padStart(4)}  ${d}`);
     }
-    console.log("\nMapeie em `nicho_dominio`. Enquanto não mapear, esses produtos não publicam.");
+    console.log("\nMapeie em `nicho_categoria`. Enquanto não mapear, esses produtos não publicam.");
   }
 }
 

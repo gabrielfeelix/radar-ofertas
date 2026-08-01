@@ -63,12 +63,28 @@ const CATEGORIAS = [
   "MLB1000", // Eletrônicos, Áudio e Vídeo
   "MLB1648", // Informática
   "MLB1051", // Celulares e Telefones
+  "MLB1039", // Câmeras e Acessórios
   "MLB264586", // Saúde
   "MLB1246", // Beleza e Cuidado Pessoal
   "MLB1276", // Esportes e Fitness
   "MLB263532", // Ferramentas
+  "MLB1500", // Construção
   "MLB1403", // Alimentos e Bebidas
+  "MLB1384", // Bebês
+  "MLB1132", // Brinquedos e Hobbies
+  "MLB1430", // Calçados, Roupas e Bolsas
+  "MLB3937", // Joias e Relógios
+  "MLB1144", // Games
+  "MLB5672", // Acessórios para Veículos
+  "MLB1368", // Arte, Papelaria e Armarinho
+  "MLB12404", // Festas e Lembrancinhas
+  "MLB1182", // Instrumentos Musicais
+  "MLB1367", // Antiguidades e Coleções
+  "MLB271599", // Agro
   "MLB1499", // Indústria e Comércio
+  "MLB1196", // Livros, Revistas e Comics
+  "MLB1168", // Música, Filmes e Seriados
+  "MLB1953", // Mais Categorias
 ];
 
 /**
@@ -301,6 +317,63 @@ async function melhorOferta(produtoId) {
  * `deal_ids` diz de quais campanhas do ML o anúncio participa (oferta
  * do dia, relâmpago). Vazio não quer dizer sem desconto.
  */
+/**
+ * O que o item diz sobre entrega e onde ele mora na árvore.
+ *
+ * FRETE GRÁTIS É O DADO MAIS SUBAPROVEITADO DA RESPOSTA. Ele vem em
+ * `shipping.free_shipping` desde sempre, e todo canal de oferta que
+ * funciona põe isso na mensagem — é a linha que decide a compra em
+ * produto barato, onde o frete é metade do preço. Nós tínhamos o dado
+ * e não usávamos.
+ *
+ * `category_id` é a folha, e a raiz sai dela por `path_from_root`. A
+ * raiz é o que decide o nicho quando o domínio não tem regra própria.
+ */
+function entregaEArvore(item) {
+  return {
+    frete_gratis: item?.shipping?.free_shipping ?? null,
+    categoria_folha: item?.category_id ?? null,
+  };
+}
+
+/** A raiz de uma categoria, com cache: a árvore do ML não muda no meio da rodada. */
+const RAIZ_DE = new Map();
+async function categoriaRaiz(categoriaId) {
+  if (!categoriaId) return null;
+  if (RAIZ_DE.has(categoriaId)) return RAIZ_DE.get(categoriaId);
+
+  const c = await api(`categories/${categoriaId}`).catch(() => null);
+  const raiz = c?.path_from_root?.[0]?.id ?? null;
+  RAIZ_DE.set(categoriaId, raiz);
+  return raiz;
+}
+
+/**
+ * Em que nicho o anúncio cai.
+ *
+ * DUAS REGRAS, E A FINA VENCE. O domínio é específico e decide quando
+ * tem opinião; a categoria raiz é grossa e cobre o resto do site com
+ * 28 linhas em vez de milhares. Sem a grossa, "buscar tudo" viraria
+ * uma fila de triagem sem fim e o produto ficaria parado no catálogo.
+ *
+ * E domínio marcado como "não roteia" (linha com nicho nulo) BLOQUEIA
+ * os dois. Sem isso, `MLB-SUPPLEMENTS` marcado como fora voltaria pela
+ * raiz "Saúde", e a decisão de não publicar seria desfeita pela regra
+ * grossa sem ninguém perceber.
+ *
+ * Espelha `nicho_do_anuncio` no banco. As duas existem porque o
+ * coletor decide em lote, na memória, e a tela precisa da mesma
+ * resposta para um item só.
+ */
+function decideNicho(dominio, raiz, porDominio, porCategoria) {
+  if (dominio && porDominio.has(dominio)) {
+    const escolhido = porDominio.get(dominio);
+    // Nulo aqui é decisão tomada, não ausência: não caia para a raiz.
+    return escolhido ?? null;
+  }
+  return raiz ? (porCategoria.get(raiz) ?? null) : null;
+}
+
 function promocaoDeclarada(item) {
   const original = Number(item?.original_price);
   if (!Number.isFinite(original) || original <= item.price) {
@@ -371,10 +444,12 @@ function reputacaoDoVendedor(usuario) {
  * É o trabalho que precisa caber de hora em hora, e por isso ele lê em
  * lotes e pelo produto de catálogo, que é uma chamada por anúncio.
  */
-async function relePrecos(db, mktId, porDominio) {
+async function relePrecos(db, mktId, porDominio, porCategoria) {
   const { data: anuncios } = await db
     .from("anuncio")
-    .select("id, url_original, produto_id, dominio_externo, produto:produto_id ( nicho_id )")
+    .select(
+      "id, url_original, produto_id, dominio_externo, categoria_raiz, produto:produto_id ( nicho_id )",
+    )
     .eq("marketplace_id", mktId)
     .eq("ativo", true)
     .order("ultima_coleta_em", { ascending: true, nullsFirst: true })
@@ -417,6 +492,9 @@ async function relePrecos(db, mktId, porDominio) {
         e só enquanto faltar domínio ou nicho. Fazê-la sempre dobraria
         o custo da releitura horária para reconfirmar o que não muda.
       */
+      const arvore = entregaEArvore(oferta);
+      const raiz = a.categoria_raiz ?? (await categoriaRaiz(arvore.categoria_folha));
+
       const precisaClassificar = !a.dominio_externo || a.produto?.nicho_id == null;
       let dominio = a.dominio_externo ?? null;
 
@@ -424,8 +502,8 @@ async function relePrecos(db, mktId, porDominio) {
         const p = await api(`products/${produtoId}`).catch(() => null);
         dominio = p?.domain_id ?? dominio;
 
-        if (dominio && a.produto?.nicho_id == null && porDominio?.has(dominio)) {
-          const nicho = porDominio.get(dominio);
+        if (a.produto?.nicho_id == null) {
+          const nicho = decideNicho(dominio, raiz, porDominio, porCategoria);
           if (nicho) {
             await db.from("produto").update({ nicho_id: nicho }).eq("id", a.produto_id);
             classificados++;
@@ -438,6 +516,8 @@ async function relePrecos(db, mktId, porDominio) {
         .update({
           ultima_coleta_em: new Date().toISOString(),
           dominio_externo: dominio ?? undefined,
+          categoria_raiz: raiz ?? undefined,
+          ...arvore,
           ...promocaoDeclarada(oferta),
         })
         .eq("id", a.id);
@@ -489,7 +569,14 @@ async function main() {
     .eq("marketplace_id", mkt.id);
 
   const porDominio = new Map((mapeamento ?? []).map((m) => [m.dominio_externo, m.nicho_id]));
-  const dominiosNovos = new Set();
+
+  const { data: porRaiz } = await db
+    .from("nicho_categoria")
+    .select("categoria_raiz, nicho_id")
+    .eq("marketplace_id", mkt.id);
+
+  const porCategoria = new Map((porRaiz ?? []).map((c) => [c.categoria_raiz, c.nicho_id]));
+  const categoriasNovas = new Set();
 
   let produtosNovos = 0;
   let anunciosNovos = 0;
@@ -589,13 +676,11 @@ async function main() {
           publicado até alguém decidir. Errar para o lado de não
           publicar é o lado certo de errar.
         */
-        const nichoDoProduto = produto.domain_id
-          ? (porDominio.get(produto.domain_id) ?? null)
-          : null;
+        const arvore = entregaEArvore(oferta);
+        const raiz = await categoriaRaiz(arvore.categoria_folha);
+        const nichoDoProduto = decideNicho(produto.domain_id, raiz, porDominio, porCategoria);
 
-        if (produto.domain_id && !porDominio.has(produto.domain_id)) {
-          dominiosNovos.add(produto.domain_id);
-        }
+        if (raiz && !porCategoria.has(raiz)) categoriasNovas.add(raiz);
 
         if (!linha) {
           const { data: novo, error } = await db
@@ -632,6 +717,8 @@ async function main() {
               sku_externo: sku,
               url_original: `https://www.mercadolivre.com.br/p/${produtoId}`,
               dominio_externo: produto.domain_id ?? null,
+              categoria_raiz: raiz,
+              ...arvore,
               ...promocaoDeclarada(oferta),
               vendedor: vendedor?.nickname ?? `vendedor ${oferta.seller_id}`,
               loja_oficial: Boolean(oferta.official_store_id),
@@ -657,6 +744,8 @@ async function main() {
             .update({
               ultima_coleta_em: new Date().toISOString(),
               dominio_externo: produto.domain_id ?? undefined,
+              categoria_raiz: raiz ?? undefined,
+              ...arvore,
               ...promocaoDeclarada(oferta),
               imagem_url: fotoDoProduto(produto),
               imagem_obtida_em: new Date().toISOString(),
@@ -710,13 +799,13 @@ async function main() {
   // Domínio sem mapeamento é catálogo parado: o produto entra e nunca
   // publica. Dizer isso alto é o que impede a fila de triagem de
   // crescer em silêncio.
-  if (dominiosNovos.size > 0) {
-    console.log(`\n${dominiosNovos.size} domínio(s) sem mapeamento, e o produto deles não publica:`);
-    for (const d of [...dominiosNovos].slice(0, 15)) console.log(`  ${d}`);
+  if (categoriasNovas.size > 0) {
+    console.log(`\n${categoriasNovas.size} categoria(s) raiz sem mapeamento, e o produto delas não publica:`);
+    for (const c of categoriasNovas) console.log(`  ${c}`);
   }
 
   // E o que já estava no banco. É daqui que sai a queda.
-  await relePrecos(db, mkt.id, porDominio);
+  await relePrecos(db, mkt.id, porDominio, porCategoria);
   if (problemas.length > 0) {
     console.log(`\n${problemas.length} problema(s):`);
     for (const p of problemas.slice(0, 10)) console.log(`  ${p}`);

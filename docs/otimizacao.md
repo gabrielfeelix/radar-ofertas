@@ -428,3 +428,56 @@ novos ao fim de cada rodada.
 **4. A medida honesta ainda não existe.** `ofertas_por_dia` responde o
 critério da Fase 1, mas "o canal está engajando?" só se responde por
 taxa de clique, e ela depende do redirecionador (Fase 2).
+
+---
+
+## 8. O que os concorrentes fazem, e o que copiamos
+
+**01/08, depois de olhar cinco automações de influenciadores** (Mercado
+Livre, Shopee e AliExpress, todas em n8n) e a mensagem que eles
+publicam.
+
+### O que eles têm e nós não tínhamos
+
+| O quê | Situação |
+|---|---|
+| **Frete grátis na mensagem** | **Feito.** O dado vinha em `shipping.free_shipping` desde o primeiro dia e era descartado. Em produto de R$ 40 o frete é metade do preço |
+| **Parcelamento** ("em 5x R$ 35,78 sem juros") | **Não dá pela API.** `items/{id}` responde 403. Eles conseguem porque **raspam a página** (o nó "HTTP ABRIR SITE" + "HTML"). Precisa de decisão do dono, seção 8 do AGENTS |
+| **Link curto `mercadolivre.com/sec/XXXX`** | Eles usam o gerador oficial da Central. O nosso `matt_word` **nunca foi provado** que carrega atribuição |
+| **Imagem com borda** | Cosmético. Eles passam por "Edit Image (Border)" antes de enviar |
+| **AliExpress como terceira loja** | Tem API de afiliado com `getProducts`. Não está no nosso mapa |
+| **Instagram: comentário vira DM com link** | Fase 4. Fora de escopo, e o dono sabe |
+
+### O que nós temos e nenhum deles tem
+
+- **Série de preço própria.** Todos eles republicam o "de" que a loja
+  declara, sem medir nada. É a diferença entre repassador e curador.
+- **Comportas de vendedor e de nota.** Nenhum fluxo deles filtra
+  reputação: o que a API devolve, eles publicam.
+- **Ritmo por faixa do dia.** Os deles são fixos, de 5 a 15 minutos, o
+  dia inteiro.
+- **`#publi`.** Nenhuma das mensagens deles identifica publicidade.
+  É a regra 3.10, e é risco deles.
+
+### O que mudou por causa disso
+
+O dono decidiu: *"por mim a gente pode buscar todos os produtos
+possíveis, desde que a gente filtre bem legal pra um nicho específico.
+Até porque a gente vai criar grupo de tudo"*.
+
+Isso quebrava o mapeamento por domínio: o ML tem milhares deles, e a
+fila de triagem viraria trabalho sem fim. A saída foi **mapear em dois
+níveis**:
+
+1. **`nicho_categoria`** — a categoria RAIZ decide, e são 28 no site
+   inteiro. Cobre tudo, sem manutenção.
+2. **`nicho_dominio`** — continua e **vence** quando houver linha. É a
+   exceção para quando a raiz erra.
+
+O caso que prova os dois: suplemento fica sob a raiz "Saúde", e a raiz
+não está errada; só que ele vende como categoria própria e já tem 61
+produtos aqui.
+
+Resultado medido: **28 categorias na descoberta** (eram 12), **15
+nichos** criados para os grupos futuros, e a reclassificação da base
+deixou **zero produtos sem nicho** (eram 131).

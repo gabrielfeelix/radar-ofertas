@@ -52,6 +52,7 @@ export default async function Modelos() {
           lastroSem: modelo.lastro_sem,
           lastroQueda: modelo.lastro_queda,
           lastroDeclarado: modelo.lastro_declarado,
+          linhaFrete: modelo.linha_frete,
         }}
       />
     </Pagina>

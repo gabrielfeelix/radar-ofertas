@@ -146,6 +146,12 @@ export type AnuncioLinha = {
   promocoes: string[] | null;
   /** Quando o preço original foi lido. Promoção velha não é promoção. */
   preco_original_visto_em: string | null;
+  /** A categoria de primeiro nível. Regra GROSSA de nicho; o domínio é a fina e vence. */
+  categoria_raiz: string | null;
+  /** A categoria exata. A raiz sai dela e fica guardada para não reconsultar. */
+  categoria_folha: string | null;
+  /** A loja declara frete grátis? Nulo = não medimos, e a mensagem omite a linha. */
+  frete_gratis: boolean | null;
   /**
    * O domínio do marketplace (`MLB-CAT_AND_DOG_FOODS`). É por ele que o
    * nicho é decidido, e não pela busca que achou o produto.
@@ -402,6 +408,8 @@ export type ModeloMensagemLinha = {
   lastro_queda: string;
   /** Usado quando quem afirma o desconto é a loja. TEM que atribuir a ela. */
   lastro_declarado: string;
+  /** O que `{frete}` vira quando a loja declara frete grátis. Some quando não. */
+  linha_frete: string;
   /** Abre a linha da nota do curador. */
   nota_prefixo: string;
   ativo: boolean;

@@ -202,6 +202,7 @@ const modeloTres = {
   lastroSem: "Menor preço que observamos desde {desde}.",
   lastroQueda: "Caiu de {antes} para {agora} hoje.",
   lastroDeclarado: "A loja marcou de {antes} por {agora}.",
+  linhaFrete: "🚚 Frete grátis",
 };
 
 const daQueda = { ...dados, precoCentavos: 3878, precoAntesCentavos: 4407 };
@@ -240,6 +241,34 @@ confere("hífen comum passa", !temTravessao("anti-dobra, custo-benefício"));
 confere("texto limpo passa", !temTravessao("Caiu agora: era R$ 36, foi para R$ 31."));
 
 // =============================================================
+
+console.log("\nas linhas opcionais e o buraco delas\n");
+
+// Com nota e frete vazios, o corpo deixava quatro linhas em branco
+// empilhadas no meio da mensagem. O texto estava certo; o espaçamento
+// e que sobrava, e nenhum teste via.
+const corpoComOpcionais = "#publi · {loja}\n\n{produto}\n\n{nota}\n\n{preco}\n\n{frete}\n\n{link}";
+const semOpcionais = montaMensagem(
+  { ...modeloTres, corpo: corpoComOpcionais },
+  { ...dados, podeAfirmarMinimo: false, notaDoCurador: null, freteGratis: false },
+);
+confere("sem nota e sem frete, nao sobra linha em branco dupla", !/\n\n\n/.test(semOpcionais));
+confere("mas o respiro entre blocos continua", semOpcionais.includes("\n\n"));
+confere("e nao comeca nem termina com quebra", semOpcionais === semOpcionais.trim());
+
+const comFrete = montaMensagem(
+  { ...modeloTres, corpo: corpoComOpcionais },
+  { ...dados, podeAfirmarMinimo: false, notaDoCurador: null, freteGratis: true },
+);
+confere("com frete gratis, a linha aparece", comFrete.includes("Frete grátis"));
+confere("sem frete gratis, ela nao aparece", !semOpcionais.includes("Frete grátis"));
+// Nulo e "nao medimos": some igual, porque dizer que o frete e pago
+// sobre um anuncio que talvez tenha frete gratis custa a venda a toa.
+const freteNulo = montaMensagem(
+  { ...modeloTres, corpo: corpoComOpcionais },
+  { ...dados, podeAfirmarMinimo: false, notaDoCurador: null, freteGratis: null },
+);
+confere("frete nulo some igual a falso", !freteNulo.includes("Frete grátis"));
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);

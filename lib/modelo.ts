@@ -32,6 +32,7 @@ const RESERVA: ModeloDeMensagem = {
   // Atribui à loja de propósito: o "de" é alegação dela, não medição
   // nossa, e assumi-lo seria a regra 3.4 violada.
   lastroDeclarado: "A loja marcou de {antes} por {agora}.",
+  linhaFrete: "🚚 Frete grátis",
   lastroSem: "Menor preço que observamos desde {desde}.",
 };
 
@@ -39,11 +40,11 @@ export async function modeloGlobal(): Promise<ModeloDeMensagem> {
   try {
     const { data } = await supabaseServidor()
       .from("modelo_mensagem")
-      .select("corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, nota_prefixo")
+      .select("corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo")
       .is("canal_id", null)
       .maybeSingle();
 
-    const linha = data as Pick<ModeloMensagemLinha, "corpo" | "lastro_com" | "lastro_sem" | "lastro_queda" | "lastro_declarado" | "nota_prefixo"> | null;
+    const linha = data as Pick<ModeloMensagemLinha, "corpo" | "lastro_com" | "lastro_sem" | "lastro_queda" | "lastro_declarado" | "linha_frete" | "nota_prefixo"> | null;
     if (!linha) return RESERVA;
 
     return {
@@ -52,6 +53,7 @@ export async function modeloGlobal(): Promise<ModeloDeMensagem> {
       lastroSem: linha.lastro_sem,
       lastroQueda: linha.lastro_queda,
       lastroDeclarado: linha.lastro_declarado,
+      linhaFrete: linha.linha_frete,
       notaPrefixo: linha.nota_prefixo,
     };
   } catch {

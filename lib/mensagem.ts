@@ -39,6 +39,14 @@ export type ModeloDeMensagem = {
    * assumi-lo como nosso é repetir a mentira que a regra 3.4 proíbe.
    */
   lastroDeclarado: string;
+  /**
+   * A linha de frete grátis, quando a loja declara.
+   *
+   * É a linha que os canais que funcionam sempre põem e nós não
+   * púnhamos: em produto barato o frete é metade do preço, e o dado
+   * vinha na resposta da API desde sempre.
+   */
+  linhaFrete?: string;
 };
 
 /**
@@ -85,6 +93,15 @@ export type DadosDaMensagem = {
    * num canal que publica trinta por dia vira sujeira.
    */
   notaDoCurador?: string | null;
+  /**
+   * A loja declara frete grátis?
+   *
+   * **Nulo é diferente de falso, e a diferença sai na mensagem.** Nulo
+   * é "não medimos", e nesse caso a linha some inteira: dizer "frete
+   * não incluso" sobre um anúncio que talvez tenha frete grátis é
+   * mentir para o lado caro, e custa a venda sem motivo.
+   */
+  freteGratis?: boolean | null;
 };
 
 /** As variáveis que o corpo aceita, para a tela listar sem inventar. */
@@ -97,6 +114,7 @@ export const VARIAVEIS = [
   { chave: "vendedor", explica: "quem vende no anúncio" },
   { chave: "lastro", explica: "a frase do histórico — muda com a série" },
   { chave: "nota", explica: "a sua opinião sobre o produto, escrita na ficha dele. Some quando não há" },
+  { chave: "frete", explica: "a linha de frete grátis. Some quando a loja não declara" },
   { chave: "link", explica: "o link com subid, do nosso redirecionador" },
 ] as const;
 
@@ -205,7 +223,28 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
     ? `${modelo.notaPrefixo ?? "💬"} ${dados.notaDoCurador.trim()}`
     : "";
 
-  return preenche(modelo.corpo, {
+  /*
+    A linha do frete some quando não há frete grátis, pela mesma razão
+    da nota do curador: rótulo órfão numa mensagem por dia é detalhe,
+    em trinta por dia é sujeira. E `false` some junto com `null` de
+    propósito — anunciar que o frete é pago não ajuda ninguém.
+  */
+  const frete = dados.freteGratis ? (modelo.linhaFrete ?? "🚚 Frete grátis") : "";
+
+  /*
+    As linhas opcionais somem, e o BURACO DELAS TAMBÉM.
+
+    `{nota}` e `{frete}` ficam vazios na maioria das mensagens, e cada
+    um deixava para trás o par de quebras que o separava das vizinhas.
+    Com os dois vazios o post saía com quatro linhas em branco no meio,
+    e nenhum teste pegava isso: o texto estava certo, o espaçamento é
+    que estava sobrando. Só aparece lendo o post publicado.
+
+    Três quebras ou mais viram duas, que é o parágrafo. Nunca vira uma:
+    o respiro entre blocos é o que faz a mensagem ser lida na rolagem.
+  */
+  const texto = preenche(modelo.corpo, {
+    frete,
     nota,
     produto: dados.produto,
     preco: reais(dados.precoCentavos),
@@ -216,6 +255,8 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
     lastro,
     link: dados.link,
   });
+
+  return texto.replace(/\n{3,}/g, "\n\n").trim();
 }
 
 /**
