@@ -124,6 +124,43 @@ for (const atributos of [null, { BRAND: "Natura" }, { GENDER: "" }]) {
   );
 }
 
+/*
+  ESCOPO POR NICHO (migration 47), e este é o caso que quase silenciou
+  metade de um canal.
+
+  O Radar Beauty aceita `beleza` e `perfume`, e o filtro de GENDER com
+  `exige` valia para o canal inteiro. Shampoo, protetor solar e
+  absorvente não declaram gênero: caíam no `exige` e eram reprovados.
+  Doze produtos legítimos, pegos na simulação de `limpa-fila --seco`.
+*/
+const PERFUME = "nicho-perfume";
+const BELEZA = "nicho-beleza";
+
+const beautyReal = [
+  { atributo: "GENDER", valores: ["Masculino"], modo: "exclui", exigeAtributo: true, nichoId: PERFUME },
+];
+
+confere(
+  "escopo: shampoo (beleza, sem GENDER) passa no Beauty",
+  canalAceitaAtributos(beautyReal, { BRAND: "Seda" }, BELEZA),
+);
+confere(
+  "escopo: perfume sem GENDER é barrado no Beauty",
+  !canalAceitaAtributos(beautyReal, { BRAND: "Natura" }, PERFUME),
+);
+confere(
+  "escopo: perfume feminino passa no Beauty",
+  canalAceitaAtributos(beautyReal, { GENDER: "Feminino" }, PERFUME),
+);
+confere(
+  "escopo: perfume masculino é barrado no Beauty",
+  !canalAceitaAtributos(beautyReal, { GENDER: "Masculino" }, PERFUME),
+);
+confere(
+  "escopo: filtro sem nichoId continua valendo para tudo",
+  !canalAceitaAtributos(soMascExige, { BRAND: "Seda" }, BELEZA),
+);
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");

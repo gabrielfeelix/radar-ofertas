@@ -240,6 +240,8 @@ export type CanalAtributoLinha = {
   modo: "inclui" | "exclui";
   /** Reprova produto que não declara o atributo. Só para canal que é recorte. */
   exige_atributo: boolean;
+  /** A que nicho o filtro se aplica. Nulo = o canal inteiro. */
+  nicho_id: string | null;
   criado_em: string;
   atualizado_em: string;
 };

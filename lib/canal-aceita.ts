@@ -46,6 +46,16 @@ export type FiltroDeCanal = {
    * Quem é RESTO não exige, e fica com o que não declara.
    */
   exigeAtributo?: boolean;
+  /**
+   * A que nicho este filtro se aplica (migration 47).
+   *
+   * Nulo vale para o canal inteiro. Preenchido existe porque o Radar
+   * Beauty aceita `beleza` e `perfume`, e o filtro de `GENDER` só faz
+   * sentido no segundo: com escopo global, shampoo e protetor solar —
+   * que não declaram gênero — caíam no `exigeAtributo` e eram
+   * reprovados. Doze produtos legítimos, na primeira simulação.
+   */
+  nichoId?: string | null;
 };
 
 /**
@@ -74,10 +84,14 @@ function normaliza(valor: string): string {
 export function canalAceitaAtributos(
   filtros: FiltroDeCanal[] | null | undefined,
   atributos: AtributosDoProduto | null | undefined,
+  nichoId?: string | null,
 ): boolean {
   if (!filtros || filtros.length === 0) return true;
 
   for (const filtro of filtros) {
+    // Filtro com escopo só opina sobre o nicho dele.
+    if (filtro.nichoId && filtro.nichoId !== nichoId) continue;
+
     const bruto = atributos?.[filtro.atributo];
 
     // O produto não declara o atributo. O filtro só opina se exigir.

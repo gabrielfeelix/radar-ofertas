@@ -494,12 +494,12 @@ async function categoriaRaiz(categoriaId) {
  * coletor decide em lote, na memória, e a tela precisa da mesma
  * resposta para um item só.
  */
-function decideNicho(dominio, raiz, porDominio, porCategoria) {
-  if (dominio && porDominio.has(dominio)) {
-    const escolhido = porDominio.get(dominio);
-    // Nulo aqui é decisão tomada, não ausência: não caia para a raiz.
-    return escolhido ?? null;
-  }
+function decideNicho(dominio, raiz, porDominio, porCategoria, ramo, porRamo) {
+  // Três níveis (migration 46): domínio vence ramo, ramo vence raiz.
+  // Nulo em qualquer um é decisão tomada, não ausência — e bloqueia os
+  // de baixo, senão a regra grossa desfaria a fina.
+  if (dominio && porDominio.has(dominio)) return porDominio.get(dominio) ?? null;
+  if (ramo && porRamo?.has(ramo)) return porRamo.get(ramo) ?? null;
   return raiz ? (porCategoria.get(raiz) ?? null) : null;
 }
 
@@ -573,7 +573,7 @@ function reputacaoDoVendedor(usuario) {
  * É o trabalho que precisa caber de hora em hora, e por isso ele lê em
  * lotes e pelo produto de catálogo, que é uma chamada por anúncio.
  */
-async function relePrecos(db, mktId, porDominio, porCategoria) {
+async function relePrecos(db, mktId, porDominio, porCategoria, porRamo) {
   const { data: anuncios } = await db
     .from("anuncio")
     .select(
@@ -637,7 +637,7 @@ async function relePrecos(db, mktId, porDominio, porCategoria) {
         dominio = p?.domain_id ?? dominio;
 
         if (a.produto?.nicho_id == null) {
-          const nicho = decideNicho(dominio, raiz, porDominio, porCategoria);
+          const nicho = decideNicho(dominio, raiz, porDominio, porCategoria, ramo, porRamo);
           if (nicho) {
             await db.from("produto").update({ nicho_id: nicho }).eq("id", a.produto_id);
             classificados++;
@@ -738,6 +738,19 @@ async function main() {
     .eq("marketplace_id", mkt.id);
 
   const porCategoria = new Map((porRaiz ?? []).map((c) => [c.categoria_raiz, c.nicho_id]));
+
+  /*
+    O nível do meio (migration 46). "Esportes e Fitness" tem 40 filhas e
+    só sete são academia: sem este corte, o Radar Fitness recebe
+    carabina de pressão e taco de beisebol, que é o que ele recebeu na
+    primeira noite.
+  */
+  const { data: porRamoLinhas } = await db
+    .from("nicho_ramo")
+    .select("ramo, nicho_id")
+    .eq("marketplace_id", mkt.id);
+
+  const porRamo = new Map((porRamoLinhas ?? []).map((r) => [r.ramo, r.nicho_id]));
   const categoriasNovas = new Set();
 
   let produtosNovos = 0;
@@ -1079,7 +1092,7 @@ async function main() {
         const daArvore = await arvoreDaCategoria(arvore.categoria_folha);
         const raiz = daArvore.raiz;
         const ramo = daArvore.ramo;
-        const nichoDoProduto = decideNicho(produto.domain_id, raiz, porDominio, porCategoria);
+        const nichoDoProduto = decideNicho(produto.domain_id, raiz, porDominio, porCategoria, ramo, porRamo);
 
         if (raiz && !porCategoria.has(raiz)) categoriasNovas.add(raiz);
 
@@ -1237,7 +1250,7 @@ async function main() {
   }
 
   // E o que já estava no banco. É daqui que sai a queda.
-  await relePrecos(db, mkt.id, porDominio, porCategoria);
+  await relePrecos(db, mkt.id, porDominio, porCategoria, porRamo);
   if (problemas.length > 0) {
     console.log(`\n${problemas.length} problema(s):`);
     for (const p of problemas.slice(0, 10)) console.log(`  ${p}`);

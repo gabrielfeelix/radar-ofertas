@@ -73,14 +73,22 @@ const CANAIS = [
     nome: "Radar Fitness",
     chat: "@radarfitness1",
     etiqueta: "radarfitness",
-    nichos: ["esporte", "suplemento"],
     /*
-      Suplemento entra junto porque é o miolo do canal, e porque ele já
-      é o maior nicho parado da base: 61 produtos com série de preço
-      correndo desde 01/08, esperando canal. A raiz "Esportes e
-      Fitness" traz o resto — com Windsurfe e Equitação segurados pela
-      regra de ramo secundário da migration 37.
+      `fitness`, e NÃO `esporte`. A auditoria do dono na primeira noite
+      mostrou por quê: a raiz "Esportes e Fitness" do Mercado Livre tem
+      40 filhas, e o canal recebeu carabina de pressão, chumbinho de
+      caça, lanterna tática, perneira de equitação e taco de beisebol —
+      tudo legitimamente sob aquela raiz.
+
+      `fitness` é um nicho de RAMO (migration 46): sete filhas de
+      MLB1276 que são academia. O resto continua caindo em `esporte`,
+      que não tem canal e segue formando série de preço para o dia em
+      que houver um Radar Esportes.
+
+      Suplemento entra junto porque é o miolo do canal e o maior nicho
+      da base fora pet e eletrônico.
     */
+    nichos: ["fitness", "suplemento"],
   },
   {
     nome: "Radar Tech",
@@ -109,14 +117,22 @@ const CANAIS = [
   {
     nome: "Radar Beauty",
     chat: "@radarbeauty",
-    etiqueta: "radargeral",
+    etiqueta: "radarbeauty",
     nichos: ["beleza", "perfume"],
     /*
-      Perfume virou nicho próprio na migration 37 porque ganhou canal.
-      O Beauty continua recebendo o que não for masculino: assim nenhum
-      perfume fica sem canal, e nenhum sai repetido nos dois.
+      `exige: true` dos DOIS LADOS, e isto foi pedido explícito do dono
+      depois de ver um perfume feminino sair no canal masculino:
+      *"nao pode. e nao pode ir perfume masc no beauty"*.
+
+      Sem exigir, perfume sem `GENDER` gravado passaria aqui — e um
+      masculino mal cadastrado acabaria no Beauty. Com os dois lados
+      exigindo, perfume de gênero desconhecido não sai em canal nenhum,
+      que é o que "não pode" significa nos dois sentidos.
+
+      O custo é aceito e é pequeno: desde que o coletor grava atributos,
+      perfume sem `GENDER` é exceção.
     */
-    filtros: [{ atributo: "GENDER", valores: ["Masculino"], modo: "exclui" }],
+    filtros: [{ atributo: "GENDER", valores: ["Masculino"], modo: "exclui", exige: true, nicho: "perfume" }],
   },
   {
     nome: "Radar Perfumes (masc)",
@@ -135,7 +151,7 @@ const CANAIS = [
         desconhecido, e canal mudo é menos ruim que canal errado. Quem
         fica com o desconhecido é o Beauty, que é o RESTO.
       */
-      { atributo: "GENDER", valores: ["Masculino"], modo: "inclui", exige: true },
+      { atributo: "GENDER", valores: ["Masculino"], modo: "inclui", exige: true, nicho: "perfume" },
     ],
   },
 ];
@@ -224,6 +240,9 @@ async function main() {
           valores: f.valores,
           modo: f.modo,
           exige_atributo: f.exige ?? false,
+          // Escopo (migration 47): sem ele o filtro de GENDER valeria
+          // para shampoo e protetor solar, que não declaram gênero.
+          nicho_id: f.nicho ? idDoNicho.get(f.nicho) : null,
         })),
       );
     }

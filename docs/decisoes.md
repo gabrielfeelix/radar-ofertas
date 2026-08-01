@@ -1446,3 +1446,79 @@ preço e imagem da Amazon continuam com as 24 horas da regra 3.3.
 
 **Mudaria se:** o custo de armazenamento passar a apertar. Hoje o
 gargalo do plano gratuito é a série de preço, não a coluna de atributos.
+
+---
+
+## D-048 · O nicho ganha um terceiro nível, e o filtro de atributo ganha escopo
+**Data:** 2026-08-01
+
+Auditoria do dono, canal por canal, na primeira noite dos sete:
+*"tem que revisar cada um pra estar CORRETOS"*. Ela achou dois buracos
+de modelagem, e os dois são do mesmo tipo — uma regra que valia com um
+canal e deixou de valer com sete.
+
+### O ramo entra entre a raiz e o domínio
+
+O Radar Fitness recebeu carabina de pressão, chumbinho de caça, lanterna
+tática, perneira de equitação e taco de beisebol. **Tudo legitimamente
+sob a raiz "Esportes e Fitness"**, que tem 40 filhas e só umas sete são
+academia.
+
+A regra de ramo secundário (D-041) não resolve isso porque ela é uma
+**proporção**, não um filtro: quatro primários liberam um secundário.
+Ela foi feita para "cavalo de vez em quando num canal de cão e gato",
+que é dosagem. Aqui o problema é de pertencimento.
+
+Faltava um nível:
+
+| Camada | Quantas | Serve para |
+|---|---|---|
+| `nicho_categoria` (raiz) | 28 | cobre o site inteiro |
+| **`nicho_ramo`** | ~30 por raiz | **separa o que a raiz mistura** |
+| `nicho_dominio` | milhares | a exceção fina, e vence todas |
+
+O ramo já era gravado em `anuncio.categoria_ramo` desde a D-041 e sai da
+mesma resposta da API. Custo zero de chamada nova.
+
+`esporte` continua existindo, agora sem canal: ele segue formando série
+de preço para o dia em que houver um Radar Esportes. O Radar Fitness
+passou a aceitar `fitness` + `suplemento`.
+
+### Geek é cultura pop, não "colecionável"
+
+O dono também corrigiu a definição do nicho: *"é coisa de NERD, star
+wars, cultura pop, harry potter, RPG de mesa, controles de play, jogos
+de play, não medalha acrílico cristal"*.
+
+A migration 37 tinha montado `geek` como "colecionáveis e hobbies", e
+colecionável é um guarda-chuva grande demais — cabe medalha, moeda,
+selo, álbum de figurinha da Copa e aeromodelismo. Saíram para
+`brinquedo` ou para fora: álbuns, figurinhas, miniatura de carro, cubo
+mágico, aeromodelismo, medalha. "Antiguidades e Coleções" voltou a não
+rotear.
+
+**O que não dá para separar, e fica registrado:** `MLB-ACTION_FIGURES`
+tem tanto action figure de colecionador quanto boneco infantil de
+personagem, e o Mercado Livre não distingue os dois em nível nenhum da
+árvore. O canal vai receber um carrinho da Patrulha Canina de vez em
+quando.
+
+### O filtro de atributo precisa de escopo
+
+O filtro `GENDER exclui Masculino, exige` da D-042 valia para o canal
+inteiro. O Radar Beauty aceita `beleza` **e** `perfume`, e shampoo,
+protetor solar e absorvente não declaram gênero: caíam no `exige` e
+seriam reprovados. **Doze produtos legítimos**, pegos na simulação de
+`limpa-fila --seco` antes de chegarem ao canal.
+
+`canal_atributo.nicho_id` resolve: o filtro só opina sobre o nicho dele.
+Nulo continua valendo para o canal inteiro, que é o certo em canal de
+nicho único.
+
+**A lição geral:** quanto mais estreito o filtro, mais o escopo importa.
+`exige_atributo` só faz sentido dentro do nicho onde aquele atributo é a
+distinção; fora dele, exigir um atributo que a prateleira nem usa cala o
+canal.
+
+**Mudaria se:** aparecer um filtro que precise valer para dois nichos
+mas não para o canal todo. Aí `nicho_id` vira lista.

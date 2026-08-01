@@ -128,7 +128,16 @@ O **recorte fino dentro do nicho** (D-042). `canal_nicho` responde de que pratel
 
 `atributo` é a chave como o marketplace a escreve (`GENDER`), e casa com `produto.atributos`. `modo` é `inclui` (só passa quem casa) ou `exclui` (passa quem não casa) — os dois existem porque o par Beauty/Perfumes precisa dos dois lados.
 
-**Canal sem linha aceita tudo, e produto sem o atributo passa.** A segunda é a que importa: reprovar por ausência calaria o canal por causa do cadastro de um terceiro.
+**Canal sem linha aceita tudo, e produto sem o atributo passa** — salvo quando o filtro tem `exige_atributo`, que é o caso do par Beauty/Perfumes.
+
+`nicho_id` é o escopo (D-048): o filtro só opina sobre produtos daquele nicho. Nulo vale para o canal inteiro. Sem ele, o filtro de `GENDER` do Radar Beauty reprovaria shampoo e protetor solar, que não declaram gênero.
+
+### nicho_ramo
+`id`, `operacao_id`, `marketplace_id`, `ramo`, `nome_ramo`, `nicho_id`
+
+O nível **médio** do roteamento (D-048), entre a raiz e o domínio. Existe porque "Esportes e Fitness" é uma raiz só com 40 filhas, e só sete são academia: sem este corte o Radar Fitness recebe carabina de pressão e taco de beisebol.
+
+Ordem de decisão: **domínio vence ramo, ramo vence raiz.** Nulo em qualquer nível é decisão tomada e bloqueia os de baixo.
 
 ### fonte_descoberta e mencao
 Colheita (D-012). A fonte tem `nicho_id`, e **o produto colhido herda esse nicho** — sem isso a colheita produz milhares de produtos não roteáveis.

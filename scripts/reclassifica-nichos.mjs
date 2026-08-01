@@ -78,33 +78,71 @@ async function main() {
     .eq("marketplace_id", mktId);
 
   const porCategoria = new Map((porRaiz ?? []).map((c) => [c.categoria_raiz, c.nicho_id]));
-  console.log(`${porDominio.size} domínios e ${porCategoria.size} categorias raiz mapeados`);
 
-  /** A raiz de uma categoria, com cache. */
-  const raizDe = new Map();
-  async function categoriaRaiz(id) {
-    if (!id) return null;
-    if (raizDe.has(id)) return raizDe.get(id);
+  // O nível do meio (migration 46).
+  const { data: porRamoLinhas } = await db
+    .from("nicho_ramo")
+    .select("ramo, nicho_id")
+    .eq("marketplace_id", mktId);
+
+  const porRamo = new Map((porRamoLinhas ?? []).map((r) => [r.ramo, r.nicho_id]));
+  console.log(
+    `${porDominio.size} domínios, ${porRamo.size} ramos e ${porCategoria.size} categorias raiz mapeados`,
+  );
+
+  /**
+   * A raiz E o ramo de uma categoria, com cache.
+   *
+   * O ramo é `path_from_root[1]`, e vem na mesma resposta que já era
+   * pedida para descobrir a raiz: custo zero de chamada nova. Ele é o
+   * nível do meio da migration 46, que é o que separa "academia" do
+   * resto de "Esportes e Fitness".
+   */
+  const arvoreDe = new Map();
+  async function arvoreDaCategoria(id) {
+    if (!id) return { raiz: null, ramo: null };
+    if (arvoreDe.has(id)) return arvoreDe.get(id);
     const c = await fetch(`${API}/categories/${id}`, { headers: cabecalho })
       .then((r) => r.json())
       .catch(() => null);
-    const raiz = c?.path_from_root?.[0]?.id ?? null;
-    raizDe.set(id, raiz);
-    return raiz;
+    const arvore = {
+      raiz: c?.path_from_root?.[0]?.id ?? null,
+      ramo: c?.path_from_root?.[1]?.id ?? null,
+    };
+    arvoreDe.set(id, arvore);
+    return arvore;
   }
 
-  /** Fina vence grossa, e "não roteia" bloqueia as duas. */
-  function decideNicho(dominio, raiz) {
+  /** Domínio vence ramo, ramo vence raiz, e "não roteia" bloqueia os de baixo. */
+  function decideNicho(dominio, raiz, ramo) {
     if (dominio && porDominio.has(dominio)) return porDominio.get(dominio) ?? null;
+    if (ramo && porRamo.has(ramo)) return porRamo.get(ramo) ?? null;
     return raiz ? (porCategoria.get(raiz) ?? null) : null;
   }
 
-  const { data: anuncios } = await db
-    .from("anuncio")
-    .select("id, url_original, produto_id, produto:produto_id ( titulo_canonico, nicho_id )")
-    .eq("marketplace_id", mktId);
+  /*
+    PAGINADO, e isto era um defeito silencioso. O PostgREST devolve no
+    máximo 1.000 linhas por consulta, e o script pedia todos os anúncios
+    de uma vez: com 1.800 no banco, ele reclassificava 1.000 e dizia
+    "1000 lidos" como se fosse o total. Os outros 800 ficavam com o nicho
+    velho, sem erro nenhum e sem aviso.
 
-  console.log(`${(anuncios ?? []).length} anúncios a conferir\n`);
+    Só apareceu quando a base passou de mil. Antes disso o script estava
+    certo por sorte.
+  */
+  const anuncios = [];
+  for (let de = 0; ; de += 1000) {
+    const { data: pagina } = await db
+      .from("anuncio")
+      .select("id, url_original, produto_id, produto:produto_id ( titulo_canonico, nicho_id )")
+      .eq("marketplace_id", mktId)
+      .range(de, de + 999);
+    if (!pagina || pagina.length === 0) break;
+    anuncios.push(...pagina);
+    if (pagina.length < 1000) break;
+  }
+
+  console.log(`${anuncios.length} anúncios a conferir\n`);
 
   let lidos = 0;
   let mudaram = 0;
@@ -140,11 +178,11 @@ async function main() {
       lidos++;
 
       const { anuncio, dominio, folha, frete } = r;
-      const raiz = await categoriaRaiz(folha);
+      const { raiz, ramo } = await arvoreDaCategoria(folha);
 
       if (raiz && !porCategoria.has(raiz)) semMapa.set(raiz, (semMapa.get(raiz) ?? 0) + 1);
 
-      const nichoNovo = decideNicho(dominio, raiz);
+      const nichoNovo = decideNicho(dominio, raiz, ramo);
       const nichoAntigo = anuncio.produto?.nicho_id ?? null;
 
       if (!SECO) {
@@ -153,6 +191,7 @@ async function main() {
           .update({
             dominio_externo: dominio,
             categoria_raiz: raiz,
+            categoria_ramo: ramo,
             categoria_folha: folha,
             frete_gratis: frete,
           })
