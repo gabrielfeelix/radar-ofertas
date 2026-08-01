@@ -28,7 +28,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-import { montaLinkDeAfiliado } from "../lib/afiliado.ts";
+import { geraLinks } from "../lib/gerador-ml.ts";
 import { montaMensagem } from "../lib/mensagem.ts";
 import { RITMO_PADRAO, podePublicarAgora } from "../lib/ritmo.ts";
 
@@ -179,14 +179,44 @@ async function main() {
     notaPrefixo: modeloLinha.nota_prefixo,
   };
 
+  /*
+    A SESSÃO DA CENTRAL DE AFILIADOS.
+
+    Mora em `credencial_rotativa`, junto do refresh token do ML, e pelo
+    mesmo motivo: no agendador cada execução começa de um clone limpo,
+    então segredo em arquivo ou em secret do GitHub ficaria velho na
+    primeira renovação e a execução seguinte falharia calada.
+
+    Ela EXPIRA sozinha, e é a dependência mais frágil do sistema hoje.
+    Quando cair, nenhuma publicação sai — e isso é o desfecho certo:
+    publicar com link que não atribui é trabalhar de graça.
+  */
+  const { data: segredos } = await db
+    .from("credencial_rotativa")
+    .select("chave, valor")
+    .in("chave", ["afiliados_cookie", "afiliados_csrf"]);
+
+  const sessao = {
+    cookie: (segredos ?? []).find((s) => s.chave === "afiliados_cookie")?.valor ?? "",
+    csrf: (segredos ?? []).find((s) => s.chave === "afiliados_csrf")?.valor ?? "",
+  };
+
+  if (!sessao.cookie || !sessao.csrf) {
+    console.log("Falta a sessão da Central de Afiliados em `credencial_rotativa`. Nada sai sem link.");
+    return;
+  }
+
   const { data: canais } = await db
     .from("canal")
-    .select("id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, canal_nicho ( nicho_id )")
+    .select(
+      "id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, canal_nicho ( nicho_id )",
+    )
     .eq("ativo", true);
 
   let reprovadas = 0;
   let publicadas = 0;
   let esperando = 0;
+  let semLink = 0;
   const motivos = {};
 
   for (const oferta of novas ?? []) {
@@ -284,7 +314,7 @@ async function main() {
           },
           { onConflict: "oferta_id,canal_id", ignoreDuplicates: false },
         )
-        .select("id, subid, estado")
+        .select("id, subid, estado, link_afiliado")
         .single();
 
       if (erroPub || !pub || pub.estado === "enviada") continue;
@@ -304,11 +334,48 @@ async function main() {
         continue;
       }
 
-      const link = montaLinkDeAfiliado(
-        anuncio.url_original,
-        pub.subid,
-        anuncio.marketplace?.slug ?? "",
-      );
+      /*
+        O LINK É GERADO AQUI, POR ÚLTIMO, e a posição importa.
+
+        Só chega neste ponto o que já passou pelas comportas de
+        confiança, achou canal do nicho e ganhou a vez no ritmo. São
+        algumas dezenas por dia, e não milhares: gerar antes da
+        curadoria seria pedir link para produto que nunca vai sair.
+
+        Se a geração falhar, a publicação NÃO sai e fica pendente com o
+        motivo gravado. Link montado à mão não atribui comissão, então
+        publicar sem ele é entregar audiência de graça.
+      */
+      if (!canal.etiqueta_afiliado) {
+        console.log(`  ✗ ${canal.nome}: sem etiqueta de afiliado cadastrada`);
+        continue;
+      }
+
+      const jaTinha = pub.link_afiliado;
+      let curto = jaTinha;
+
+      if (!curto) {
+        const { gerados, falhas } = await geraLinks(
+          [anuncio.url_original],
+          canal.etiqueta_afiliado,
+          sessao,
+        );
+
+        if (gerados.length === 0) {
+          const motivo = falhas[0]?.motivo ?? "gerador não respondeu";
+          console.log(`  ✗ ${canal.nome}: link não gerado (${motivo})`);
+          semLink++;
+          continue;
+        }
+
+        curto = gerados[0].curto;
+        await db
+          .from("publicacao")
+          .update({ link_afiliado: curto, link_afiliado_em: new Date().toISOString() })
+          .eq("id", pub.id);
+      }
+
+      const link = { url: curto };
 
       const texto = montaMensagem(modelo, {
         produto: anuncio.produto?.titulo_canonico ?? "",
@@ -362,7 +429,7 @@ async function main() {
   */
   const { data: pendentes } = await db
     .from("publicacao")
-    .select(`id, subid, canal_id, oferta:oferta_id ( ${SELECAO} )`)
+    .select(`id, subid, canal_id, link_afiliado, oferta:oferta_id ( ${SELECAO} )`)
     .eq("estado", "pendente")
     .order("criado_em");
 
@@ -382,7 +449,33 @@ async function main() {
       continue;
     }
 
-    const link = montaLinkDeAfiliado(anuncio.url_original, pub.subid, anuncio.marketplace?.slug ?? "");
+    // Mesma regra da primeira passada: sem link gerado, não sai. E
+    // reaproveita o que já foi gerado antes, para não pedir duas vezes
+    // o mesmo link ao painel de outra empresa.
+    if (!canal.etiqueta_afiliado) {
+      console.log(`  ✗ ${canal.nome}: sem etiqueta de afiliado cadastrada`);
+      continue;
+    }
+
+    let curto = pub.link_afiliado;
+    if (!curto) {
+      const { gerados, falhas } = await geraLinks(
+        [anuncio.url_original],
+        canal.etiqueta_afiliado,
+        sessao,
+      );
+      if (gerados.length === 0) {
+        console.log(`  ✗ ${canal.nome}: link não gerado (${falhas[0]?.motivo ?? "sem resposta"})`);
+        semLink++;
+        continue;
+      }
+      curto = gerados[0].curto;
+      await db
+        .from("publicacao")
+        .update({ link_afiliado: curto, link_afiliado_em: new Date().toISOString() })
+        .eq("id", pub.id);
+    }
+
     const texto = montaMensagem(modelo, {
       produto: anuncio.produto?.titulo_canonico ?? "",
       precoCentavos: oferta.preco_atual_centavos,
@@ -395,7 +488,8 @@ async function main() {
       podeAfirmarMinimo: oferta.pode_afirmar_minimo,
       gatilho: oferta.gatilho,
       notaDoCurador: anuncio.produto?.nota_curador,
-      link: link.url,
+      freteGratis: anuncio.frete_gratis,
+      link: curto,
     });
 
     const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, fotoValida(anuncio));
@@ -417,8 +511,11 @@ async function main() {
   }
 
   console.log(
-    `\n${publicadas} publicadas · ${reprovadas} reprovadas · ${esperando} esperando o ritmo`,
+    `\n${publicadas} publicadas · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ${semLink} sem link`,
   );
+  if (semLink > 0) {
+    console.log("Sem link é quase sempre sessão da Central expirada. Renove e rode de novo.");
+  }
   if (reprovadas > 0) console.log(`motivos: ${JSON.stringify(motivos)}`);
 }
 
