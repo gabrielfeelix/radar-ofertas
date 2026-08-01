@@ -225,6 +225,38 @@ export type PublicacaoLinha = {
   atualizado_em: string;
 };
 
+/**
+ * Cupom da loja (migration 17).
+ *
+ * Digitado à mão porque **nenhum marketplace expõe cupom por API** —
+ * conferido em 31/07: `coupons`, `deals` e `marketplace/coupons` do
+ * Mercado Livre devolvem 404, e não é permissão, é ausência.
+ *
+ * `esgotado_em` é separado de `vigente_ate` porque um é fato observado
+ * e o outro é promessa da loja. Cupom que acaba antes do prazo só se
+ * descobre usando.
+ */
+export type CupomLinha = {
+  id: string;
+  operacao_id: string;
+  marketplace_id: string;
+  /** Nulo = vale para qualquer nicho. */
+  nicho_id: string | null;
+  codigo: string;
+  descricao: string | null;
+  tipo: "percentual" | "valor";
+  /** Percentual (12 = 12%) ou centavos, conforme o tipo. */
+  valor: number;
+  valor_minimo_centavos: number;
+  teto_desconto_centavos: number | null;
+  vigente_de: string;
+  vigente_ate: string | null;
+  esgotado_em: string | null;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+};
+
 export type TipoLeituraFonte = "web_publica" | "conta_usuario";
 
 export type FonteDescobertaLinha = {
@@ -497,6 +529,7 @@ export type Banco = {
       comporta_dia: Tabela<ComportaDiaLinha, "operacao_id" | "dia" | "comporta">;
       canal: Tabela<CanalLinha, "operacao_id" | "nome" | "plataforma">;
       canal_nicho: Tabela<CanalNichoLinha, "canal_id" | "nicho_id">;
+      cupom: Tabela<CupomLinha, "operacao_id" | "marketplace_id" | "codigo" | "tipo" | "valor">;
       publicacao: Tabela<
         PublicacaoLinha,
         "operacao_id" | "oferta_id" | "canal_id" | "preco_na_fila_centavos"
@@ -506,6 +539,17 @@ export type Banco = {
       anuncio_serie: { Row: AnuncioSerieLinha; Relationships: [] };
       saude_operacao: { Row: SaudeOperacaoLinha; Relationships: [] };
       rendimento_da_fonte: { Row: RendimentoDaFonteLinha; Relationships: [] };
+      /** Cupons que podem entrar numa mensagem AGORA. As três condições de "vivo" moram só na view. */
+      cupons_vivos: {
+        Row: CupomLinha & {
+          marketplace_slug: string;
+          marketplace_nome: string;
+          nicho_slug: string | null;
+          /** Nulo quando não há prazo declarado. */
+          horas_restantes: number | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       registra_preco: {

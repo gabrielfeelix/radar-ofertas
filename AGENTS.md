@@ -308,6 +308,28 @@ E o de sempre: **97 botões sem `cursor: pointer`** foi achado assim. `pnpm veri
 
 **Os dois catálogos estão vazios** — o local desde o `db:reset` de 28/07, e o da nuvem porque nunca teve dado. O catálogo se refaz rodando a colheita, e é o que destrava ver as telas cheias.
 
+### Para testar depois — anotado em 01/08/2026
+
+**1. `matt_word` numa URL normal, sem o gerador.** Colar
+`?matt_word=radarpet&matt_tool=66367903` numa URL comum de produto do ML.
+Se o Mercado Livre honrar, o sistema publica **100% sozinho**; se não,
+cada lote de links passa pelo gerador do painel. É a diferença entre
+automático e semiautomático, e **não há como verificar sem venda real** —
+faça junto com a compra de teste da Fase 0.
+
+**2. Geração em lote pelo painel**, que é o plano B do item 1. O gerador
+aceita várias URLs de uma vez por etiqueta: o sistema monta a lista de
+aprovados, alguém cola, e devolve os links. Funciona hoje, com um passo
+manual por lote. Vale medir quanto tempo custa de verdade antes de
+descartar.
+
+**3. Configurar o bot do Telegram.** Criar no `@BotFather`, adicionar
+como administrador do canal, e o sistema publica por `sendMessage`. A
+regra 3.2 autoriza — Telegram pode postar sozinho pela API oficial. Meia
+hora de trabalho, e **deixou de depender do redirecionador** desde que a
+etiqueta provou carregar a atribuição. O que decide se ele publica
+sozinho ou com um passo manual é o teste 1.
+
 ### Bloqueado, e por quem
 
 - **Coleta de preço real** — falta credencial de marketplace, e o caminho mais curto **mudou em 31/07**. A Shopee continua sendo a melhor chave (resolve dado e link de uma vez), mas ela está a cerca de três semanas de distância: cadastro em análise, e a API só pode ser pedida depois de aprovado, levando até duas semanas a mais. **O Mercado Livre virou o atalho, e ele andou:** a aplicação já existe e `ML_CLIENT_ID` e `ML_CLIENT_SECRET` já estão no `.env`. **Falta um único passo**, o `ML_REFRESH_TOKEN`, que sai de um fluxo de navegador descrito em `docs/credenciais.md` §4b. Quem retomar isto: é a primeira coisa da fila, e leva minutos.

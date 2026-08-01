@@ -136,6 +136,7 @@ async function montaNavegacao(): Promise<{
         { href: "/ajustes/nichos", rotulo: "Nichos", ponto: "#4B5563" },
         { href: "/ajustes/marketplaces", rotulo: "Marketplaces", ponto: "#4B5563" },
         { href: "/ajustes/modelos", rotulo: "Modelos de mensagem", ponto: "#4B5563" },
+        { href: "/ajustes/cupons", rotulo: "Cupons", ponto: "#8B5CF6" },
       ],
     },
   ];

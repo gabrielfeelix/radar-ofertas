@@ -44,9 +44,9 @@ type Ordem = "nota" | "comissao";
 export default async function Aprovar({
   searchParams,
 }: {
-  searchParams: Promise<{ ordem?: string; oferta?: string }>;
+  searchParams: Promise<{ ordem?: string; oferta?: string; nicho?: string }>;
 }) {
-  const { ordem: ordemBruta, oferta: ofertaAberta } = await searchParams;
+  const { ordem: ordemBruta, oferta: ofertaAberta, nicho: nichoFiltro } = await searchParams;
   const ordem: Ordem = ordemBruta === "comissao" ? "comissao" : "nota";
 
   // Uma leitura só do banco para as duas listas e os dois KPIs. O
@@ -59,11 +59,39 @@ export default async function Aprovar({
     vagasDeHoje(),
   ]);
 
-  const fila = [...fila0].sort((a, b) =>
+  /*
+    O filtro por nicho existe porque publicar é por canal, e canal é
+    de um nicho. "Quero ver só tecnologia agora, para postar naquele
+    grupo" é o pedido literal de quem opera — sem ele, decidir para um
+    canal significa varrer a fila inteira ignorando o que não serve.
+
+    Ele filtra a FILA, não os KPIs: as vagas e o total do dia
+    continuam sendo os da operação inteira. Um teto que mudasse ao
+    trocar de aba faria o número que controla o dia parecer outro a
+    cada clique.
+  */
+  const nichosDaFila = [...new Set(fila0.map((o) => o.nicho))]
+    .map((slug) => ({ slug, nome: fila0.find((o) => o.nicho === slug)?.nichoNome ?? slug }))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+  const filtrada = nichoFiltro ? fila0.filter((o) => o.nicho === nichoFiltro) : fila0;
+
+  const fila = [...filtrada].sort((a, b) =>
     ordem === "comissao"
       ? b.comissaoEstimadaCentavos - a.comissaoEstimadaCentavos
       : b.nota - a.nota,
   );
+
+  /** Preserva o nicho ao trocar a ordem, e vice-versa. */
+  const comFiltros = (mudanca: { ordem?: string; nicho?: string }) => {
+    const p = new URLSearchParams();
+    const o = mudanca.ordem ?? (ordem === "comissao" ? "comissao" : "");
+    const n = mudanca.nicho ?? nichoFiltro ?? "";
+    if (o) p.set("ordem", o);
+    if (n) p.set("nicho", n);
+    const q = p.toString();
+    return q ? `/aprovar?${q}` : "/aprovar";
+  };
   const estouro = publicacoes - vagas;
 
   // O painel é rota, não estado: sobrevive a recarregar, o botão
@@ -81,8 +109,12 @@ export default async function Aprovar({
           fila.length > 0 ? (
             <div className="flex items-center gap-1 rounded-md border border-borda bg-superficie p-1">
               <span className="px-2 text-xs text-texto-fraco">ordenar</span>
-              <Aba href="/aprovar" rotulo="Nota" ativo={ordem === "nota"} />
-              <Aba href="/aprovar?ordem=comissao" rotulo="Comissão" ativo={ordem === "comissao"} />
+              <Aba href={comFiltros({ ordem: "" })} rotulo="Nota" ativo={ordem === "nota"} />
+              <Aba
+                href={comFiltros({ ordem: "comissao" })}
+                rotulo="Comissão"
+                ativo={ordem === "comissao"}
+              />
             </div>
           ) : undefined
         }
@@ -105,7 +137,40 @@ export default async function Aprovar({
           },
         ]}
       >
-        {fila.length === 0 ? (
+        {/*
+          As abas de nicho só aparecem com mais de um nicho na fila:
+          com um só, elas seriam uma linha de interface que não decide
+          nada.
+        */}
+        {nichosDaFila.length > 1 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Aba href={comFiltros({ nicho: "" })} rotulo="Todos" ativo={!nichoFiltro} />
+            {nichosDaFila.map((n) => (
+              <Aba
+                key={n.slug}
+                href={comFiltros({ nicho: n.slug })}
+                rotulo={`${n.nome} (${fila0.filter((o) => o.nicho === n.slug).length})`}
+                ativo={nichoFiltro === n.slug}
+              />
+            ))}
+          </div>
+        )}
+
+        {fila.length === 0 && nichoFiltro ? (
+          <div className="rounded-lg border border-borda-sutil bg-superficie p-8 shadow-repouso">
+            <p className="text-base text-texto-fraco">
+              Nada de{" "}
+              <strong className="font-bold text-texto">
+                {nichosDaFila.find((n) => n.slug === nichoFiltro)?.nome ?? nichoFiltro}
+              </strong>{" "}
+              esperando decisão agora.{" "}
+              <Link href={comFiltros({ nicho: "" })} className="text-marca-texto underline">
+                Ver a fila inteira
+              </Link>
+              .
+            </p>
+          </div>
+        ) : fila.length === 0 ? (
           <FilaVazia decididas={decididas.length} />
         ) : (
           // Sem `overflow-hidden`: ele cortava a lista de motivos da
