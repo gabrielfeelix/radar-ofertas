@@ -63,6 +63,34 @@ export function horaEmSaoPaulo(agora: Date): number {
   );
 }
 
+/**
+ * O dia de hoje em São Paulo, como `YYYY-MM-DD`.
+ *
+ * Existe por causa do teto diário do canal: "quantos posts saíram
+ * hoje" precisa de um recorte de dia, e o recorte é o do fuso em que o
+ * canal vive, não o do UTC (regra 3.9). Sem isto o teto zeraria às
+ * 21h de São Paulo, que é a meia-noite de Londres, bem no meio do
+ * pico da noite.
+ *
+ * `sv-SE` não é exotismo: é a locale cujo formato de data é
+ * exatamente `YYYY-MM-DD`, o mesmo que o Postgres usa.
+ */
+export function diaEmSaoPaulo(agora: Date): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo" }).format(agora);
+}
+
+/**
+ * O instante, em UTC, em que o dia de São Paulo começou.
+ *
+ * É o `>=` de uma consulta por `enviada_em`. O deslocamento é fixo em
+ * `-03:00` porque **o Brasil não tem horário de verão desde 2019**, e
+ * enquanto não voltar não há segundo deslocamento possível. Se ele
+ * voltar, esta é a linha que muda.
+ */
+export function inicioDoDiaEmSaoPaulo(agora: Date): Date {
+  return new Date(`${diaEmSaoPaulo(agora)}T00:00:00-03:00`);
+}
+
 /** Os minutos que precisam passar entre um post e o seguinte. */
 export function intervaloEmMinutos(faixa: FaixaDoDia, ritmo: RitmoConfigurado): number {
   const base =

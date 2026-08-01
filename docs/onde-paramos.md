@@ -53,6 +53,43 @@ Cinco frentes de `docs/otimizacao.md`, depois duas correções grandes.
 
 ---
 
+## O que a sessão de pesquisa + automação mudou (01/08, à tarde)
+
+Duas entregas, e a segunda depende da primeira:
+
+**1. Pesquisa de campo em `docs/pesquisa/`** — 521 fontes, oito frentes.
+Comece por `sintese.md`; `o-que-muda-no-radar.md` diz o que ela cobra do
+projeto e `cupons-de-onde-vem.md` responde de onde sai `FULL3107`.
+
+**2. Plano de automação em `docs/plano-automacao.md`** — dez planos, com o
+banco da nuvem medido em vez de suposto. **P1, P2 e P3 executados.**
+
+Três defeitos reais foram achados e corrigidos, e todos eram do mesmo tipo:
+**regra escrita na documentação e não aplicada no código.**
+
+| O quê | Onde estava escrito | Onde não estava |
+|---|---|---|
+| A reputação do vendedor não era relida junto do preço | comentário da descoberta, linha 777 | `relePrecos`, que é o caminho horário |
+| `posts_por_dia_max` não era conferido | D-033, "continua valendo por cima" | `publica-automatico.mjs` |
+| A variedade não entrava na fila automática | `lib/variedade.ts` inteiro | o laço ordenava só por nota |
+
+O primeiro é o grave: `melhorOferta` reordena os vendedores a cada hora, e o
+sistema gravava o preço do novo mantendo a reputação do antigo. **As
+comportas aprovavam olhando o histórico da pessoa errada.**
+
+**Duas migrations escritas e NÃO aplicadas** (32 e 33). O código funciona sem
+elas — `reputacao_nula_reprova ?? 1` nasce ligado. Aplicar é decisão do dono,
+seção 8.
+
+**E uma correção de rumo que vale mais que as três:** o plano dizia que 262
+produtos sem nicho eram buraco de mapeamento. **Não são.** São 203 anúncios
+de Amazon e Shopee esperando credencial, 59 com bloqueio deliberado de
+domínio, e **zero defeitos**. Medi antes de rodar `reclassifica-nichos.mjs`,
+e ainda bem. A perda real é só uma: **61 ofertas por rodada morrendo por
+falta de canal**, e isso não é código.
+
+---
+
 ## O que está QUEBRADO ou pendente, por prioridade
 
 ### 1. O freio de mão está puxado, e é decisão do dono soltar

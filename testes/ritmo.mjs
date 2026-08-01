@@ -7,6 +7,7 @@
  */
 import {
   RITMO_PADRAO, faixaDaHora, intervaloEmMinutos, podePublicarAgora, cabemAteMeiaNoite,
+  diaEmSaoPaulo, inicioDoDiaEmSaoPaulo,
 } from "../lib/ritmo.ts";
 
 let passou = 0, falhou = 0;
@@ -59,6 +60,37 @@ confere(`o dia inteiro cabe num número plausível (${cabem})`, cabem > 20 && ca
 confere(
   "modo intenso cabe mais",
   cabemAteMeiaNoite(new Date("2026-08-01T11:00:00Z"), intenso) > cabem,
+);
+
+/*
+  O DIA DE SÃO PAULO, que é o recorte do teto diário do canal.
+
+  O caso que importa é o das 23h UTC: já é dia seguinte em Londres e
+  ainda são 20h em São Paulo, dentro do pico da noite. Se o teto usasse
+  o dia UTC, ele zeraria ali e o canal ganharia uma cota inteira no
+  meio do pico.
+*/
+console.log("\no dia em São Paulo\n");
+confere(
+  "23h UTC do dia 1 ainda é dia 1 em São Paulo",
+  diaEmSaoPaulo(new Date("2026-08-01T23:00:00Z")) === "2026-08-01",
+);
+confere(
+  "02h UTC do dia 2 ainda é dia 1 em São Paulo",
+  diaEmSaoPaulo(new Date("2026-08-02T02:00:00Z")) === "2026-08-01",
+);
+confere(
+  "03h UTC do dia 2 já é dia 2 em São Paulo",
+  diaEmSaoPaulo(new Date("2026-08-02T03:00:00Z")) === "2026-08-02",
+);
+confere(
+  "o começo do dia é 03h UTC",
+  inicioDoDiaEmSaoPaulo(new Date("2026-08-01T23:00:00Z")).toISOString() === "2026-08-01T03:00:00.000Z",
+);
+confere(
+  "e ele nunca está no futuro",
+  inicioDoDiaEmSaoPaulo(new Date("2026-08-01T23:00:00Z")).getTime() <=
+    new Date("2026-08-01T23:00:00Z").getTime(),
 );
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);

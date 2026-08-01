@@ -30,7 +30,8 @@ import { createClient } from "@supabase/supabase-js";
 
 import { geraLinks } from "../lib/gerador-ml.ts";
 import { montaMensagem } from "../lib/mensagem.ts";
-import { RITMO_PADRAO, podePublicarAgora } from "../lib/ritmo.ts";
+import { RITMO_PADRAO, inicioDoDiaEmSaoPaulo, podePublicarAgora } from "../lib/ritmo.ts";
+import { intercalaPorVariedade } from "../lib/variedade.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.CHAVE;
@@ -84,6 +85,31 @@ function reprova(anuncio, par) {
     anuncio.reputacao_vendedor < (par.reputacao_minima ?? 0.6)
   ) {
     return `vendedor_fraco(${anuncio.reputacao_vendedor})`;
+  }
+
+  /*
+    VENDEDOR SOBRE QUEM NÃO SE SABE NADA (migration 32).
+
+    A regra geral acima é "nulo não reprova", e ela está certa para a
+    avaliação do produto: a loja pode de fato não informar. Ela está
+    errada para a reputação do vendedor, porque **reputação de
+    vendedor no Mercado Livre sempre existe**. Nula no nosso banco
+    significa que nós não perguntamos, não que ele não tem.
+
+    Medido em 01/08: 288 dos 708 anúncios (41%) sem reputação. A
+    curadoria automática (D-033) foi vendida ao dono como capaz de
+    substituir o olho humano na conferência de vendedor; deixando
+    passar 4 em cada 10 sem medir, ela não estava.
+
+    Loja oficial dispensa, pelo mesmo motivo da regra de avaliações:
+    a confiança vem da marca.
+  */
+  if (
+    (par.reputacao_nula_reprova ?? 1) === 1 &&
+    !anuncio.loja_oficial &&
+    anuncio.reputacao_vendedor == null
+  ) {
+    return "vendedor_desconhecido";
   }
 
   // Reputação boa com pouca venda é sorte, não histórico.
@@ -217,6 +243,35 @@ async function melhorPrateleira(db, oferta) {
 
   console.log(`${(novas ?? []).length} ofertas novas`);
 
+  /*
+    A ORDEM INTERCALA NICHO E FAIXA DE PREÇO, e não é só a nota.
+
+    A consulta acima pede `order("nota", desc)`, e esse é exatamente o
+    comportamento que `lib/variedade.ts` foi escrito para corrigir. O
+    comentário dele descreve o que acontecia aqui:
+
+      *"ofertas parecidas pontuam parecido, porque desconto, comissão e
+      reputação de vendedor andam juntos dentro de um mesmo nicho e
+      faixa de preço. O resultado é que as melhores notas do dia tendem
+      a ser oito variações da mesma coisa, publicadas em sequência."*
+
+    A intercalação existia, tinha teste, e era usada só na tela manual
+    `/publicar`. O laço automático — que é o caminho de verdade desde a
+    D-033 — publicava na ordem crua.
+
+    ISTO NÃO É CURADORIA E NÃO PODE VIRAR: nada é descartado, nada muda
+    de nota, o conjunto publicado no fim do dia é o mesmo. Só a ordem
+    muda. A regra de o que publicar continua no banco, em
+    `avalia_anuncios`.
+  */
+  const ordenadas = intercalaPorVariedade(
+    (novas ?? []).map((o) => ({
+      grupo: o.anuncio?.produto?.nicho_id ?? null,
+      precoCentavos: o.preco_atual_centavos,
+      oferta: o,
+    })),
+  ).map((x) => x.oferta);
+
   // Modelo e canais, uma vez só.
   const { data: modeloLinha } = await db
     .from("modelo_mensagem")
@@ -269,14 +324,54 @@ async function melhorPrateleira(db, oferta) {
     )
     .eq("ativo", true);
 
+  /*
+    O TETO DIÁRIO DO CANAL, que existia no papel e não no código.
+
+    A D-033 diz, com todas as letras: *"O teto diário do canal
+    (`posts_por_dia_max`) continua valendo por cima — é o combinado com
+    o parceiro."* Ele era lido na consulta acima e nunca usado: o único
+    freio era o intervalo do ritmo.
+
+    Com os parâmetros de hoje (pico 10 min, normal 30, madrugada 90) o
+    intervalo sozinho permite ~64 posts por dia, contra um teto
+    combinado de 50. Ninguém era avisado, porque um teto que não é
+    conferido não falha: ele só é ultrapassado.
+
+    E isso não é preciosismo. A pesquisa de campo mediu que **volume é
+    o motivo número um de alguém sair de um canal**, à frente da
+    qualidade da oferta (`docs/pesquisa/sintese.md` §5).
+
+    O recorte é o dia de São Paulo, não o de UTC: a meia-noite de
+    Londres são 21h aqui, no meio do pico da noite, e o teto zeraria
+    ali.
+  */
+  const desdeMeiaNoite = inicioDoDiaEmSaoPaulo(new Date()).toISOString();
+  const { data: jaEnviadas } = await db
+    .from("publicacao")
+    .select("canal_id")
+    .eq("estado", "enviada")
+    .gte("enviada_em", desdeMeiaNoite);
+
+  const enviadasHoje = {};
+  for (const p of jaEnviadas ?? []) {
+    enviadasHoje[p.canal_id] = (enviadasHoje[p.canal_id] ?? 0) + 1;
+  }
+
+  /** O canal já falou o suficiente hoje? */
+  function noTetoDiario(canal) {
+    const teto = canal.posts_por_dia_max ?? Infinity;
+    return (enviadasHoje[canal.id] ?? 0) >= teto;
+  }
+
   let reprovadas = 0;
   let publicadas = 0;
   let esperando = 0;
   let semLink = 0;
   let trocas = 0;
+  let noTeto = 0;
   const motivos = {};
 
-  for (const oferta of novas ?? []) {
+  for (const oferta of ordenadas) {
     const anuncio = oferta.anuncio;
     if (!anuncio) continue;
 
@@ -380,7 +475,15 @@ async function melhorPrateleira(db, oferta) {
       // humano envia pela tela.
       if (canal.plataforma !== "telegram") continue;
 
-      // 5. O ritmo. Intervalo, não cota: a fila não sai toda de uma vez.
+      // 5. O teto diário, que é o combinado com o parceiro. Ele vem
+      // antes do ritmo porque é mais duro: o ritmo adia, o teto encerra
+      // o dia do canal.
+      if (noTetoDiario(canal)) {
+        noTeto++;
+        continue;
+      }
+
+      // 6. O ritmo. Intervalo, não cota: a fila não sai toda de uma vez.
       const veredito = podePublicarAgora(
         new Date(),
         canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
@@ -515,6 +618,7 @@ async function melhorPrateleira(db, oferta) {
         .eq("id", pub.id);
       await db.from("canal").update({ ultima_publicacao_em: agora }).eq("id", canal.id);
       canal.ultima_publicacao_em = agora;
+      enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
 
       publicadas++;
       console.log(`  ✓ ${canal.nome}: ${anuncio.produto?.titulo_canonico?.slice(0, 46)}`);
@@ -544,6 +648,13 @@ async function melhorPrateleira(db, oferta) {
     const anuncio = oferta?.anuncio;
     const canal = (canais ?? []).find((c) => c.id === pub.canal_id);
     if (!oferta || !anuncio || !canal || canal.plataforma !== "telegram") continue;
+
+    // O teto vale igual aqui: sem isto a fila pendente seria a porta
+    // dos fundos por onde o combinado com o parceiro é furado.
+    if (noTetoDiario(canal)) {
+      noTeto++;
+      continue;
+    }
 
     const veredito = podePublicarAgora(
       new Date(),
@@ -611,6 +722,7 @@ async function melhorPrateleira(db, oferta) {
       .eq("id", pub.id);
     await db.from("canal").update({ ultima_publicacao_em: quando }).eq("id", canal.id);
     canal.ultima_publicacao_em = quando;
+    enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
 
     publicadas++;
     console.log(`  ✓ ${canal.nome}: ${anuncio.produto?.titulo_canonico?.slice(0, 46)} (pendente)`);
@@ -618,8 +730,12 @@ async function melhorPrateleira(db, oferta) {
 
   console.log(
     `\n${publicadas} publicadas · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
-      `${semLink} sem link · ${trocas} trocaram de prateleira`,
+      `${noTeto} no teto do dia · ${semLink} sem link · ${trocas} trocaram de prateleira`,
   );
+  for (const canal of canais ?? []) {
+    const saiu = enviadasHoje[canal.id] ?? 0;
+    console.log(`  ${canal.nome}: ${saiu}/${canal.posts_por_dia_max ?? "sem teto"} hoje`);
+  }
   if (semLink > 0) {
     console.log("Sem link é quase sempre sessão da Central expirada. Renove e rode de novo.");
   }

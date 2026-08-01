@@ -287,7 +287,12 @@ async function melhorOferta(produtoId) {
   const comReputacao = await Promise.all(
     aceitaveis.slice(0, 8).map(async (i) => {
       const u = await api(`users/${i.seller_id}`).catch(() => null);
-      return { item: i, reputacao: reputacaoDoVendedor(u) ?? 0, oficial: Boolean(i.official_store_id) };
+      return {
+        item: i,
+        vendedor: u,
+        reputacao: reputacaoDoVendedor(u) ?? 0,
+        oficial: Boolean(i.official_store_id),
+      };
     }),
   );
 
@@ -298,7 +303,23 @@ async function melhorOferta(produtoId) {
     return a.item.price - b.item.price;
   });
 
-  return comReputacao[0]?.item ?? null;
+  /*
+    DEVOLVE O VENDEDOR JUNTO, E NÃO SÓ O ITEM.
+
+    Antes daqui saía só `comReputacao[0].item`, e o objeto do vendedor
+    — que esta função **já buscou** para poder ordenar — era jogado
+    fora. Isso custava duas coisas:
+
+    1. A releitura horária gravava o preço do vendedor novo e mantinha
+       a reputação do vendedor antigo. O sistema aprovava a oferta de
+       um olhando o histórico de outro.
+    2. A descoberta pedia `users/{id}` de novo, logo depois, para ter
+       de volta exatamente o que acabara de ser descartado.
+
+    Devolver o conjunto conserta as duas de uma vez, sem nenhuma
+    chamada nova de API.
+  */
+  return comReputacao[0] ?? null;
 }
 
 /**
@@ -467,9 +488,10 @@ async function relePrecos(db, mktId, porDominio, porCategoria) {
     if (!produtoId) continue;
 
     try {
-      const oferta = await melhorOferta(produtoId);
-      if (!oferta) continue;
+      const escolha = await melhorOferta(produtoId);
+      if (!escolha) continue;
 
+      const oferta = escolha.item;
       const centavos = Math.round(oferta.price * 100);
 
       const { data: antes } = await db
@@ -513,6 +535,29 @@ async function relePrecos(db, mktId, porDominio, porCategoria) {
         }
       }
 
+      /*
+        QUEM VENDE É RELIDO JUNTO COM O PREÇO, e esta é a correção
+        mais importante desta função.
+
+        `melhorOferta` reordena os vendedores do catálogo a cada
+        execução: loja oficial primeiro, depois reputação, depois
+        preço. **O vendedor escolhido muda de uma hora para outra.**
+
+        Antes daqui só saía o preço. O resultado é que o anúncio
+        guardava o preço do vendedor de agora e a reputação do
+        vendedor da descoberta — e as comportas de `publica-automatico`
+        aprovavam olhando o histórico da pessoa errada. Medido em
+        01/08: 288 dos 708 anúncios (41%) com `reputacao_vendedor`
+        nula, e nulo não reprova.
+
+        O caminho de descoberta já fazia isto certo, e o comentário
+        dele explica por quê: *"vendedor que caiu de nível precisa
+        parar de passar hoje, não na próxima vez que o anúncio for
+        cadastrado"*. Só que a descoberta toca as categorias raiz, e é
+        esta função que passa pela base inteira de hora em hora.
+
+        Não custa chamada nova: `melhorOferta` já buscou o vendedor.
+      */
       await db
         .from("anuncio")
         .update({
@@ -521,6 +566,10 @@ async function relePrecos(db, mktId, porDominio, porCategoria) {
           categoria_raiz: raiz ?? undefined,
           ...arvore,
           ...promocaoDeclarada(oferta),
+          vendedor: escolha.vendedor?.nickname ?? `vendedor ${oferta.seller_id}`,
+          loja_oficial: escolha.oficial,
+          reputacao_vendedor: reputacaoDoVendedor(escolha.vendedor),
+          vendas_estimadas: escolha.vendedor?.seller_reputation?.transactions?.total ?? null,
         })
         .eq("id", a.id);
 
@@ -598,15 +647,67 @@ async function main() {
     Beleza, Ferramentas e Alimentos, que antes não entravam por não ter
     nicho onde encaixar.
   */
+  /*
+    A DESCOBERTA OLHA PRIMEIRO ONDE EXISTE CANAL.
+
+    O teto de descoberta é de 600 produtos por rodada, e até agora o
+    corte era um `slice` na ordem em que as 28 categorias aparecem na
+    lista. Isso ignora um fato medido em 01/08: **existe um canal, e
+    ele é de pet**. Numa rodada, 61 ofertas de 109 rejeitadas morreram
+    em `nenhum_canal_do_nicho`.
+
+    Descobrir produto de nicho sem canal não é errado — a base precisa
+    existir antes do canal, senão o canal nasce mudo. Mas gastar o teto
+    com ele **antes** de esgotar o nicho que tem canal é trocar oferta
+    publicável por oferta que vai ser rejeitada na mesma rodada.
+
+    Então a ordem muda e o conjunto não: primeiro as categorias cuja
+    raiz roteia para um nicho com canal ativo, depois todo o resto. Se
+    o teto não for atingido, nada é perdido; se for, o que fica de fora
+    é o que não tinha onde ser publicado.
+
+    Quando o dono abrir canal de casa e de eletrônico, esta prioridade
+    se reconfigura sozinha: ela lê os canais do banco, não uma lista.
+  */
+  const { data: canaisAtivos } = await db
+    .from("canal")
+    .select("canal_nicho ( nicho_id )")
+    .eq("ativo", true);
+
+  const nichosComCanal = new Set(
+    (canaisAtivos ?? []).flatMap((c) => (c.canal_nicho ?? []).map((cn) => cn.nicho_id)),
+  );
+
+  const temCanal = (cat) => {
+    const nicho = porCategoria.get(cat);
+    return Boolean(nicho && nichosComCanal.has(nicho));
+  };
+
+  const categoriasEmOrdem = SO_PRECOS
+    ? []
+    : [...CATEGORIAS].sort((a, b) => Number(temCanal(b)) - Number(temCanal(a)));
+
+  if (!SO_PRECOS) {
+    const priorizadas = categoriasEmOrdem.filter(temCanal);
+    console.log(
+      `\nprioridade de descoberta: ${priorizadas.length} categoria(s) com canal ativo` +
+        `${priorizadas.length ? ` (${priorizadas.join(", ")})` : " — nenhuma, a ordem é a da lista"}`,
+    );
+  }
+
+  const idsPrioritarios = [];
   const ids = [];
 
-  for (const cat of SO_PRECOS ? [] : CATEGORIAS) {
+  for (const cat of categoriasEmOrdem) {
     try {
-      ids.push(...(await maisVendidos(cat)));
+      const achados = await maisVendidos(cat);
+      (temCanal(cat) ? idsPrioritarios : ids).push(...achados);
     } catch (e) {
       problemas.push(`categoria ${cat}: ${e.message}`);
     }
   }
+  // A busca por termo não sabe em que nicho vai cair, então ela entra
+  // depois do que tem canal e antes do que não tem.
   for (const termo of SO_PRECOS ? [] : BUSCAS) {
     try {
       ids.push(...(await porBusca(termo)));
@@ -623,35 +724,43 @@ async function main() {
     // ofertas, vendedor, avaliações) e a rotina diária tem uma janela.
     // Sem ele, ampliar as categorias transformaria "descobre menos do
     // que cabe" em "estoura o tempo e não grava nada".
-    const escolhidos = [...new Set(ids)].slice(
-      0,
-      Number(process.env.ML_DESCOBERTAS_POR_RODADA ?? 600),
+    // O `Set` sobre a concatenação preserva a primeira aparição, então
+    // um produto que existe nas duas listas conta como prioritário.
+    const todos = [...new Set([...idsPrioritarios, ...ids])];
+    const escolhidos = todos.slice(0, Number(process.env.ML_DESCOBERTAS_POR_RODADA ?? 600));
+
+    const prioritariosEscolhidos = escolhidos.filter((id) =>
+      new Set(idsPrioritarios).has(id),
+    ).length;
+    console.log(
+      `\ndescoberta — ${escolhidos.length} produtos de ${todos.length} achados ` +
+        `(${prioritariosEscolhidos} de nicho com canal)`,
     );
-    console.log(`\ndescoberta — ${escolhidos.length} produtos de ${new Set(ids).size} achados`);
 
     for (const produtoId of escolhidos) {
       try {
-        const [produto, oferta] = await Promise.all([
+        const [produto, escolha] = await Promise.all([
           api(`products/${produtoId}`),
           melhorOferta(produtoId),
         ]);
-        if (!oferta) {
+        if (!escolha) {
           console.log(`  · ${produtoId} sem oferta nova viva`);
           continue;
         }
 
-        // Quem vende e o que o público achou. É o que alimenta as
-        // comportas `reputacao_minima` e `avaliacao_minima`, que
-        // existem no motor desde 27/07 e nunca reprovaram nada porque
-        // estes campos ficavam vazios.
+        // O vendedor vem junto da escolha: `melhorOferta` já o buscou
+        // para poder ordenar, e pedir de novo era pagar duas vezes pela
+        // mesma resposta.
+        const oferta = escolha.item;
+        const vendedor = escolha.vendedor;
+
+        // O que o público achou do PRODUTO. É por item e não por
+        // vendedor, então continua sendo uma chamada à parte.
         //
         // Falha aqui não derruba a coleta: sem o dado, a comporta não
         // reprova, e o preço continua entrando na série. Perder um
         // sinal é melhor que perder a série.
-        const [vendedor, avaliacoes] = await Promise.all([
-          api(`users/${oferta.seller_id}`).catch(() => null),
-          api(`reviews/item/${oferta.item_id}`).catch(() => null),
-        ]);
+        const avaliacoes = await api(`reviews/item/${oferta.item_id}`).catch(() => null);
 
         /*
           O PRODUTO É ACHADO PELA IDENTIDADE, NÃO PELO TÍTULO.
