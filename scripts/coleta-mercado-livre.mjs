@@ -33,6 +33,8 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+
+import { atributosDe, chaveDeIdentidade } from "../lib/identidade.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const API = "https://api.mercadolibre.com";
@@ -651,13 +653,34 @@ async function main() {
           api(`reviews/item/${oferta.item_id}`).catch(() => null),
         ]);
 
-        // O produto: chave é o título canônico dentro da operação.
-        let { data: linha } = await db
-          .from("produto")
-          .select("id")
-          .eq("operacao_id", operacao.id)
-          .eq("titulo_canonico", produto.name)
-          .maybeSingle();
+        /*
+          O PRODUTO É ACHADO PELA IDENTIDADE, NÃO PELO TÍTULO.
+
+          O ML cadastra o mesmo saco de ração com três títulos
+          diferentes, e enquanto a chave era o título eles viravam três
+          produtos nossos, com a comparação de preço nunca cruzando
+          entre eles. Foi assim que o canal publicou R$ 130,00 existindo
+          R$ 119,90 do mesmo item.
+
+          Sem identidade (produto genérico, sem marca cadastrada) cai no
+          título, que é o comportamento antigo. Perde-se a comparação
+          entre catálogos, não o produto.
+        */
+        const identidade = chaveDeIdentidade(atributosDe(produto), produto.domain_id, produto.name);
+
+        let { data: linha } = identidade
+          ? await db
+              .from("produto")
+              .select("id")
+              .eq("operacao_id", operacao.id)
+              .eq("chave_identidade", identidade)
+              .maybeSingle()
+          : await db
+              .from("produto")
+              .select("id")
+              .eq("operacao_id", operacao.id)
+              .eq("titulo_canonico", produto.name)
+              .maybeSingle();
 
         /*
           O NICHO VEM DO QUE O PRODUTO É, não de quem o achou.
@@ -689,6 +712,7 @@ async function main() {
               operacao_id: operacao.id,
               nicho_id: nichoDoProduto,
               titulo_canonico: produto.name,
+              chave_identidade: identidade,
             })
             .select("id")
             .single();
@@ -716,6 +740,7 @@ async function main() {
               marketplace_id: mkt.id,
               sku_externo: sku,
               url_original: `https://www.mercadolivre.com.br/p/${produtoId}`,
+              produto_externo_id: produtoId,
               dominio_externo: produto.domain_id ?? null,
               categoria_raiz: raiz,
               ...arvore,
