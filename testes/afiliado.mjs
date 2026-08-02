@@ -7,6 +7,8 @@
  */
 
 process.env.ML_MATT_TOOL = "66367903";
+// Valor de teste, não o real: o teste não pode depender do `.env`.
+process.env.AFILIADO_AMAZON = "radar4yu-20";
 const { montaLinkDeAfiliado } = await import("../lib/afiliado.ts");
 
 let passou = 0;
@@ -50,6 +52,33 @@ confere(
   "sobrescreve matt_word de outra pessoa — publicar o afiliado alheio é dar a venda de presente",
   jaTinhaWord.url.includes("matt_word=k3m9pq2x") && !jaTinhaWord.url.includes("doOutro"),
 );
+
+/*
+  AMAZON (02/08). Formato tirado de links reais que circulam em canais
+  de oferta. `tag` paga a comissão; `ascsubtag` é o subid, e era a
+  pergunta em aberto desde a D-035.
+*/
+const AZ = "https://www.amazon.com.br/dp/B0CWB2H5JX";
+const az = montaLinkDeAfiliado(AZ, "k3m9pq2x", "amazon");
+
+confere("amazon: rastreado", az.rastreado);
+confere("amazon: leva a tag de associado", az.url.includes("tag=radar4yu-20"));
+confere("amazon: o subid vai em ascsubtag", az.url.includes("ascsubtag=k3m9pq2x"));
+confere("amazon: marca a origem como SiteStripe", az.url.includes("linkCode=ll1"));
+confere("amazon: preserva o ASIN", az.url.includes("/dp/B0CWB2H5JX"));
+
+/*
+  O que NÃO pode entrar. `btn_type`, `btn_ref` e o prefixo `srctok-` do
+  link de exemplo são da plataforma Button, que o autor daquele link usa
+  como intermediária — copiá-los atribuiria a venda a um terceiro.
+*/
+confere("amazon: não copia os parâmetros da Button", !/btn_type|btn_ref|srctok/.test(az.url));
+
+// URL que já vem com tag de OUTRO afiliado precisa ser sobrescrita, ou
+// a comissão vai para quem publicou antes.
+const daOutraPessoa = montaLinkDeAfiliado(`${AZ}?tag=milena0fd-20`, "k3m9pq2x", "amazon");
+confere("amazon: sobrescreve a tag de outro afiliado", daOutraPessoa.url.includes("tag=radar4yu-20"));
+confere("amazon: e não deixa a antiga", !daOutraPessoa.url.includes("milena0fd-20"));
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);

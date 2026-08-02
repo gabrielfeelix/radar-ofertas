@@ -37,7 +37,57 @@
 /** Identificador da ferramenta de afiliado, por loja. Vem do painel. */
 const FERRAMENTA: Record<string, string | undefined> = {
   mercado_livre: process.env.ML_MATT_TOOL,
+  amazon: process.env.AFILIADO_AMAZON,
 };
+
+/**
+ * A AMAZON É O CASO FÁCIL, e isso é contraintuitivo depois do trabalho
+ * que o Mercado Livre deu.
+ *
+ * O formato saiu de links reais que circulam em canais de oferta, que o
+ * dono trouxe em 02/08:
+ *
+ *   .../dp/B01I54ITP0?linkCode=sl2&tag=milena0fd-20
+ *       &linkId=7e640a...&ref_=as_li_ss_tl
+ *       &ascsubtag=srctok-116b638fd68bb173
+ *       &btn_type=ss&btn_ref=srctok-116b638fd68bb173
+ *
+ * O que cada pedaço é, e o que a gente precisa:
+ *
+ * **`tag` é a comissão.** É o ID de Associado, e sozinho ele já paga.
+ * Diferente do ML, que descarta o `matt_word` que a gente manda e exige
+ * passar pelo gerador com sessão logada, aqui **a URL montada à mão
+ * vale**: é o formato que o próprio SiteStripe produz.
+ *
+ * **`ascsubtag` é o subid** (regra 3.6), e era a pergunta em aberto
+ * desde a D-035. Ele é o campo de rastreio granular do Associates e
+ * aparece no relatório de comissão. Não precisa de cadastro prévio, ao
+ * contrário da etiqueta do ML.
+ *
+ * **`linkCode` e `ref_`** identificam a origem como SiteStripe. Não são
+ * necessários para a comissão, mas custam nada e deixam o link igual ao
+ * que a Amazon gera.
+ *
+ * **`linkId`, `btn_type` e `btn_ref` ficam de fora.** O `linkId` é um
+ * id que o SiteStripe cria por link e nós não temos como gerar. Os dois
+ * `btn_*` e o prefixo `srctok-` do exemplo não são da Amazon: são da
+ * plataforma Button, que o autor daquele link usa como intermediária.
+ * Copiá-los seria atribuir a venda a um terceiro.
+ *
+ * **O encurtador `link.amazon` também fica de fora**, e o dono viu por
+ * quê sem querer: um dos links curtos que ele mandou levou a um headset
+ * em vez do perfume. O encurtador aponta para o que estava na tela na
+ * hora de gerar, e quem controla o destino é a Amazon, não nós. Link
+ * longo é feio e é auditável.
+ */
+function linkDaAmazon(url: URL, subid: string, tag: string): string {
+  url.searchParams.set("tag", tag);
+  url.searchParams.set("linkCode", "ll1");
+  url.searchParams.set("ref_", "as_li_ss_tl");
+  // O subid da publicação, que é o que liga a venda ao canal.
+  url.searchParams.set("ascsubtag", subid);
+  return url.toString();
+}
 
 export type LinkDeAfiliado = {
   url: string;
@@ -71,7 +121,9 @@ export function montaLinkDeAfiliado(
       motivo:
         marketplaceSlug === "mercado_livre"
           ? "falta ML_MATT_TOOL — sai sem comissão"
-          : `${marketplaceSlug} ainda não tem link de afiliado configurado`,
+          : marketplaceSlug === "amazon"
+            ? "falta AFILIADO_AMAZON — sai sem comissão"
+            : `${marketplaceSlug} ainda não tem link de afiliado configurado`,
     };
   }
 
@@ -80,6 +132,10 @@ export function montaLinkDeAfiliado(
     url = new URL(urlDoAnuncio);
   } catch {
     return { url: urlDoAnuncio, rastreado: false, motivo: "a URL do anúncio é inválida" };
+  }
+
+  if (marketplaceSlug === "amazon") {
+    return { url: linkDaAmazon(url, subid, ferramenta), rastreado: true };
   }
 
   // O subid vai como está: o `gera_subid()` do banco já produz

@@ -29,6 +29,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { geraLinks } from "../lib/gerador-ml.ts";
+import { montaLinkDeAfiliado } from "../lib/afiliado.ts";
 import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
 import {
   RITMO_PADRAO,
@@ -679,17 +680,43 @@ async function melhorPrateleira(db, oferta) {
 
     let curto = pub.link_afiliado;
     if (!curto) {
-      const { gerados, falhas } = await geraLinks(
-        [aPublicar.url_original],
-        canal.etiqueta_afiliado,
-        sessao,
-      );
-      if (gerados.length === 0) {
-        console.log(`  ✗ ${canal.nome}: link não gerado (${falhas[0]?.motivo ?? "sem resposta"})`);
-        semLink++;
-        return false;
+      /*
+        CADA LOJA GERA O LINK DE UM JEITO, e a diferença é grande.
+
+        O Mercado Livre **descarta** o `matt_word` que a gente manda e
+        devolve um `ref=` cifrado: montar a URL à mão não paga comissão
+        (D-034), então é obrigatório passar pelo gerador da Central, com
+        sessão logada e etiqueta pré-cadastrada.
+
+        A Amazon é o contrário e é o caso fácil: `tag` na URL já paga, e
+        `ascsubtag` carrega o subid sem precisar cadastrar nada. É o
+        mesmo formato que o SiteStripe produz. Sem sessão, sem etiqueta,
+        sem chamada de rede — e por isso nunca falha por sessão
+        expirada, que é o motivo número um de canal mudo aqui.
+      */
+      const loja = aPublicar.marketplace?.slug;
+
+      if (loja === "amazon") {
+        const link = montaLinkDeAfiliado(aPublicar.url_original, pub.subid, "amazon");
+        if (!link.rastreado) {
+          console.log(`  ✗ ${canal.nome}: ${link.motivo}`);
+          semLink++;
+          return false;
+        }
+        curto = link.url;
+      } else {
+        const { gerados, falhas } = await geraLinks(
+          [aPublicar.url_original],
+          canal.etiqueta_afiliado,
+          sessao,
+        );
+        if (gerados.length === 0) {
+          console.log(`  ✗ ${canal.nome}: link não gerado (${falhas[0]?.motivo ?? "sem resposta"})`);
+          semLink++;
+          return false;
+        }
+        curto = gerados[0].curto;
       }
-      curto = gerados[0].curto;
       await db
         .from("publicacao")
         .update({ link_afiliado: curto, link_afiliado_em: new Date().toISOString() })

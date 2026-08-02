@@ -130,6 +130,10 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           ML_MATT_TOOL: ${{ secrets.ML_MATT_TOOL }}
+          # A Amazon monta o link sozinha: `tag` paga a comissão e
+          # `ascsubtag` carrega o subid, sem sessão nem etiqueta. Sem
+          # esta variável o anúncio da Amazon sai sem comissão.
+          AFILIADO_AMAZON: ${{ secrets.AFILIADO_AMAZON }}
         run: |
           set -o pipefail
           node --experimental-strip-types \
