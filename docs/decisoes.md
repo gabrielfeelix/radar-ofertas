@@ -1522,3 +1522,99 @@ canal.
 
 **Mudaria se:** aparecer um filtro que precise valer para dois nichos
 mas não para o canal todo. Aí `nicho_id` vira lista.
+
+---
+
+## D-049 · A Amazon monta o link sozinha, e `ascsubtag` é o subid
+**Data:** 2026-08-02
+
+O dono trouxe links de afiliado que circulam em canais de oferta, e o
+formato respondeu a pergunta que estava aberta desde a D-035: **onde vai
+o subid na Amazon**. Vai em `ascsubtag`.
+
+```
+.../dp/B01I54ITP0?linkCode=sl2&tag=milena0fd-20&linkId=7e640a...
+    &ref_=as_li_ss_tl&ascsubtag=srctok-116b638fd68bb173
+    &btn_type=ss&btn_ref=srctok-116b638fd68bb173
+```
+
+### A Amazon é o caso fácil, e isso é contraintuitivo
+
+Depois do trabalho que o Mercado Livre deu, a expectativa era que a
+Amazon fosse pior. É o contrário:
+
+| | Mercado Livre | Amazon |
+|---|---|---|
+| Link montado à mão paga? | **não** (D-034) | **sim** |
+| Precisa de sessão logada? | sim | não |
+| Etiqueta pré-cadastrada? | sim, por canal | não |
+| Subid | `matt_word`, e o ML o descarta | `ascsubtag` |
+| Falha por sessão expirada? | sim, é o motivo nº 1 de canal mudo | nunca |
+
+O ML devolve um `ref=` cifrado e é obrigatório passar pelo gerador da
+Central. A Amazon aceita a URL montada — é o mesmo formato que o
+SiteStripe produz.
+
+### O que fica de fora do link, e por quê
+
+- **`linkId`** — o SiteStripe gera por link e não temos como criar.
+- **`btn_type`, `btn_ref`, prefixo `srctok-`** — **não são da Amazon.**
+  São da plataforma Button, que o autor daquele link usa como
+  intermediária. Copiá-los atribuiria a venda a um terceiro.
+- **O encurtador `link.amazon`** — não controlamos o destino, e o dono
+  viu o risco sem querer: um dos links curtos que ele mandou levava a um
+  headset em vez do perfume. O encurtador aponta para o que estava na
+  tela na hora de gerar.
+
+### Imagem da Amazon: preview, nunca `sendPhoto`
+
+A regra 3.3 permite guardar o LINK da imagem por até 24h e proíbe
+guardar a imagem. `sendPhoto` faz o **Telegram** baixar e hospedar o
+arquivo por tempo indeterminado, o que é exatamente o que a política
+veda.
+
+A saída é o preview do Telegram: mandamos só a URL do produto, e quem
+busca a imagem é ele, na hora — igual a qualquer pessoa colando um link.
+`link_preview_options: { is_disabled: false, prefer_large_media: true }`.
+
+**Mudaria se:** a Amazon liberar a Creators API para nós. Aí o link
+continua igual, mas passa a haver preço, que é o que falta para a
+Amazon virar fonte de oferta automática.
+
+---
+
+## D-050 · A primeira compra real de teste, e o que ela ainda precisa provar
+**Data:** 2026-08-02
+
+**Uma compra real foi feita por outra pessoa** (namorada do dono, não
+autocompra — que é violação de termo nos três programas) por um dos
+links publicados em 02/08. É a prova que a **Fase 0** existe para obter.
+
+### O que conferir, e onde
+
+A Fase 0 só fecha quando o subid aparecer no relatório. Os três links
+publicados à mão em 02/08:
+
+| subid | Canal | Loja | Produto |
+|---|---|---|---|
+| `vhzgpk65` | Radar Beauty | Amazon | Eudora Siàge Hair-Plastia |
+| `68gbyqh7` | Radar Pet | Mercado Livre | Ração Golden Special Gatos 10,1kg |
+| `mzd567xd` | Radar Pet | Mercado Livre | Areia Simple Cat 4kg |
+
+Mais 166 publicações automáticas no Mercado Livre no mesmo dia.
+
+- **Amazon** — Central de Associados, relatório de pedidos. O subid sai
+  na coluna de *tracking ID / subtag*. Pedido costuma aparecer em 24h;
+  a comissão só é confirmada depois do envio.
+- **Mercado Livre** — Central de Afiliados. O subid vai em `matt_word`,
+  e a granularidade é **por canal**, não por publicação (D-035).
+
+### O que a compra NÃO prova ainda
+
+Que o dinheiro chega. Comissão da Amazon só é paga com a situação
+fiscal aceita, e em 31/07 ela estava como **"Enviado"**, ainda em
+revisão. Se voltar pendente, a comissão acumula e não é paga.
+
+**Enquanto o subid não for visto no relatório, a Fase 0 continua
+aberta** — e com ela a decisão de granularidade que a D-035 tomou por
+inferência.

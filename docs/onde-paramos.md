@@ -1,3 +1,45 @@
+# Onde paramos — 02/08/2026
+
+## 02/08: a Amazon entrou, e a primeira compra real aconteceu
+
+**Uma pessoa comprou por um dos nossos links.** Não é autocompra (que é
+violação nos três programas): foi outra pessoa, por um link publicado no
+dia. É a prova que a **Fase 0** existe para obter, e ela só fecha quando
+o subid aparecer no relatório — os três subids a conferir estão na
+D-050.
+
+**A Amazon está ligada** (D-049), e é o caso fácil: `tag` na URL já paga
+a comissão e `ascsubtag` carrega o subid, sem sessão, sem etiqueta
+cadastrada e sem chamada de rede. Isso responde a pergunta que a D-035
+tinha deixado aberta. O formato saiu de links reais que o dono trouxe de
+canais concorrentes.
+
+**Falta a Amazon como fonte de preço, e não é código:** a PA-API v5 foi
+aposentada em 15/05/2026 e a Creators API pede volume de vendas. Os 74
+anúncios dela no banco estão todos sem preço. Publicação manual funciona
+hoje; o radar achar oferta da Amazon sozinho, não.
+
+### Três defeitos meus no mesmo dia, e o terceiro é o que ensina
+
+1. **Escrevi travessão numa mensagem publicada** (regra 3.11). Corrigi
+   *depois de publicada* — a primeira vez que isso foi possível, graças
+   ao `message_id` que passou a ser guardado na migration 44.
+2. **Publiquei à mão sem gravar `link_afiliado`.** A constraint
+   `publicacao_enviada_tem_link` recusou o registro, e como o script não
+   conferia o retorno, **a mensagem foi ao canal e o banco não soube**.
+   É a D-040 se repetindo dentro do meu próprio código. A proteção do
+   banco funcionou; quem falhou foi quem não leu o erro.
+3. **Quase publiquei uma comparação enganosa.** Achei areia a R$ 3,09/kg
+   contra R$ 13,24/kg da que o dono viu na Shopee, e fui conferir os
+   atributos: `IS_BIODEGRADABLE: Não`. A dele é biodegradável. Publicar
+   como equivalente seria mentir por omissão.
+
+**A lição das três:** publicação manual precisa ser um script em
+`scripts/`, com as mesmas checagens do publicador, e não algo montado na
+hora. Está em aberto.
+
+---
+
 # Onde paramos — 01/08/2026, fim do dia
 
 **Se você é um agente novo: leia isto antes de tudo, depois `AGENTS.md`.**
