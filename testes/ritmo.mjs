@@ -30,6 +30,48 @@ const intenso = { ...RITMO_PADRAO, modoIntenso: true };
 confere("modo intenso divide por três", intervaloEmMinutos("pico", intenso) === 3);
 confere("e nunca desce de um minuto", intervaloEmMinutos("pico", { ...intenso, intervaloPicoMin: 1 }) >= 1);
 
+/*
+  A FOLGA SORTEADA.
+
+  Existe para o canal não publicar em horário exato, que é carimbo de
+  robô. `sorteio` é injetado aqui para o acaso ficar fixo: teste que
+  depende de `Math.random` falha uma vez a cada tanto, e teste
+  intermitente ensina a ignorar falha vermelha.
+*/
+const comFolga = { ...RITMO_PADRAO, intervaloPicoMin: 5, jitterMin: 2 };
+
+confere(
+  "sorteio no piso encurta o máximo: 5 vira 3",
+  intervaloEmMinutos("pico", comFolga, () => 0.99) === 3,
+);
+confere(
+  "sorteio no teto não encurta nada: 5 continua 5",
+  intervaloEmMinutos("pico", comFolga, () => 0) === 5,
+);
+confere(
+  "e o meio cai entre os dois",
+  intervaloEmMinutos("pico", comFolga, () => 0.5) === 4,
+);
+
+// A folga NUNCA alonga: o intervalo configurado é o teto de frequência
+// combinado com o parceiro, não uma média para variar em volta.
+let alongou = false;
+for (let i = 0; i <= 100; i++) {
+  if (intervaloEmMinutos("pico", comFolga, () => i / 100) > 5) alongou = true;
+}
+confere("a folga só encurta, nunca alonga", !alongou);
+
+// Folga maior que o próprio intervalo viraria "publique sempre".
+confere(
+  "folga não engole o intervalo inteiro",
+  intervaloEmMinutos("pico", { ...comFolga, intervaloPicoMin: 2, jitterMin: 90 }, () => 0.99) >= 1,
+);
+
+confere(
+  "sem folga configurada, o intervalo é o de sempre",
+  intervaloEmMinutos("pico", { ...RITMO_PADRAO, jitterMin: 0 }, () => 0.99) === 10,
+);
+
 console.log("\nquando pode publicar\n");
 // 20h em São Paulo é 23h UTC
 const vinteHoras = new Date("2026-08-01T23:00:00Z");

@@ -221,6 +221,10 @@ async function main() {
     intervaloNormalMin: par.intervalo_normal_min ?? RITMO_PADRAO.intervaloNormalMin,
     intervaloMadrugadaMin: par.intervalo_madrugada_min ?? RITMO_PADRAO.intervaloMadrugadaMin,
     modoIntenso: (par.modo_intenso ?? 0) === 1,
+    // Quanto o intervalo pode encurtar por sorteio. Com 5 de intervalo
+    // e 2 de folga, os posts saem a cada 3, 4 ou 5 minutos — em vez de
+    // 5 cravado, que é carimbo de robô.
+    jitterMin: par.intervalo_jitter_min ?? RITMO_PADRAO.jitterMin,
   };
 
   const SELECAO = `

@@ -28,6 +28,22 @@ export type RitmoConfigurado = {
   intervaloMadrugadaMin: number;
   /** Dia de pico divide os intervalos por três. Ligado à mão. */
   modoIntenso: boolean;
+  /**
+   * Quantos minutos o intervalo pode ENCURTAR, por sorteio.
+   *
+   * Com intervalo de 5 e folga de 2, os posts saem a cada 3, 4 ou 5
+   * minutos em vez de 5 cravado. **O motivo é parecer gente.**
+   *
+   * Canal que publica exatamente de 5 em 5 tem carimbo de robô, e
+   * canal de oferta vive de parecer gente — é a mesma razão da regra
+   * 3.11, que proíbe travessão. O dono notou isso observando os
+   * concorrentes: os horários deles são irregulares.
+   *
+   * ENCURTA E NUNCA ALONGA, de propósito: alongar deixaria o canal mais
+   * lento que o combinado, e o intervalo configurado é o teto de
+   * frequência que o parceiro aceitou, não uma média.
+   */
+  jitterMin: number;
 };
 
 export const RITMO_PADRAO: RitmoConfigurado = {
@@ -35,6 +51,7 @@ export const RITMO_PADRAO: RitmoConfigurado = {
   intervaloNormalMin: 30,
   intervaloMadrugadaMin: 90,
   modoIntenso: false,
+  jitterMin: 0,
 };
 
 /** Quanto o modo intenso encurta os intervalos. */
@@ -91,8 +108,20 @@ export function inicioDoDiaEmSaoPaulo(agora: Date): Date {
   return new Date(`${diaEmSaoPaulo(agora)}T00:00:00-03:00`);
 }
 
-/** Os minutos que precisam passar entre um post e o seguinte. */
-export function intervaloEmMinutos(faixa: FaixaDoDia, ritmo: RitmoConfigurado): number {
+/**
+ * Os minutos que precisam passar entre um post e o seguinte.
+ *
+ * `sorteio` existe para o teste poder fixar o acaso. Em produção ele é
+ * `Math.random`; no teste, uma função que devolve o número que se quer.
+ * Sem isso, ou o jitter fica sem teste, ou o teste fica intermitente —
+ * e teste intermitente é pior que teste nenhum, porque ensina a ignorar
+ * falha vermelha.
+ */
+export function intervaloEmMinutos(
+  faixa: FaixaDoDia,
+  ritmo: RitmoConfigurado,
+  sorteio: () => number = Math.random,
+): number {
   const base =
     faixa === "pico"
       ? ritmo.intervaloPicoMin
@@ -100,9 +129,16 @@ export function intervaloEmMinutos(faixa: FaixaDoDia, ritmo: RitmoConfigurado): 
         ? ritmo.intervaloMadrugadaMin
         : ritmo.intervaloNormalMin;
 
+  const comIntensidade = ritmo.modoIntenso ? Math.round(base / FATOR_INTENSO) : base;
+
+  // A folga nunca engole o intervalo inteiro: sorteada maior que o
+  // próprio intervalo, ela viraria "publique sempre".
+  const folga = Math.min(Math.max(0, ritmo.jitterMin), Math.max(0, comIntensidade - 1));
+  const sorteado = folga > 0 ? Math.floor(sorteio() * (folga + 1)) : 0;
+
   // Nunca abaixo de um minuto, por mais intenso que o dia seja: dois
   // posts no mesmo minuto chegam como um bloco e o segundo não é lido.
-  return ritmo.modoIntenso ? Math.max(1, Math.round(base / FATOR_INTENSO)) : base;
+  return Math.max(1, comIntensidade - sorteado);
 }
 
 export type Veredito =
@@ -150,9 +186,15 @@ export function cabemAteMeiaNoite(agora: Date, ritmo: RitmoConfigurado): number 
   const hora = horaEmSaoPaulo(agora);
   const minutoAtual = agora.getMinutes();
 
+  // A conta da tela ignora o jitter, e é por isso que o sorteio aqui é
+  // fixo em zero: número que muda a cada carregamento da página, sem
+  // nada ter mudado, faz quem lê desconfiar da tela inteira. O jitter
+  // só encurta, então este número é o piso — cabem estes ou mais.
+  const semSorteio = () => 0;
+
   for (let h = hora; h < 24; h++) {
     const minutosDaHora = h === hora ? 60 - minutoAtual : 60;
-    total += minutosDaHora / intervaloEmMinutos(faixaDaHora(h), ritmo);
+    total += minutosDaHora / intervaloEmMinutos(faixaDaHora(h), ritmo, semSorteio);
   }
 
   return Math.floor(total);
