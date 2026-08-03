@@ -256,8 +256,8 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 | **Supabase nuvem** | ✅ `radar-ofertas`, São Paulo, ref `fcdkczueohekmgaaacdr`, 15 migrations aplicadas | nada |
 | **Mercado Livre — afiliado** | ✅ aprovado, `fega6031503`. **Etiquetas resolvidas em 01/08** | falta gerar um link com cada etiqueta, para extrair o número de rastreamento |
 | **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
-| **Shopee — afiliado** | ⏳ cadastro enviado, até 3 dias úteis | esperar e-mail |
-| **Shopee — Open API** | ⛔ bloqueado | exige o ID de afiliado, que só existe depois de aprovar. **Depois disso, até 2 semanas** |
+| **Shopee — afiliado** | ✅ aprovado em 03/08, ID `18378371108`, dados bancários e fiscais enviados | nada |
+| **Shopee — Open API** | ⛔ bloqueado | **abrir o chamado** — Central de Ajuda → rodapé → "Acesso rápido" → "E-mail" → *Quero ativar a API*. O caminho completo está em `docs/credenciais.md` §3, porque o link da própria página *Abrir API* está quebrado |
 | **Mercado Livre — API de itens** | 🟡 aplicação criada em 31/07, `Radar de Ofertas 4YU`, Client ID `7618355784652588` | faltam **dois**: o `ML_CLIENT_SECRET`, que a versão anterior deste arquivo dava como presente no `.env` e **não está em lugar nenhum** (conferido no `.env`, no cofre da 4YU e nas variáveis da Vercel), e o `ML_REFRESH_TOKEN`. Passo a passo em `docs/credenciais.md` §4b |
 | **Canais** | ✅ `t.me/radarpet` (público) e grupo de WhatsApp | audiência |
 

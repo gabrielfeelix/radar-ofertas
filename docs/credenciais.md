@@ -130,13 +130,16 @@ as rotinas automáticas rodarem sozinhas de madrugada.
 
 ## 3. Credencial da Shopee (Open API de afiliado)
 
-> **Estado em 31/07/2026:** cadastro de afiliado **enviado**, aguardando análise
-> (até 3 dias úteis, resposta por e-mail para `gab.feelix@gmail.com`).
+> **Estado em 03/08/2026:** cadastro de afiliado **✅ APROVADO**, com dados
+> bancários e fiscais enviados. **ID de afiliado: `18378371108`** — já no `.env`
+> como `AFILIADO_SHOPEE`. Não é o código de indicação, que é outro número.
 >
-> **O pedido da API não pôde ser aberto junto**, e isso corrige uma orientação
-> anterior: o formulário do chamado tem o **ID de Afiliado como campo
-> obrigatório**, e ele só existe depois da conta aprovada. As duas esperas são
-> em série. Assim que a aprovação chegar, o chamado é a primeira coisa a fazer.
+> **A Open API continua bloqueada, e o pedido é chamado à parte.** A página
+> *Abrir API* no painel mostra AppID e Senha vazios, com a mensagem "No momento
+> você não possui acesso à Plataforma de Open API dos Afiliados Shopee".
+>
+> As duas esperas são em série, como já estava previsto: a conta primeiro, a API
+> depois.
 
 **Destrava:** a coleta de preço de verdade. Hoje o coletor está pronto e pula
 todas as lojas por falta de chave — o catálogo só enche pela colheita de canais
@@ -148,14 +151,35 @@ separadas.
 
 ### Passo a passo
 
-1. Tenha a conta de afiliado do passo 1 **aprovada** — a Open API sai de dentro
-   dela.
-2. No painel de afiliado, procure **Open API** (fica em `affiliate.shopee.com.br/open_api`).
-3. Gere a credencial. Ela vem em duas partes:
-   - **App ID** → `SHOPEE_APP_ID`
-   - **Secret** → `SHOPEE_APP_SECRET`
-4. Me mande um aviso de que existe — **não o valor pelo chat**. Cole você mesmo
+1. Tenha a conta de afiliado do passo 1 **aprovada** — o chamado exige o ID.
+2. **Não adianta ir à página *Abrir API*** (`affiliate.shopee.com.br/open_api`).
+   Ela existe no menu, mas até a liberação mostra AppID e Senha vazios. O link
+   "entre em contato com a gente" que ela oferece **está quebrado** — a própria
+   página imprime o `<a>` cru no meio do texto. Confirmado em 03/08.
+3. O pedido é por chamado, na **Central de Ajuda do Afiliado**: role até o
+   rodapé, seção **"Acesso rápido"**, escolha **"E-mail"**. As opções aparecem
+   em cascata e a sequência é:
+   1. `Sim`
+   2. `Não, estou com outras dificuldades / dúvidas`
+   3. `Tenho dúvidas / dificuldades com meu cadastro / conta`
+   4. `Quero ativar a API`
+4. O formulário pede **ID do cadastro de afiliado** e **telefone**. Depois é
+   análise manual, com resposta por e-mail.
+5. Aprovado, a credencial aparece **naquela mesma página *Abrir API***, em duas
+   partes:
+   - **AppID** → `SHOPEE_APP_ID`
+   - **Senha** → `SHOPEE_APP_SECRET`
+6. Me mande um aviso de que existe — **não o valor pelo chat**. Cole você mesmo
    no `.env`.
+
+> **Nenhum guia menciona exigência de seguidores, vendas ou tipo de canal** para
+> liberar a API. Pelo que se lê, é análise de conta. Então não há motivo para
+> esperar audiência antes de pedir.
+>
+> **A API é GraphQL**, não REST — está escrito no *Guia de Usuário* da própria
+> página: *"A plataforma Aberta de Afiliados da Shopee de API usa a
+> especificação GraphQL"*. Quem for escrever o adaptador já sabe que o
+> `supabase/functions/_compartilhado/fontes/shopee.ts` precisa falar GraphQL.
 
 **Como saber que funcionou:** eu rodo o coletor e ele deixa de dizer "pulei a
 Shopee". A tela *Precisa de atenção* passa a mostrar a coleta como concluída.
