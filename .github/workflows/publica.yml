@@ -1,0 +1,89 @@
+name: Publica no Telegram
+
+# POR QUE ESTE WORKFLOW EXISTE SEPARADO DA COLETA
+#
+# A publicação morava dentro da "Coleta horária", e isso amarrava duas
+# coisas que têm ritmos diferentes. A coleta relê preço e é cara: a
+# varredura leva minutos e consome cota do Mercado Livre, então de hora
+# em hora é o certo. A publicação é barata e precisa acontecer o tempo
+# todo, porque o intervalo do ritmo é de CINCO minutos.
+#
+# Medido em 03/08: o cron `0 * * * *` pedia execução de hora em hora e o
+# GitHub entregou às 03:45, 07:23 e 11:21. Buracos de quase quatro
+# horas. O agendamento do Actions é melhor esforço, não garantia — sob
+# carga ele atrasa e descarta, e repositório público espera mais.
+#
+# Dentro de uma execução o ritmo funcionava: 24 posts na rodada das
+# 11:21, um a cada 5 minutos, e 180 publicações ficaram esperando
+# quando a janela fechou. O gargalo nunca foi o ritmo. Era o canal
+# existir 50 minutos e sumir por três horas.
+#
+# A resposta é tentar mais vezes. De 15 em 15 minutos o GitHub continua
+# descartando execução, mas quatro tentativas por hora erram muito menos
+# que uma.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+# Grupo PRÓPRIO, e é o motivo de o arquivo existir.
+#
+# A coleta usa `coleta-mercado-livre` porque duas execuções brigariam
+# pelo refresh token do ML, que é invalidado a cada renovação. A
+# publicação não renova token nenhum, então compartilhar aquele grupo
+# só faria uma esperar a outra sem necessidade.
+concurrency:
+  group: publica-telegram
+  cancel-in-progress: false
+
+jobs:
+  publica:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Instala o cliente do Supabase
+        run: npm install --no-save @supabase/supabase-js
+
+      - name: Publica no Telegram
+        # O laço fecha aqui. Não há aprovação humana no caminho (D-033):
+        # quem aprova são as comportas de confiança, e quem controla o
+        # volume é o intervalo do ritmo.
+        #
+        # O WhatsApp nunca sai daqui — regra 3.2, e é o que protege o
+        # número do parceiro.
+        #
+        # SOBREPOSIÇÃO É ESPERADA E NÃO É PROBLEMA. A execução fica viva
+        # 50 minutos dormindo entre posts, então as agendadas dos 15, 30
+        # e 45 caem em cima de uma que já roda. Elas encontram a trava de
+        # execução tomada no banco (migration 45) e saem na hora, sem
+        # publicar nada. A trava tem prazo, então execução que morrer no
+        # meio não deixa o canal mudo até alguém perceber.
+        #
+        # A janela continua em 50 minutos, e não maior: quanto mais longa
+        # a execução, mais tempo o canal fica refém de UMA execução dar
+        # certo. Com quatro tentativas por hora, cobertura vem da
+        # frequência, não da duração.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ML_MATT_TOOL: ${{ secrets.ML_MATT_TOOL }}
+          # A Amazon monta o link sozinha: `tag` paga a comissão e
+          # `ascsubtag` carrega o subid, sem sessão nem etiqueta. Sem
+          # esta variável o anúncio da Amazon sai sem comissão.
+          AFILIADO_AMAZON: ${{ secrets.AFILIADO_AMAZON }}
+        run: |
+          # `pipefail` porque o `| tee` mascara o código de saída do
+          # node: sem ele, o step passa como sucesso mesmo quando o
+          # script morre.
+          set -o pipefail
+          node --experimental-strip-types \
+               --disable-warning=ExperimentalWarning \
+               --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+               scripts/publica-automatico.mjs | tee -a "$GITHUB_STEP_SUMMARY"
