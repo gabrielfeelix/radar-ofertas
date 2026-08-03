@@ -258,6 +258,7 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 | **Mercado Livre — afiliado** | ✅ aprovado, `fega6031503`. **Etiquetas resolvidas em 01/08** | falta gerar um link com cada etiqueta, para extrair o número de rastreamento |
 | **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
 | **Shopee — afiliado** | ✅ aprovado em 03/08, ID `18378371108`, dados bancários e fiscais enviados | nada |
+| **Shopee — coleta** | ✅ **pelo feed de produto**, dois CSV diários, 110 mil itens (D-058) | mapear as categorias que sobraram: Watches, Travel & Luggage, Gaming & Consoles |
 | **Shopee — Open API** | ⏳ chamado aberto em 03/08 | esperar o e-mail. **Prazo desconhecido** — os relatos públicos vêm do Reclame Aqui, que só tem quem deu errado. Se voltar sem resposta, reabrir. Caminho do chamado em `docs/credenciais.md` §3 |
 | **Shopee — link de afiliado** | ✅ **não depende da API**, testado em 03/08 | só implementar o gerador. Formato e teste na D-057 |
 | **Mercado Livre — API de itens** | ✅ **no ar**, aplicação `Radar de Ofertas 4YU`, Client ID `7618355784652588` | nada. `ML_CLIENT_ID` e `ML_CLIENT_SECRET` existem no `.env` e nos secrets do GitHub; o refresh token vive em `credencial_rotativa` e **não** em variável de ambiente, porque ele é trocado a cada renovação |

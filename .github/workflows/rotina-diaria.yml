@@ -107,6 +107,31 @@ jobs:
           echo "$resposta" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Coleta da Shopee pelo feed de produto
+        # POR QUE AQUI, e não num workflow com horário próprio.
+        #
+        # A Shopee atualiza o feed no fim da tarde — visto em 02/08 às
+        # 19:55. O ideal seria rodar logo depois, umas 21h, para a oferta
+        # sair fresca. Mas a D-052 mostrou que cron NOVO no GitHub pode
+        # simplesmente não disparar, e a rotina diária é um agendamento
+        # que comprovadamente roda.
+        #
+        # O custo de estar aqui é publicar sobre uma foto de até doze
+        # horas. Dá para viver com isso porque o desconto do feed é
+        # declarado pela loja, e não uma queda que a gente mediu: ele
+        # muda menos ao longo do dia.
+        #
+        # Vem ANTES da detecção de propósito. O passo seguinte é quem
+        # transforma preço em oferta, e coletar depois dele deixaria o
+        # catálogo novo esperando um dia inteiro para virar fila.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -o pipefail
+          npm install --no-save @supabase/supabase-js
+          node scripts/coleta-shopee.mjs | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Manutenção e detecção de ofertas
         env:
           URL: ${{ secrets.SUPABASE_URL }}

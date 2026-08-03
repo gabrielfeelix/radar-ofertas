@@ -2019,3 +2019,109 @@ diferentes. O ID de afiliado só aparece no `utm_source`, como `an_<id>`.
 **Mudaria se:** a Open API sair e passar a gerar link curto próprio com
 o mesmo rastreio — aí vale comparar, porque link curto é mais bonito no
 post. O rastreio, este já temos.
+
+---
+
+## D-058 · A Shopee entra pelo feed de produto, sem esperar a Open API
+**Data:** 2026-08-03
+
+A D-057 já tinha tirado o link da dependência da Open API. Faltava o
+dado — preço, título, imagem —, e era por isso que a Shopee continuava
+listada como bloqueada.
+
+**Ela não está.** O painel de afiliado tem **Criativo → Feed de produto**,
+e ele entrega dois CSV atualizados todo dia, sem credencial de API.
+
+### O que vem nos arquivos
+
+| | **Shopee Oficial BR** | **Shopee Brasil** |
+|---|---|---|
+| Produtos | 100.000 (184 MB) | 10.000 (19 MB) |
+| Entre 25% e 70% de desconto | 15.375 | 3.441 |
+| `shop_rating`, `shop_name`, `like`, `condition`, `cb_option` | ✅ | ❌ |
+| `global_item_attributes` | ❌ | ✅ |
+
+**A sobreposição entre eles é de 334 itens.** São catálogos praticamente
+distintos, então os dois entram — ficar com um só jogaria fora a maior
+parte.
+
+Colunas que interessam: `price` (o "de"), `sale_price` (o "por"),
+`discount_percentage` já calculado, `item_rating`, `image_link`,
+`global_category1/2` com os ids, e `product_link` com loja e item.
+
+### Uma confirmação da D-057 que veio de brinde
+
+O `product_short link` do feed vem assim:
+
+```
+https://shope.ee/an_redir?origin_link=https%3A%2F%2Fshopee.com.br%2F...
+```
+
+É o **mesmo `an_redir`** que a D-057 tinha testado, gerado pela própria
+Shopee. O formato não era engenharia reversa nossa: é o mecanismo dela.
+
+### As URLs do feed são alças permanentes, não links de arquivo
+
+Medido em 03/08: duas chamadas seguidas ao mesmo endereço devolveram o
+mesmo `outer_feed_id` com `nonce` e `timestamp` diferentes. A Shopee
+assina um endereço novo a cada chamada, então **guardar a URL uma vez
+basta**.
+
+Elas carregam um token no parâmetro `id`, e este repositório é público —
+por isso vivem em `credencial_rotativa`, com as chaves `feed_oficial` e
+`feed_brasil`. Se a Shopee trocar o `id`, o coletor **falha com a
+mensagem dizendo onde pegar a nova**, em vez de pular calado.
+
+### Ler tudo, escrever o melhor
+
+Dos 110 mil itens lidos, **19.827 passam** nas comportas de desconto,
+nota, condição e origem. Escrever todos custaria quase cem mil chamadas
+ao banco por execução, para encher o catálogo de item que a curadoria
+reprovaria depois.
+
+Então a escrita é limitada por `SHOPEE_MAX_ITENS`, com o corte pelo
+**maior desconto**. O catálogo cresce um pouco por dia, e entra primeiro
+o que tem mais chance de virar post.
+
+**Item sem nicho mapeado não entra**, e isso é decisão: sem nicho ele não
+acha canal, e ficaria no banco para sempre sem virar nada. O coletor
+imprime as categorias que faltam, com nome e contagem, e mapear é um
+`insert` — o mesmo desenho da D-023.
+
+### O mapa de categorias
+
+As 255 categorias de segundo nível dos feeds viraram 240 linhas em
+`nicho_dominio`, com a chave `SHOPEE-<catid2>`. A tabela é chaveada por
+`(operacao, marketplace, dominio)`, então o prefixo não é necessário
+para evitar colisão — ele existe porque `anuncio.dominio_externo` é
+coluna compartilhada, e um número solto ali não diz de que loja é.
+
+As 15 que sobraram não têm nicho nosso equivalente. As maiores que
+apareceram na primeira execução: **Watches**, **Travel & Luggage** e
+**Gaming & Consoles**. Viram nicho novo se algum canal quiser.
+
+### O que a Open API ainda resolve
+
+**Reler o preço de um item específico.** O feed é uma foto diária: se o
+preço mudar às 15h, só sabemos amanhã. Por isso a oferta da Shopee é
+sempre de gatilho `declarado`, nunca `queda`, e ela continua fora da
+série histórica medida por nós.
+
+O desenho final tem os dois, e é o mesmo do Mercado Livre: **descoberta
+em lote uma vez ao dia, releitura de preço de hora em hora.** O feed
+preenche a primeira coluna; a API, quando sair, preenche a segunda.
+Nada do que foi feito aqui é refeito.
+
+### O horário, e por que ele não é o ideal
+
+A Shopee atualiza o feed no fim da tarde — visto em 02/08 às 19:55. O
+certo seria coletar logo depois. A coleta ficou na **rotina diária**, que
+roda às 09:00 UTC, então a foto tem até doze horas quando vira post.
+
+É escolha consciente: a D-052 mostrou que cron novo no GitHub pode não
+disparar, e a rotina diária é um agendamento que comprovadamente roda.
+Dá para viver com o atraso porque o desconto do feed é declarado pela
+loja, não uma queda medida por nós — ele muda menos ao longo do dia.
+
+**Mudaria se:** o sistema sair para um servidor com cron de verdade
+(D-055), aí a coleta vai para as 21h e a oferta sai no mesmo dia.
