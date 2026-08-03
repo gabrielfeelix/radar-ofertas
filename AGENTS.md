@@ -244,7 +244,7 @@ Dia de investigação, não de construção. Duas correções de código e quatr
 
 **3. WhatsApp automatizado: pesquisado a fundo e engavetado por conta (D-053).** A regra 3.2 foi rediscutida a pedido do dono e **continua valendo**, agora com lastro. A D-053 tem tudo que uma revisita futura precisa: os números de aquecimento, os limiares de detecção, o custo real, e a descoberta que muda o medo — **quando cai, cai a conta do número, não o chip e não o grupo**.
 
-**4. Onde o sistema vai morar (D-055).** A Vercel não pode hospedar o publicador, e não é questão de plano: função dela morre em minutos e o nosso publicador vive 50. Oracle Cloud (grátis, São Paulo) ou Hetzner (~R$27) são as saídas, e uma máquina fecharia três pendências de uma vez. **Espera de propósito** até saber se a D-052 resolveu sozinha.
+**4. Onde o sistema vai morar (D-055 e D-059), com roteiro pronto em `docs/migracao-para-vps.md`.** A Vercel não pode hospedar o publicador, e não é questão de plano: função dela morre em minutos e o nosso publicador vive 50. Oracle Cloud (grátis, São Paulo) ou Hetzner (~R$27) são as saídas, e uma máquina fecharia três pendências de uma vez. **Espera de propósito** até saber se a D-052 resolveu sozinha.
 
 **5. O gargalo agora é audiência, não sistema (D-056).** Os sete canais publicam sozinhos. Telegram Ads foi avaliado e **não é por onde começar** — divulgação cruzada é grátis e um post pago em canal do nicho custa uns R$200 e dá o número que falta: o custo real por inscrito.
 
@@ -259,7 +259,7 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 | **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
 | **Shopee — afiliado** | ✅ aprovado em 03/08, ID `18378371108`, dados bancários e fiscais enviados | nada |
 | **Shopee — coleta** | ✅ **pelo feed de produto**, dois CSV diários, 110 mil itens (D-058) | mapear as categorias que sobraram: Watches, Travel & Luggage, Gaming & Consoles |
-| **Shopee — Open API** | ⏳ chamado aberto em 03/08 | esperar o e-mail. **Prazo desconhecido** — os relatos públicos vêm do Reclame Aqui, que só tem quem deu errado. Se voltar sem resposta, reabrir. Caminho do chamado em `docs/credenciais.md` §3 |
+| **Shopee — Open API** | ✅ **aprovada em 03/08**, no mesmo dia do chamado | a credencial aparece na página *Abrir API* em até 5 dias. Conferir e colar `SHOPEE_APP_ID` e `SHOPEE_APP_SECRET` no `.env` |
 | **Shopee — link de afiliado** | ✅ **não depende da API**, testado em 03/08 | só implementar o gerador. Formato e teste na D-057 |
 | **Mercado Livre — API de itens** | ✅ **no ar**, aplicação `Radar de Ofertas 4YU`, Client ID `7618355784652588` | nada. `ML_CLIENT_ID` e `ML_CLIENT_SECRET` existem no `.env` e nos secrets do GitHub; o refresh token vive em `credencial_rotativa` e **não** em variável de ambiente, porque ele é trocado a cada renovação |
 | **Canais** | ✅ `t.me/radarpet` (público) e grupo de WhatsApp | audiência |

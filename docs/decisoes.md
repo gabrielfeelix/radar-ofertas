@@ -2125,3 +2125,83 @@ loja, não uma queda medida por nós — ele muda menos ao longo do dia.
 
 **Mudaria se:** o sistema sair para um servidor com cron de verdade
 (D-055), aí a coleta vai para as 21h e a oferta sai no mesmo dia.
+
+---
+
+## D-059 · A Oracle é a saída, e o preço dela é atenção
+**Data:** 2026-08-03
+
+Pesquisa a pedido do dono, que quer trocar Vercel, GitHub Actions e
+Supabase por uma máquina só na Oracle Cloud, tudo no gratuito, com os
+três serviços virando reserva.
+
+**O plano fecha**, e resolve três coisas de uma vez: a D-032 (Vercel
+Hobby proíbe uso comercial), a D-052 (agendador do GitHub não dispara) e
+o teto de 500 MB do Supabase gratuito. Mas a Oracle tem um histórico que
+precisa estar escrito antes de alguém confiar dados a ela.
+
+### O que dá errado, e é sério
+
+Relatos de **onda de banimento em massa** de contas Always Free, entre
+2025 e 2026:
+
+- conta encerrada **sem aviso e sem motivo informado**, com o suporte
+  dizendo que não pode explicar nem reverter;
+- **nenhum caso de recuperação de dados** na discussão do Hacker News.
+  A exclusão é definitiva;
+- um caso disparado por uma cobrança de teste de **US$ 0,01 que falhou**
+  num cartão virtual;
+- um usuário perdeu um cluster inteiro e, nas palavras dele, *"significant
+  losses, including the loss of some of my clients"*.
+
+O comentário que resume: *"nunca construa algo que você queira manter"*.
+
+### O que dá certo, e é o outro lado
+
+Só ler reclamação é o viés que o próprio dono apontou antes, sobre o
+Reclame Aqui: quem deu certo não volta para contar.
+
+- um operador hospeda um serviço **há mais de 5 anos, zero problemas**,
+  tudo dentro do Always Free;
+- relatos de 2 anos sem incidente;
+- *"a Oracle relaxou desde a purga de 2022; enquanto a instância não ficar
+  meses ociosa e você não minerar nem abusar de tráfego, normalmente está
+  tudo bem"*.
+
+A metáfora da comunidade: **"é como um gato, amigável na maioria dos dias,
+mas pode te arranhar sem aviso"**.
+
+### A mitigação que muda a conta
+
+**Subir a conta para Pay As You Go.** Põe-se um cartão, a conta deixa de
+ser "free tier", **e os recursos Always Free continuam gratuitos** — a
+fatura fica em R$0 enquanto não passar dos limites. Isso remove o motivo
+de encerramento mais documentado, que é conta gratuita sendo recuperada
+por política.
+
+Duas regras a mais, achadas na documentação: conta **sem uso por 60 dias**
+pode ser encerrada (não morde aqui, a máquina roda o dia todo), e a
+recuperação de instância ociosa da D-055 exige CPU, rede **e** memória
+abaixo de 20% — com banco, painel e publicador na mesma máquina, a
+memória sozinha já passa disso. **O plano se protege desse risco
+sozinho.**
+
+### Backup no Supabase, que é ideia do dono e é melhor do que parece
+
+O Supabase gratuito dá 500 MB de banco e **1 GB de storage**, e o
+`backup-semanal.yml` já faz `pg_dump` — basta apontar o destino.
+
+O ponto forte não é o espaço, é serem **empresas diferentes**: backup na
+Oracle protege contra disco; backup no Supabase protege contra a Oracle
+inteira sumir. E o projeto Supabase vira **reserva morna**, com o schema
+já aplicado: se a Oracle cair, troca-se a URL no `.env` e o sistema volta
+com o dado do último backup. Não é reconstrução, é chave girada.
+
+Duas ressalvas: projeto gratuito do Supabase **hiberna após 7 dias sem
+uso**, e o backup semanal já resolve isso porque escrever conta como uso;
+e os 500 MB limitam até onde a reserva acompanha o banco principal.
+
+**Mudaria se:** a Oracle encerrar a conta mesmo em Pay As You Go, ou o
+banco passar dos 500 MB a ponto de a reserva no Supabase deixar de ser
+retorno viável. Aí a discussão vira Hetzner paga, e o roteiro de
+`docs/migracao-para-vps.md` continua valendo com outro provedor.

@@ -158,8 +158,13 @@ as rotinas automáticas rodarem sozinhas de madrugada.
 > bancários e fiscais enviados. **ID de afiliado: `18378371108`** — já no `.env`
 > como `AFILIADO_SHOPEE`. Não é o código de indicação, que é outro número.
 >
-> **Open API: chamado ABERTO em 03/08/2026**, com retorno "Enviado com sucesso ·
-> Seu caso será enviado para análise". Agora é esperar o e-mail.
+> **Open API: ✅ APROVADA em 03/08/2026**, no mesmo dia do chamado. A resposta
+> diz que a credencial aparece na página *Abrir API* em **até 5 dias**. Não é
+> preciso fazer mais nada além de conferir a página.
+>
+> Isso derruba o medo do prazo: os relatos de dois meses que assustavam vinham do
+> Reclame Aqui, que só tem quem deu errado. O dono desconfiou desse viés na hora,
+> e estava certo.
 >
 > **E o chamado é mesmo o caminho — isto ficou provado, não inferido.** O
 > formulário tem uma opção literal chamada **"Quero ativar a API"**. Se a
