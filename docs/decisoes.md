@@ -1670,3 +1670,288 @@ Amazon, raspar quebra o negócio.
 **Mudaria se:** a Amazon abrir um nível da Creators API sem o requisito
 de vendas, ou se as 10 vendas chegarem — que é o desfecho esperado e
 depende de operação, não de código.
+
+---
+
+## D-052 · O agendamento do GitHub não é confiável, e a resposta é redundância
+**Data:** 2026-08-03
+
+O canal ficava mudo por horas e o ritmo levava a culpa. Não era ele.
+
+**Medido em 03/08.** O cron pedia execução de hora em hora e o GitHub
+entregou às **03:45, 07:23 e 11:21**. Buracos de quase quatro horas.
+Dentro de cada execução o ritmo funcionava: 24 posts na rodada das
+11:21, um a cada cinco minutos, e **180 publicações ficaram esperando**
+quando a janela de 50 minutos fechou. O canal existia 50 minutos e
+sumia por três.
+
+**O agendamento do Actions é melhor esforço, não garantia.** Sob carga
+ele atrasa e descarta, e repositório público espera mais.
+
+### A primeira tentativa piorou, e vale registrar
+
+A publicação saiu da "Coleta horária" e virou `publica.yml`, com cron
+de 15 em 15 minutos. **Uma hora e quinze depois, o workflow novo tinha
+rodado zero vezes** — o GitHub não ligou o agendamento novo — enquanto
+a coleta rodou normal. Ou seja: a mudança feita para o canal falar mais
+deixou o canal mudo.
+
+**Cron novo não começa a valer só porque está no `main`.** Não descobri
+o prazo, e não há como forçar.
+
+### O desenho que ficou
+
+**Dois agendadores para a mesma tarefa**, e nenhum é dono:
+
+1. `publica.yml`, de 15 em 15 minutos, é o caminho principal.
+2. A "Coleta horária" publica no fim, como reserva de hora em hora.
+
+Não duplica post porque a **trava de execução no banco (migration 45) é
+única**: quem chega segundo encontra tomada e sai na hora. A trava tem
+prazo, então execução que morrer no meio não trava o canal.
+
+**A janela segue em 50 minutos, e não maior.** Aumentar faria o canal
+depender de UMA execução dar certo. A cobertura vem da frequência.
+
+**Mudaria se:** o sistema sair para um servidor com cron de verdade —
+aí o publicador vira processo permanente e nada disto é necessário.
+
+---
+
+## D-053 · Não existe caminho oficial para publicar em grupo de WhatsApp
+**Data:** 2026-08-03
+
+Pesquisa a pedido do dono, que questionou a regra 3.2: *"essas regras
+não ditam a verdade não, foi só o início do projeto"*. Justo. Então a
+pergunta foi refeita do zero, sem assumir a regra como dada.
+
+**A conclusão não mudou, e agora tem lastro.**
+
+### A via oficial não cobre o nosso caso
+
+- **Groups API** (lançada em 2026): teto de **8 participantes por
+  grupo**. Grupo de ofertas tem centenas. Exige conta oficial verificada
+  e bloqueia mensagem de comércio.
+- **Broadcast com template de marketing**: cobra por conversa de 24
+  horas, exige opt-in número a número, e é mensagem individual — não
+  grupo.
+- **Canais do WhatsApp**: não têm API de publicação. Só na mão.
+
+Não é que não achamos. **Não existe.**
+
+### O que o mercado usa, e o que custa
+
+Bibliotecas que fazem engenharia reversa do WhatsApp Web: **Baileys**
+(a dominante, as outras rodam por cima), **Evolution API** e **WAHA**
+(camadas REST sobre ela), e **whatsapp-web.js** (automatiza um Chrome).
+
+Prazo típico até a detecção: **2 a 8 semanas** — medido em quem dispara
+para lista fria. **68%** das empresas pesquisadas que usaram ferramenta
+não oficial relataram ao menos um banimento em 12 meses. A detecção é
+automática: não depende de denúncia.
+
+Isto explica a ementa dos cursos do nicho, que a pesquisa de 28/07 já
+tinha achado e termina em *"gestão de múltiplos números para evitar
+ban"*. Eles não resolveram o problema, distribuíram o prejuízo.
+
+### Os números concretos, para quando isto for revisitado
+
+**Aquecimento de número novo:** 20 a 50 mensagens/dia nos primeiros 3
+dias; 100 a 200/dia entre os dias 8 e 14; volume de operação a partir
+do dia 15. Aquecimento sério leva de 7 a 14 dias.
+
+**Tetos de número maduro:** menos de 200 mensagens/dia e menos de 30
+por hora.
+
+**Sinais que derrubam:**
+- bloqueio acima de **2%** derruba a qualidade; acima de **0,5%** já é
+  zona de risco
+- taxa de resposta abaixo de **15%** é zona de perigo
+- ritmo mecânico é assinatura: intervalo fixo de 500 ms é sinal
+  documentado
+- mesma estrutura de mensagem para mais de **15 destinatários por
+  hora** acumula marcação
+- **o país do IP tem que bater com o do número** — número brasileiro
+  conectado de servidor europeu é bandeira vermelha de primeira camada
+
+### O nosso caso é mais leve que a média, e isto é inferência
+
+Postar em grupo é **um envio**, não mil: o grupo distribui sozinho.
+Espelhando o ritmo do Telegram, seriam ~30 publicações/dia por grupo, e
+um número servindo os 7 grupos daria ~210 envios/dia — acima do teto.
+**Dois números resolveriam.**
+
+E os dois sinais mais fortes jogam a favor: membro insatisfeito de grupo
+de ofertas **sai do grupo em vez de bloquear**, e grupo de ofertas tem
+conversa, o que alimenta a taxa de resposta.
+
+**Nenhuma fonte mediu postagem em grupo separadamente.** O 2 a 8 semanas
+é de disparo frio. A leitura de que o nosso perfil é mais leve é
+inferência, não dado.
+
+**O que não some com bom comportamento:** a detecção também identifica o
+cliente pelo protocolo, não só pelo comportamento. Cliente não oficial é
+detectável por si.
+
+### O que cai quando cai, e isto muda o medo
+
+**Cai a conta do WhatsApp vinculada ao número. Não cai o chip, e não cai
+o grupo.**
+
+- A linha da operadora continua funcionando: liga, recebe SMS, tem
+  internet.
+- O número fica barrado do WhatsApp. Em banimento permanente, para
+  sempre — reinstalar não adianta, e o recurso é dentro do app ou por
+  e-mail da Meta. **Serviço pago de "desbanimento" é golpe.**
+- **O grupo sobrevive.** Ele vive na infraestrutura do WhatsApp. Se a
+  conta banida era admin, o WhatsApp passa o admin para outro membro. Só
+  se perde o grupo se a conta banida for o único membro.
+
+**Daí sai uma regra de arquitetura, para o dia em que isto for feito:**
+o número do bot **nunca** pode ser o único admin. Um segundo número, do
+dono, fica como titular e nunca roda bot. Assim o pior caso é perder um
+chip e o tempo de aquecimento, não a audiência.
+
+**E nunca o número pessoal nem o de trabalho.** Banimento permanente é
+perda de identidade, não de ferramenta.
+
+### Por que fica engavetado mesmo assim
+
+Não é por princípio, é por conta. O custo real é **~R$30/mês de chip
+com recarga obrigatória, mais VPS no Brasil** (o IP precisa ser
+brasileiro), mais 14 dias de aquecimento antes do primeiro post. Isso
+para automatizar um grupo que **ainda não tem audiência** — que é
+justamente o que falta, segundo a própria tabela de contas.
+
+O Telegram é gratuito, automatizado, já publica, e é onde os sete canais
+estão. A energia vai para lá.
+
+**A regra 3.2 continua valendo**, agora por decisão econômica com
+lastro, e não por herança do começo do projeto.
+
+**Mudaria se:** um grupo de WhatsApp ganhar audiência que justifique os
+R$60/mês, ou a Meta abrir API de grupo com teto real. Quando mudar, o
+plano é: um número dedicado, um grupo, 14 dias de aquecimento, VPS no
+Brasil, ritmo com intervalo variável, e o titular do grupo sendo outro
+número. Sobreviveu 60 dias, expande.
+
+---
+
+## D-054 · Como os concorrentes acham oferta, e por que ler canal alheio é a rota mais segura
+**Data:** 2026-08-03
+
+A D-051 já tinha decidido usar a colheita como fila de sugestão da
+Amazon. Faltava saber **de onde os canais alheios tiram aquilo**, porque
+disso depende quanto confiar no dado.
+
+**São três origens, e a mais comum não é humana:**
+
+1. **Redistribuição entre eles.** O *Feed Global P2P* do Pro Afiliados é
+   uma rede onde afiliados concorrentes repassam ofertas uns aos outros
+   automaticamente, cada um recebendo já com o próprio link convertido.
+   A Afilira descreve o mesmo: *"monitora grupos e fontes de ofertas"* e
+   *"ofertas detectadas pela rede de usuários abastecem o seu canal"*. É
+   por isso que a mesma oferta aparece em três canais em minutos.
+2. **Raspagem.** É o que os cursos do nicho ensinam.
+3. **Na mão**, os menores.
+
+**A consequência prática:** quando a nossa colheita lê o canal deles,
+ela pega carona nas duas primeiras sem correr o risco de nenhuma. Eles
+raspam, nós lemos o que já foi publicado. Não é gambiarra nossa — é o
+padrão do mercado, e a nossa versão é a mais segura das três.
+
+**Um detalhe que muda prioridade:** a Afilira vende *"velocidade que
+garante a comissão na janela da Amazon"*. Quem opera isto trata **tempo
+de resposta como o fator competitivo**. Enquanto a publicação depender
+do agendador do GitHub (D-052), perdemos essa corrida por horas.
+
+**Mudaria se:** algum marketplace abrir feed oficial de oferta para
+afiliado. A Shopee é a única que promete isso, pela Open API.
+
+---
+
+## D-055 · Onde o sistema vai morar, e por que a decisão espera
+**Data:** 2026-08-03
+
+Levantamento feito quando o dono perguntou se valia pagar servidor para
+escapar do agendador do GitHub (D-052).
+
+**A Vercel não resolve, e não é questão de plano.** Ela tem cron, mas no
+gratuito ele roda **uma vez por dia**, e função da Vercel morre em
+minutos. O nosso publicador **fica vivo 50 minutos dormindo entre
+posts** — não cabe em nenhum plano. O GitHub Actions serve justamente
+porque o job pode durar até 6 horas.
+
+**As opções levantadas:**
+
+| Opção | Custo | Observação |
+|---|---|---|
+| **Oracle Cloud Always Free** | R$0 | Tem região em **São Paulo**. Melhor negócio da lista. |
+| **Hetzner CX22** | ~R$27/mês | 2 vCPU, 4 GB. Melhor relação preço/qualidade paga. Fica na Europa. |
+| **Contabo** | ~R$25/mês | Mais RAM pelo preço, CPU mais sobrevendida. |
+| **Hostinger KVM1** | R$34,99, renova a R$59,99 | Mesmo painel do domínio. |
+
+**Sobre a Oracle, dois números que os guias da internet erram:** o
+Always Free era 4 OCPU e 24 GB até **15/06/2026**, quando a Oracle
+cortou para **2 OCPU e 12 GB** sem anunciar — só editaram a
+documentação. E existe **recuperação de instância ociosa**, que se
+aplica a Always Free: a máquina é considerada ociosa se, em 7 dias, CPU,
+rede **e** memória ficarem todas abaixo de 20%. São as três juntas, então
+é evitável, mas é uma coisa a acompanhar. A fricção prática é o ARM viver
+dando *"out of host capacity"*.
+
+**Uma restrição que só aparece se o WhatsApp entrar (D-053):** o país do
+IP tem que bater com o do número. Isso elimina Hetzner e Contabo para
+aquele uso, e mantém Oracle São Paulo ou VPS brasileiro.
+
+**O domínio já existe:** `4yu.com.br`, registrado na Hostinger, com o
+site publicado na Vercel. O caminho natural é `radarofertas.4yu.com.br`
+apontando para a máquina, e `go.4yu.com.br` para o redirecionador da
+Fase 2 — **subdomínio, não subpasta**, para os dois não se amarrarem.
+
+**Uma máquina e um domínio fechariam três pendências de uma vez:**
+hospedagem sem violar termo (D-032), publicador contínuo (D-052) e a
+base do redirecionador.
+
+**Por que espera:** as duas mudanças gratuitas da D-052 podem resolver o
+buraco de publicação. Se resolverem, a mudança de casa vira decisão
+calma sobre hospedagem em vez de correria.
+
+**Atenção ao mudar:** as URIs de redirect do OAuth do Mercado Livre
+apontam para a Vercel. Mudando de endereço, tem que cadastrar as novas
+no devcenter, senão o token para de renovar.
+
+---
+
+## D-056 · Anúncio no Telegram fica para depois da divulgação cruzada
+**Data:** 2026-08-03
+
+Os sete canais existem e a audiência é o que falta. A pergunta foi se
+Telegram Ads resolve.
+
+**A plataforma oficial tem porteiro:** conta direta exige depósito
+mínimo de **€2 milhões**. Por agência revendedora cai para €3.000 a
+€5.000, e alguns painéis self-serve começam em US$150.
+
+**O CPM é barato no papel** — €1 a €4, contra US$15 a 20 do Meta — e a
+segmentação joga a favor, porque o Telegram Ads mira **por canal e
+tema**, não por pessoa: dá para anunciar dentro de canais de oferta e de
+pet.
+
+**A ressalva que desmonta o entusiasmo:** quase todo esse volume barato
+é mercado russo, onde o Telegram é dominante. **Inventário brasileiro é
+fino**, então o CPM real aqui é provavelmente bem pior. Casos de "2.400
+inscritos por €42" são material de venda, não referência.
+
+**O que o nicho brasileiro faz, e custa menos:**
+- **Divulgação cruzada** entre canais, custo zero, com grupos
+  organizados só para isso;
+- **Comprar post em canal existente**, a partir de uns **R$200** em
+  canal com 5 mil inscritos.
+
+**A decisão:** não começar por Ads. Fazer cruzada com canais de pet e
+oferta, e comprar **um** post pago para medir o custo real por inscrito.
+Com esse número na mão, Ads vira conta; sem ele, é aposta.
+
+**Mudaria se:** o custo por inscrito medido no post pago vier alto o
+bastante para o CPM do Ads compensar mesmo com inventário fino.

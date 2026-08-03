@@ -37,7 +37,9 @@ Se você acha que outra tecnologia é melhor, escreva a sugestão em `docs/decis
 
 **3.1 Nenhum segredo entra no Git.** Chaves do Supabase, tokens de bot e IDs de afiliado ficam em variáveis de ambiente. `.env` está no `.gitignore` e continua lá. Se precisar de uma variável nova, adicione ao `.env.example` com valor falso, nunca o real. Antes de qualquer commit, confira que nenhum segredo entrou.
 
-**3.2 Nunca automatize o envio no WhatsApp.** Nada de biblioteca não oficial, leitura de QR Code ou simulação de WhatsApp Web. Isso viola os termos e derruba o número, que é o ativo do parceiro. O WhatsApp é sempre: gerar o texto, abrir `wa.me` com a mensagem pronta, humano aperta enviar. **Telegram sim, pode postar sozinho** pela API oficial.
+**3.2 Nunca automatize o envio no WhatsApp.** Nada de biblioteca não oficial, leitura de QR Code ou simulação de WhatsApp Web. O WhatsApp é sempre: gerar o texto, abrir `wa.me` com a mensagem pronta, humano aperta enviar. **Telegram sim, pode postar sozinho** pela API oficial.
+
+> A regra foi rediscutida do zero em 03/08 a pedido do dono, e **continua valendo por conta, não por herança** (D-053). Não existe via oficial: a Groups API tem teto de **8 participantes**, Canal não tem API de publicação, e broadcast é mensagem individual com opt-in. O mercado usa Baileys e derivados, que caem em 2 a 8 semanas. Automatizar custaria ~R$30/mês de chip mais VPS **no Brasil** (o país do IP tem que bater com o do número) para servir um grupo que ainda não tem audiência. Se for revisitar, leia a D-053 inteira antes: ela tem os números de aquecimento, os limiares de detecção, e a regra de que **o número do bot nunca pode ser o único admin do grupo** — porque quando cai, cai a conta, não o grupo.
 
 **3.3 Preço da Amazon não vira histórico — e imagem é ainda mais restrita.** A política de associados permite guardar preço em cache por no máximo 24 horas. Portanto: não construa série histórica de preço da Amazon, não exiba comparação histórica de Amazon, e descarte pontos de preço da Amazon com mais de 24 horas. Histórico de preço é construído em cima de **Mercado Livre e Shopee**. A Amazon entra como fonte de oferta pontual.
 
@@ -230,6 +232,20 @@ Dia longo, quatro frentes. Ordem de leitura para quem chega agora: esta lista, d
 **5. A simulação saiu do painel, inteira.** Decisão do dono: *"agora estamos parando de brincar de mockup"*. Encerra a exceção da D-026. `lib/simulacao/loja.ts` foi apagado e as três telas — Canais, Aprovar e Publicar — leem o banco. A faixa `AvisoSimulacao` não existe mais, porque não há tela mentindo. **Nenhuma tela do painel mostra número inventado.** O que a travessia mudou está em `docs/tirar-a-simulacao.md`.
 
 **6. A infraestrutura saiu do papel.** Segredos do GitHub subidos, Edge Functions publicadas na nuvem, variáveis da Vercel completadas em Preview e Development. As duas rotinas agendadas foram **disparadas à mão e passaram** — não estão só configuradas, estão comprovadas.
+
+### O que a sessão de 03/08/2026 mudou
+
+Dia de investigação, não de construção. Duas correções de código e quatro decisões que fecham perguntas que voltavam sempre.
+
+**1. O canal tinha parado de publicar foto, e a culpa era nossa.** O prazo de 24 horas da imagem estava **cravado no código**, quando ele é da loja: `marketplace.cache_preco_max_horas` vale 24 na Amazon e é **nulo** no Mercado Livre e na Shopee. O banco sempre respeitou isso; o publicador não. Enquanto o catálogo era novo ninguém notou — quando 82% dos anúncios passaram de um dia, a foto sumiu de tudo. Corrigido no publicador e no painel.
+
+**2. O canal ficava mudo por horas, e não era o ritmo (D-052).** O ritmo já é de 5 minutos e funciona: 24 posts numa rodada, 180 esperando quando a janela fechou. **O agendador do GitHub é que não dispara** — pediu de hora em hora e entregou às 03:45, 07:23 e 11:21. Agora são **dois agendadores para a mesma tarefa**, e a trava do banco impede post duplicado. Leia a D-052 antes de mexer nisso: a primeira tentativa piorou, porque cron novo pode simplesmente não ligar.
+
+**3. WhatsApp automatizado: pesquisado a fundo e engavetado por conta (D-053).** A regra 3.2 foi rediscutida a pedido do dono e **continua valendo**, agora com lastro. A D-053 tem tudo que uma revisita futura precisa: os números de aquecimento, os limiares de detecção, o custo real, e a descoberta que muda o medo — **quando cai, cai a conta do número, não o chip e não o grupo**.
+
+**4. Onde o sistema vai morar (D-055).** A Vercel não pode hospedar o publicador, e não é questão de plano: função dela morre em minutos e o nosso publicador vive 50. Oracle Cloud (grátis, São Paulo) ou Hetzner (~R$27) são as saídas, e uma máquina fecharia três pendências de uma vez. **Espera de propósito** até saber se a D-052 resolveu sozinha.
+
+**5. O gargalo agora é audiência, não sistema (D-056).** Os sete canais publicam sozinhos. Telegram Ads foi avaliado e **não é por onde começar** — divulgação cruzada é grátis e um post pago em canal do nicho custa uns R$200 e dá o número que falta: o custo real por inscrito.
 
 ### Contas e credenciais — onde estamos
 
@@ -436,6 +452,8 @@ etiqueta provou carregar a atribuição. O que decide se ele publica
 sozinho ou com um passo manual é o teste 1.
 
 ### Bloqueado, e por quem
+
+- **Audiência** — é o gargalo de verdade desde 03/08. Os sete canais publicam sozinhos e quase ninguém lê. Isto não se resolve com código: o caminho decidido na D-056 é divulgação cruzada com canais de pet e oferta, mais **um** post pago (~R$200) para medir o custo real por inscrito. Sem esse número, qualquer decisão sobre anúncio é aposta.
 
 - **Coleta de preço real** — falta credencial de marketplace, e o caminho mais curto **mudou em 31/07**. A Shopee continua sendo a melhor chave (resolve dado e link de uma vez), mas ela está a cerca de três semanas de distância: cadastro em análise, e a API só pode ser pedida depois de aprovado, levando até duas semanas a mais. **O Mercado Livre virou o atalho, e ele andou:** a aplicação já existe e `ML_CLIENT_ID` e `ML_CLIENT_SECRET` já estão no `.env`. **Falta um único passo**, o `ML_REFRESH_TOKEN`, que sai de um fluxo de navegador descrito em `docs/credenciais.md` §4b. Quem retomar isto: é a primeira coisa da fila, e leva minutos.
 - **Renovação do token do ML rasga o token guardado** — ⚠️ **defeito conhecido, não corrigido.** O Mercado Livre **troca o refresh token a cada renovação** e invalida o anterior. `pegaToken` em `supabase/functions/_compartilhado/fontes/mercado-livre.ts` lê só o `access_token` da resposta e descarta o `refresh_token` novo. Funciona na primeira renovação e quebra na próxima execução fria — o coletor passa a reportar "não consegui renovar o token" e pula a loja. **Tem que ser resolvido antes da primeira coleta agendada:** o token rotacionado precisa ser gravado em algum lugar que sobreviva à Edge Function, e variável de ambiente não é esse lugar.
