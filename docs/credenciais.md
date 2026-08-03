@@ -181,9 +181,14 @@ as rotinas automáticas rodarem sozinhas de madrugada.
 todas as lojas por falta de chave — o catálogo só enche pela colheita de canais
 alheios, e sem preço coletado não existe série, sem série não existe oferta.
 
-**É a aposta principal, e o motivo é concreto:** a mesma credencial resolve
-**dado de produto e link curto rastreável**. Nos outros programas são duas coisas
-separadas.
+**Ela destrava só metade do que se pensava, e a outra metade já é nossa.** A
+ideia era que a mesma credencial resolvesse dado de produto **e** link
+rastreável. O link **não precisa dela**: testamos em 03/08 e o formato
+`s.shopee.com.br/an_redir` funciona montado por URL, com o nosso ID e o nosso
+sub_id chegando íntegros. Está na **D-057**.
+
+Então o que o chamado ainda destrava é **preço, título, estoque e o feed de
+ofertas** — a perna da série histórica. Publicar Shopee já dá.
 
 ### Passo a passo
 

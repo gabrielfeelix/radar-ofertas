@@ -1955,3 +1955,67 @@ Com esse número na mão, Ads vira conta; sem ele, é aposta.
 
 **Mudaria se:** o custo por inscrito medido no post pago vier alto o
 bastante para o CPM do Ads compensar mesmo com inventário fino.
+
+---
+
+## D-057 · O link da Shopee não depende da Open API, e o sub_id dela tem cinco campos
+**Data:** 2026-08-03
+
+A Shopee estava classificada como bloqueada esperando o chamado da Open
+API. **Estava errado, e a distinção importa:** o chamado é necessário
+para *ler produto*, não para *gerar link*.
+
+### O formato, e ele é montável por URL
+
+```
+https://s.shopee.com.br/an_redir?origin_link=<URL_CODIFICADA>&affiliate_id=<ID>&sub_id=a-b-c-d-e
+```
+
+**Testado com a nossa conta em 03/08**, e a URL final voltou assim:
+
+```
+utm_source=an_18378371108     ← o nosso ID
+utm_content=teste01----       ← o nosso sub_id, íntegro
+utm_medium=affiliates
+```
+
+Não é inferência: é um link nosso, aberto no navegador, chegando com
+atribuição. O formato saiu do Help Center da Shopee da Malásia e de
+Singapura, e a dúvida era se o Brasil usava o mesmo. Usa.
+
+### A confirmação veio antes, de um concorrente
+
+Um link de canal alheio, resolvido à mão, trouxe `utm_content=gurubot----`.
+Cinco campos separados por hífen, com só o primeiro preenchido. Foi o que
+provou que a estrutura de cinco campos vale em `.com.br` antes mesmo do
+nosso teste.
+
+### O que isso muda
+
+**A Shopee vira publicável hoje.** O catálogo dela já entra pela colheita
+dos canais de terceiros, e agora o link sai montado, com comissão e
+rastreio. Não depende de fila de aprovação nenhuma.
+
+**O que continua faltando na Open API:** preço, título e estoque, e o
+feed de ofertas. A Shopee segue fora da série histórica — mas deixa de
+estar fora do canal.
+
+### O sub_id de cinco campos reabre a D-035
+
+A D-035 escolheu a granularidade do subid por inferência, quando o único
+formato conhecido era o do Mercado Livre, que tem **um** campo e obriga a
+espremer tudo numa string. A Shopee tem **cinco**, e isso permite canal,
+publicação e origem em campos próprios, legíveis no relatório sem
+precisar decodificar nada.
+
+Isso não força uma decisão agora — a regra 3.6 continua exigindo subid
+único por publicação, e ela é atendida nos dois formatos. Mas quem for
+revisitar a granularidade deve saber que o teto não é mais o do ML.
+
+**Atenção a uma confusão fácil:** em `shopee.com.br/product/{shop_id}/{item_id}`
+os dois números têm 11 dígitos, e o ID de afiliado também. São três coisas
+diferentes. O ID de afiliado só aparece no `utm_source`, como `an_<id>`.
+
+**Mudaria se:** a Open API sair e passar a gerar link curto próprio com
+o mesmo rastreio — aí vale comparar, porque link curto é mais bonito no
+post. O rastreio, este já temos.

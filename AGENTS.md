@@ -259,6 +259,7 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 | **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
 | **Shopee — afiliado** | ✅ aprovado em 03/08, ID `18378371108`, dados bancários e fiscais enviados | nada |
 | **Shopee — Open API** | ⏳ chamado aberto em 03/08 | esperar o e-mail. **Prazo desconhecido** — os relatos públicos vêm do Reclame Aqui, que só tem quem deu errado. Se voltar sem resposta, reabrir. Caminho do chamado em `docs/credenciais.md` §3 |
+| **Shopee — link de afiliado** | ✅ **não depende da API**, testado em 03/08 | só implementar o gerador. Formato e teste na D-057 |
 | **Mercado Livre — API de itens** | ✅ **no ar**, aplicação `Radar de Ofertas 4YU`, Client ID `7618355784652588` | nada. `ML_CLIENT_ID` e `ML_CLIENT_SECRET` existem no `.env` e nos secrets do GitHub; o refresh token vive em `credencial_rotativa` e **não** em variável de ambiente, porque ele é trocado a cada renovação |
 | **Canais** | ✅ `t.me/radarpet` (público) e grupo de WhatsApp | audiência |
 
