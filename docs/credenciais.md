@@ -134,12 +134,24 @@ as rotinas automáticas rodarem sozinhas de madrugada.
 > bancários e fiscais enviados. **ID de afiliado: `18378371108`** — já no `.env`
 > como `AFILIADO_SHOPEE`. Não é o código de indicação, que é outro número.
 >
-> **A Open API continua bloqueada, e o pedido é chamado à parte.** A página
-> *Abrir API* no painel mostra AppID e Senha vazios, com a mensagem "No momento
-> você não possui acesso à Plataforma de Open API dos Afiliados Shopee".
+> **Open API: chamado ABERTO em 03/08/2026**, com retorno "Enviado com sucesso ·
+> Seu caso será enviado para análise". Agora é esperar o e-mail.
 >
-> As duas esperas são em série, como já estava previsto: a conta primeiro, a API
-> depois.
+> **E o chamado é mesmo o caminho — isto ficou provado, não inferido.** O
+> formulário tem uma opção literal chamada **"Quero ativar a API"**. Se a
+> liberação fosse automática depois da análise fiscal, essa opção não existiria.
+> A dúvida era legítima: o dono levantou que seria estranho a Shopee fazer cada
+> afiliado abrir chamado, e o formulário respondeu.
+>
+> A página *Abrir API* no painel segue mostrando AppID e Senha vazios, com a
+> mensagem "No momento você não possui acesso à Plataforma de Open API dos
+> Afiliados Shopee". O link "entre em contato com a gente" que ela oferece
+> **está quebrado** — a página imprime o `<a>` cru no meio do texto.
+>
+> **Prazo: desconhecido, e desconfie de qualquer número.** Os relatos que
+> existem estão no Reclame Aqui, que é amostra de quem deu errado por definição
+> — ninguém volta lá para dizer que foi liberado em três dias. As duas esperas
+> são em série, como já estava previsto: a conta primeiro, a API depois.
 
 **Destrava:** a coleta de preço de verdade. Hoje o coletor está pronto e pula
 todas as lojas por falta de chave — o catálogo só enche pela colheita de canais
