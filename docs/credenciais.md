@@ -91,6 +91,30 @@ no `.env`.
 >
 > **Uma coisa continua sendo sua:** a senha do banco está em `.env.producao` e o
 > Supabase não a mostra de novo. Copie para um gerenciador de senhas.
+
+### Onde vive o token que aplica migration
+
+`pnpm db:publica` (que é `supabase db push`) falha com *"Access token not
+provided"* se o `SUPABASE_ACCESS_TOKEN` não estiver no ambiente. Ele **não está
+no `.env` deste projeto**, e é de propósito: é token de **conta**, não de
+projeto — alcança todos os projetos e organizações da 4YU, então não pertence a
+um repositório só.
+
+Ele mora no cofre compartilhado da 4YU, em `4yu-apps/.secrets/4yu.env`, com a
+convenção explicada lá dentro: `SUPABASE_ACCESS_TOKEN` é da conta, e
+`<APP>_SUPABASE_*` são de projeto.
+
+Para rodar uma migration na nuvem, exporte a variável a partir dele e chame o
+push. **Nunca copie o valor para dentro deste repositório, que é público.**
+
+**Antes de empurrar, confira o ledger** com `supabase migration list --linked`.
+Ele mostra `local` e `remote` lado a lado. Se as duas colunas baterem em tudo
+menos na migration nova, o push é seguro. Se alguma aplicada na nuvem não
+aparecer como local — ou o contrário —, **pare**: o push tentaria reaplicar
+coisa que já rodou, e migration aplicada não se reaplica sem estrago.
+
+O projeto já está vinculado ao ref `fcdkczueohekmgaaacdr`, em
+`supabase/.temp/project-ref`, então não é preciso refazer o `link`.
 >
 > O passo a passo abaixo fica registrado para quando houver um segundo ambiente.
 

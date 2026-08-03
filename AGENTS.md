@@ -109,6 +109,7 @@ Schema completo, campos e índices: `docs/dados.md`. Não crie tabela fora do qu
 - Tabelas e colunas em `snake_case`, português, singular para a tabela (`publicacao`, não `publicacoes`).
 - Toda tabela tem `id` (uuid ou bigint identity), `criado_em` e, quando fizer sentido, `atualizado_em`.
 - Migrations versionadas em `supabase/migrations/`, nome com data e descrição. **Nunca altere migration já aplicada — crie outra.** A reescrita de 27/07/2026 foi exceção deliberada e aprovada, com o banco vazio e nada publicado. **Essa porta fechou em 31/07/2026**, quando o projeto Supabase da nuvem passou a existir e as 15 migrations foram aplicadas nele: alterar uma migration já aplicada agora significa banco local e banco da nuvem contando histórias diferentes, e a diferença só aparece em produção.
+- **Para aplicar migration na nuvem** (`pnpm db:publica`), o `SUPABASE_ACCESS_TOKEN` **não está no `.env` deste projeto** — é token de conta e vive no cofre da 4YU, em `4yu-apps/.secrets/4yu.env`. Sem ele o comando falha com *"Access token not provided"*. **Confira o ledger antes**, com `supabase migration list --linked`: se as colunas `local` e `remote` não baterem, pare em vez de empurrar. Detalhe em `docs/credenciais.md` §2.
 - Row Level Security ligado em toda tabela desde a primeira migration. Parceiro só enxerga os próprios canais.
 - Componentes React em `PascalCase`, funções em `camelCase`.
 - Nada de `any` em TypeScript sem comentário justificando.
