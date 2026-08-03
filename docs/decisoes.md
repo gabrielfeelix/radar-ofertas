@@ -1699,6 +1699,17 @@ deixou o canal mudo.
 **Cron novo não começa a valer só porque está no `main`.** Não descobri
 o prazo, e não há como forçar.
 
+**Correção do mesmo dia, às 19h:** ele acabou disparando — às 16:08 e às
+18:04. Não é que nunca funcione: **é que funciona uma vez a cada oito**.
+Entre aqueles dois horários deveriam ter acontecido oito execuções.
+
+Isso é pior que não funcionar, porque parece configurado e não é
+confiável. E leva à saída registrada em `docs/cron-externo.md`: **parar
+de pedir e passar a mandar**, com um cron externo chamando a API de
+`workflow_dispatch`. Esse caminho não passa pelo agendador do GitHub —
+entra na fila como um push. Testado em 03/08, a execução começou em
+segundos.
+
 ### O desenho que ficou
 
 **Dois agendadores para a mesma tarefa**, e nenhum é dono:
