@@ -38,7 +38,52 @@
 const FERRAMENTA: Record<string, string | undefined> = {
   mercado_livre: process.env.ML_MATT_TOOL,
   amazon: process.env.AFILIADO_AMAZON,
+  shopee: process.env.AFILIADO_SHOPEE,
 };
+
+/**
+ * A SHOPEE NÃO PRECISA DA OPEN API PARA GERAR LINK, e essa distinção
+ * custou semanas de espera imaginária (D-057).
+ *
+ * O chamado da Open API, aberto em 03/08 e sem prazo conhecido,
+ * destrava **ler produto** — preço, título, estoque, feed de ofertas.
+ * O link é outra coisa: a Shopee documenta um redirecionador que aceita
+ * os parâmetros direto na URL, sem sessão e sem credencial.
+ *
+ *   https://s.shopee.com.br/an_redir
+ *     ?origin_link=<URL do produto, codificada>
+ *     &affiliate_id=<o nosso ID>
+ *     &sub_id=a-b-c-d-e
+ *
+ * **Testado com a nossa conta em 03/08**, e não é leitura de
+ * documentação: o link foi aberto no navegador e a URL final chegou com
+ * `utm_source=an_18378371108` e `utm_content=teste01----`. O ID paga e o
+ * subid volta.
+ *
+ * **O `sub_id` tem CINCO campos separados por hífen**, e isso é o que a
+ * Shopee tem de melhor que o Mercado Livre, que só tem um. A pista veio
+ * de um link de canal concorrente, que chegava com
+ * `utm_content=gurubot----`: quatro campos vazios e o primeiro
+ * preenchido.
+ *
+ * Aqui usamos **só o primeiro campo**, com o subid da publicação, e
+ * deixamos os outros quatro vazios. A regra 3.6 pede subid único por
+ * publicação, e isso já atende. Usar os outros quatro é decisão de
+ * granularidade que a D-035 tomou quando o teto conhecido era o do ML —
+ * quem for revisitá-la tem espaço aqui.
+ *
+ * **O hífen é separador, então ele não pode entrar no subid.** O
+ * `gera_subid()` do banco produz alfanumérico minúsculo, mas a limpeza
+ * fica aqui de qualquer forma: subid com hífen não daria erro nenhum,
+ * só espalharia a publicação por campos que ninguém lê.
+ */
+function linkDaShopee(urlDoAnuncio: string, subid: string, afiliadoId: string): string {
+  const destino = new URL("https://s.shopee.com.br/an_redir");
+  destino.searchParams.set("origin_link", urlDoAnuncio);
+  destino.searchParams.set("affiliate_id", afiliadoId);
+  destino.searchParams.set("sub_id", `${subid.replace(/-/g, "")}----`);
+  return destino.toString();
+}
 
 /**
  * A AMAZON É O CASO FÁCIL, e isso é contraintuitivo depois do trabalho
@@ -123,7 +168,9 @@ export function montaLinkDeAfiliado(
           ? "falta ML_MATT_TOOL — sai sem comissão"
           : marketplaceSlug === "amazon"
             ? "falta AFILIADO_AMAZON — sai sem comissão"
-            : `${marketplaceSlug} ainda não tem link de afiliado configurado`,
+            : marketplaceSlug === "shopee"
+              ? "falta AFILIADO_SHOPEE — sai sem comissão"
+              : `${marketplaceSlug} ainda não tem link de afiliado configurado`,
     };
   }
 
@@ -136,6 +183,14 @@ export function montaLinkDeAfiliado(
 
   if (marketplaceSlug === "amazon") {
     return { url: linkDaAmazon(url, subid, ferramenta), rastreado: true };
+  }
+
+  // A Shopee recebe a URL original inteira como parâmetro, em vez de
+  // ganhar parâmetros: quem redireciona é o `an_redir`, e é ele que
+  // carimba a atribuição. Passa `url.toString()` e não a string crua
+  // para a URL já sair normalizada.
+  if (marketplaceSlug === "shopee") {
+    return { url: linkDaShopee(url.toString(), subid, ferramenta), rastreado: true };
   }
 
   // O subid vai como está: o `gera_subid()` do banco já produz

@@ -78,6 +78,9 @@ jobs:
           # `ascsubtag` carrega o subid, sem sessão nem etiqueta. Sem
           # esta variável o anúncio da Amazon sai sem comissão.
           AFILIADO_AMAZON: ${{ secrets.AFILIADO_AMAZON }}
+          # A Shopee é o mesmo caso, pelo redirecionador `an_redir`
+          # (D-057). Sem esta variável o anúncio da Shopee não sai.
+          AFILIADO_SHOPEE: ${{ secrets.AFILIADO_SHOPEE }}
         run: |
           # `pipefail` porque o `| tee` mascara o código de saída do
           # node: sem ele, o step passa como sucesso mesmo quando o

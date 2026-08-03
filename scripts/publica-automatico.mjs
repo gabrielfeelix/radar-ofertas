@@ -706,11 +706,17 @@ async function melhorPrateleira(db, oferta) {
         mesmo formato que o SiteStripe produz. Sem sessão, sem etiqueta,
         sem chamada de rede — e por isso nunca falha por sessão
         expirada, que é o motivo número um de canal mudo aqui.
+
+        A Shopee é do time da Amazon (D-057): o redirecionador
+        `an_redir` aceita `affiliate_id` e `sub_id` direto na URL,
+        testado com a conta real em 03/08. **Ela caía no `else` e ia
+        parar no gerador do Mercado Livre**, que responderia erro para
+        uma URL da Shopee — canal mudo sem ninguém entender por quê.
       */
       const loja = aPublicar.marketplace?.slug;
 
-      if (loja === "amazon") {
-        const link = montaLinkDeAfiliado(aPublicar.url_original, pub.subid, "amazon");
+      if (loja === "amazon" || loja === "shopee") {
+        const link = montaLinkDeAfiliado(aPublicar.url_original, pub.subid, loja);
         if (!link.rastreado) {
           console.log(`  ✗ ${canal.nome}: ${link.motivo}`);
           semLink++;
