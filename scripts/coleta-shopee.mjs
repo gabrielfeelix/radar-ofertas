@@ -293,11 +293,34 @@ async function main() {
         .eq("sku_externo", sku)
         .maybeSingle();
 
+      /*
+        A REPUTAÇÃO DO VENDEDOR, e esquecê-la reprovou 1.173 ofertas.
+
+        A comporta `vendedor_desconhecido` reprova anúncio sem
+        `reputacao_vendedor` quando não é loja oficial, e está certa: a
+        primeira carga entrou sem esse campo e **toda oferta da Shopee
+        foi reprovada**, com o catálogo cheio e o canal mudo.
+
+        O feed grande traz `shop_rating` de 0 a 5, preenchido em 100%
+        das linhas. A `reputacao_vendedor` do projeto é de 0 a 1, porque
+        nasceu do Mercado Livre — daí a divisão. Sem ela, uma nota 4,9
+        entraria como 4,9 e passaria em qualquer comporta, inclusive nas
+        que deveriam barrar.
+
+        O feed pequeno não tem a coluna. Item que só existe lá continua
+        sem reputação e continua reprovado, o que é o comportamento
+        certo: não temos como saber.
+      */
+      const notaLoja = Number(linha.shop_rating);
+      const reputacao =
+        Number.isFinite(notaLoja) && notaLoja > 0 ? Math.min(1, notaLoja / 5) : null;
+
       const campos = {
         dominio_externo: chaveCategoria,
         categoria_raiz: linha.global_category1 || null,
         categoria_folha: linha.global_category2 || null,
         vendedor: linha.shop_name || null,
+        reputacao_vendedor: reputacao,
         avaliacao: Number.isFinite(nota) && nota > 0 ? nota : null,
         imagem_url: linha.image_link || null,
         imagem_obtida_em: new Date().toISOString(),
