@@ -86,10 +86,20 @@ export type Publicacao = {
  * Sem foto a publicação continua saindo, em texto. Perder a imagem
  * custa alcance; publicar fora do prazo custa a conta de afiliado.
  */
-function fotoAindaValida(url?: string | null, obtidaEm?: string | null): string | null {
+/**
+ * O prazo é da loja, não do sistema: `marketplace.cache_preco_max_horas`
+ * vale 24 na Amazon e é nulo no Mercado Livre e na Shopee. Nulo é "não
+ * expira" — o mesmo que `expurga_imagens_expiradas` faz no banco.
+ */
+function fotoAindaValida(
+  url?: string | null,
+  obtidaEm?: string | null,
+  maxHoras?: number | null,
+): string | null {
   if (!url || !obtidaEm) return null;
+  if (maxHoras == null) return url;
   const horas = (Date.now() - new Date(obtidaEm).getTime()) / 3_600_000;
-  return horas <= 24 ? url : null;
+  return horas <= maxHoras ? url : null;
 }
 
 /** Meia-noite de hoje em São Paulo, em UTC (regra 3.9). */
@@ -152,7 +162,7 @@ type LinhaDePublicacao = {
       vendedor: string | null;
       imagem_url: string | null;
       imagem_obtida_em: string | null;
-      marketplace: { nome: string; slug: string } | null;
+      marketplace: { nome: string; slug: string; cache_preco_max_horas: number | null } | null;
       produto: {
         titulo_canonico: string;
         nota_curador: string | null;
@@ -170,7 +180,7 @@ const SELECAO = `
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em,
     anuncio:anuncio_id (
       url_original, vendedor, imagem_url, imagem_obtida_em,
-      marketplace:marketplace_id ( nome, slug ),
+      marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ),
       produto:produto_id ( titulo_canonico, nota_curador, nicho:nicho_id ( slug ) )
     )
   )
@@ -295,7 +305,11 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
       precoAgoraCentavos: precoAgora.get(oferta.anuncio_id) ?? oferta.preco_atual_centavos,
       subid: linha.subid,
       link: linkAPublicar(linha, anuncio?.url_original ?? "", anuncio?.marketplace?.slug ?? ""),
-      imagemUrl: fotoAindaValida(anuncio?.imagem_url, anuncio?.imagem_obtida_em),
+      imagemUrl: fotoAindaValida(
+        anuncio?.imagem_url,
+        anuncio?.imagem_obtida_em,
+        anuncio?.marketplace?.cache_preco_max_horas,
+      ),
       enviadaEm: linha.estado === "enviada" ? linha.enviada_em : null,
       origem: linha.estado === "enviada" ? (linha.origem as OrigemDoEnvio) : null,
       cancelada: linha.estado === "cancelada",

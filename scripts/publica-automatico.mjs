@@ -135,11 +135,24 @@ function reprova(anuncio, par) {
   return null;
 }
 
-/** Foto ainda dentro das 24 horas que a política permite (regra 3.3). */
+/**
+ * Foto ainda dentro do prazo que a loja permite (regra 3.3).
+ *
+ * O prazo é da LOJA, não do sistema: `marketplace.cache_preco_max_horas`
+ * vale 24 na Amazon e é NULO no Mercado Livre e na Shopee, porque só a
+ * Amazon limita retenção. Nulo aqui significa "não expira".
+ *
+ * Isto já era assim no banco — `expurga_imagens_expiradas` sempre leu a
+ * coluna. Era só aqui que 24 estava cravado, e o efeito foi o canal
+ * parar de publicar foto de Mercado Livre assim que o catálogo passou
+ * de um dia de idade.
+ */
 function fotoValida(anuncio) {
   if (!anuncio.imagem_url || !anuncio.imagem_obtida_em) return null;
+  const limite = anuncio.marketplace?.cache_preco_max_horas;
+  if (limite == null) return anuncio.imagem_url;
   const horas = (Date.now() - new Date(anuncio.imagem_obtida_em).getTime()) / 3_600_000;
-  return horas <= 24 ? anuncio.imagem_url : null;
+  return horas <= limite ? anuncio.imagem_url : null;
 }
 
 async function mandaAoTelegram(chatId, texto, foto) {
@@ -217,7 +230,7 @@ async function main() {
       id, produto_id, url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
       avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis,
       preco_leitura_centavos, preco_original_centavos, categoria_ramo,
-      marketplace:marketplace_id ( nome, slug ),
+      marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ),
       produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos )
     )`;
 
@@ -256,7 +269,7 @@ async function melhorPrateleira(db, oferta) {
       "id, produto_id, url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial, " +
         "avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis, " +
         "preco_leitura_centavos, preco_original_centavos, " +
-        "marketplace:marketplace_id ( nome, slug ), " +
+        "marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ), " +
         "produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos )",
     )
     .eq("id", melhorId)
