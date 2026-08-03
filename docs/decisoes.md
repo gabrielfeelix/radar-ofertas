@@ -1714,8 +1714,11 @@ segundos.
 
 **Dois agendadores para a mesma tarefa**, e nenhum é dono:
 
-1. `publica.yml`, de 15 em 15 minutos, é o caminho principal.
-2. A "Coleta horária" publica no fim, como reserva de hora em hora.
+1. **`pg_cron` dispara de 5 em 5 minutos** (acrescentado às 19h de 03/08, ver
+   `docs/cron-externo.md`). É o caminho principal, e o único que de fato
+   dispara na hora pedida.
+2. `publica.yml` com cron do GitHub, de 15 em 15 minutos.
+3. A "Coleta horária" publica no fim, como reserva de hora em hora.
 
 Não duplica post porque a **trava de execução no banco (migration 45) é
 única**: quem chega segundo encontra tomada e sai na hora. A trava tem

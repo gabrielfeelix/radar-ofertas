@@ -17,6 +17,72 @@ Testado em 03/08: a chamada foi feita e a execução começou em segundos.
 
 ---
 
+## ✅ Resolvido de outro jeito, em 03/08: quem dispara é o banco
+
+**O cron externo não foi usado.** O `pg_cron` está disponível neste projeto
+(1.6.4, conferido em 03/08), e ele é melhor em tudo que importava aqui:
+
+| | pg_cron | cron-job.org |
+|---|---|---|
+| Token sai da nossa infraestrutura | não | sim |
+| Conta em serviço de terceiro | não | sim |
+| Intervalo | 5 minutos | 15 minutos, com atraso de 4 a 40s |
+
+O desenho: **`pg_cron` chama `public.dispara_publicacao()` de 5 em 5 minutos**, que
+lê o token do **Vault** e faz `POST` no `workflow_dispatch` do GitHub pelo
+`pg_net`. A API responde `204` e a execução começa em cerca de um segundo,
+medido.
+
+Isso **não revoga a D-015**, e a distinção é o que torna aceitável: o `pg_cron`
+aqui é *gatilho*, não *agendador de rotina*. Ele não coleta, não publica e não
+expurga — manda o GitHub Actions rodar. O trabalho, o log e a falha continuam
+visíveis lá, que era o motivo da D-015.
+
+### Onde olhar quando o canal ficar mudo
+
+```sql
+-- o gatilho está ativo?
+select jobname, schedule, active from cron.job;
+
+-- as últimas execuções do gatilho
+select status, return_message, start_time
+  from cron.job_run_details order by start_time desc limit 10;
+
+-- o que o GitHub respondeu (204 é o certo)
+select status_code, error_msg, created
+  from net._http_response order by id desc limit 10;
+```
+
+`401` quer dizer token trocado ou revogado. `403`, token sem a permissão
+*Actions*. O segredo se troca sem publicar versão:
+
+```sql
+select vault.update_secret(
+  (select id from vault.secrets where name = 'github_dispatch_token'),
+  'novo_token_aqui'
+);
+```
+
+### O que continua ligado
+
+Os três caminhos convivem, e a trava no banco impede post duplicado:
+
+1. **`pg_cron`, de 5 em 5 minutos** — o principal
+2. agendamento do GitHub, de 15 em 15 — funciona cerca de uma vez a cada oito
+3. reserva na coleta horária, de hora em hora
+
+Some tudo quando o publicador virar processo permanente numa máquina nossa
+(`docs/migracao-para-vps.md`).
+
+---
+
+## O caminho do cron externo, se um dia for preciso
+
+Fica registrado porque serve para qualquer outro gatilho, e porque o `pg_cron`
+pode não estar disponível num projeto novo.
+
+---
+
 ## Passo 1 — Criar o token, restrito
 
 Em **github.com/settings/personal-access-tokens** → *Fine-grained tokens* →

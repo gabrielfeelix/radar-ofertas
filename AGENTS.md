@@ -24,6 +24,7 @@ Contexto completo de negócio, divisão de receita e fluxo do dinheiro: `docs/ne
 - **Painel:** Next.js (App Router) + TypeScript.
 - **Hospedagem do painel:** Cloudflare Workers, com o adaptador OpenNext (`@opennextjs/cloudflare`). **Não Cloudflare Pages** — a integração nativa não roda Next.js em modo servidor e o `next-on-pages` foi descontinuado (D-016). **Não Vercel Hobby** — o plano gratuito da Vercel não permite uso comercial, e este projeto gera receita.
 - **Agendamento:** GitHub Actions, não `pg_cron` (D-015). Mantém o projeto gratuito do Supabase acordado e falha de forma visível.
+  **Uma exceção, aberta em 03/08 e só uma:** o `pg_cron` dispara o `publica.yml` de 5 em 5 minutos, porque o agendamento do GitHub entrega cerca de uma execução a cada oito (D-052). Ele é **gatilho, não agendador** — não coleta, não publica, não expurga; manda o Actions rodar, e o trabalho e o log continuam lá. Detalhe e diagnóstico em `docs/cron-externo.md`.
 - **Redirecionador de links:** Supabase Edge Function, domínio próprio.
 - **Telegram:** Bot API oficial.
 - **WhatsApp:** link de compartilhamento oficial (`wa.me`), envio manual por humano.
