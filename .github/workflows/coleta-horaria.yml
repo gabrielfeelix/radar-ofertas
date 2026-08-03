@@ -118,13 +118,37 @@ jobs:
                --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
                scripts/colhe-cupons.mjs | tee -a "$GITHUB_STEP_SUMMARY"
 
-      # A PUBLICAÇÃO SAIU DAQUI EM 03/08, e virou `publica.yml`.
-      #
-      # Ela morava neste workflow e herdava o ritmo dele: uma tentativa
-      # por hora, das quais o GitHub entregava poucas. Publicar é barato
-      # e precisa acontecer o tempo todo; coletar é caro e de hora em
-      # hora basta. Amarradas, a mais lenta mandava.
-      #
-      # Manter as duas aqui também prendia a publicação ao grupo de
-      # concorrência `coleta-mercado-livre`, que existe por causa do
-      # refresh token e não tem nada a ver com publicar.
+      - name: Publica no Telegram (reserva)
+        # ESTE PASSO É RESERVA, e a lição que o criou foi cara.
+        #
+        # Em 03/08 a publicação saiu daqui para o `publica.yml`, que
+        # tenta de 15 em 15 minutos. Passada uma hora e quinze, o
+        # workflow novo tinha rodado ZERO vezes — o GitHub simplesmente
+        # não disparou o cron novo — enquanto este aqui rodou normal. O
+        # canal ficou mudo, e ficou por causa da mudança que existia
+        # para o contrário.
+        #
+        # A conclusão não é voltar atrás: é não depender de um
+        # agendador só. O `publica.yml` continua sendo o caminho
+        # principal, com quatro tentativas por hora. Este passo é a
+        # rede: se aquele não disparar, a publicação ainda acontece de
+        # hora em hora, que é o que era antes.
+        #
+        # Rodar os dois não duplica post. A trava de execução no banco
+        # (migration 45) é única: quem chega segundo encontra tomada e
+        # sai na hora, sem publicar nada.
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          ML_MATT_TOOL: ${{ secrets.ML_MATT_TOOL }}
+          # A Amazon monta o link sozinha: `tag` paga a comissão e
+          # `ascsubtag` carrega o subid, sem sessão nem etiqueta. Sem
+          # esta variável o anúncio da Amazon sai sem comissão.
+          AFILIADO_AMAZON: ${{ secrets.AFILIADO_AMAZON }}
+        run: |
+          set -o pipefail
+          node --experimental-strip-types \
+               --disable-warning=ExperimentalWarning \
+               --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+               scripts/publica-automatico.mjs | tee -a "$GITHUB_STEP_SUMMARY"
