@@ -1618,3 +1618,55 @@ revisão. Se voltar pendente, a comissão acumula e não é paga.
 **Enquanto o subid não for visto no relatório, a Fase 0 continua
 aberta** — e com ela a decisão de granularidade que a D-035 tomou por
 inferência.
+
+---
+
+## D-051 · A Creators API pede 10 vendas em 30 dias, e não há atalho
+**Data:** 2026-08-02
+
+Pesquisa feita a pedido do dono: *"ve ai como fazemos pra pegar a API da
+Amazon creators, deve ter alguma forma q n sabemos"*.
+
+**Não há.** A trava é dura e a documentação da Amazon é explícita: para
+acessar a PA API através da Creators API é preciso ter **no mínimo 10
+vendas qualificadas nos últimos 30 dias**.
+
+E tem um detalhe pior, que muda o planejamento: se a conta ficar **30
+dias consecutivos sem venda qualificada, o acesso é revogado**. Não é um
+portão que se atravessa uma vez — é uma condição contínua.
+
+A PA-API v5, que não tinha esse requisito, **já foi desligada**: virou
+obsoleta em 30/04/2026 e o endpoint saiu do ar em 15/05/2026. Ela não
+aceita cliente novo desde antes disso. Não há porta velha para usar.
+
+### O caminho é o óbvio, e a própria Amazon o desenha assim
+
+Publicar com link manual até somar 10 vendas, e só então pedir a API. É
+o que a documentação dos plugins de afiliado recomenda para conta nova,
+e é o que a nossa situação já é: **1 venda em 02/08** (D-050), faltam 9.
+
+### As três rotas até lá, e por que a segunda é a certa
+
+**1. Publicar Amazon à mão.** Funciona hoje: link e subid prontos desde
+a D-049. É o que foi feito com o Eudora Siàge. Não escala.
+
+**2. A colheita já traz Amazon, e nós ignorávamos.** Há 74 anúncios da
+Amazon no banco, vindos de canais de terceiros, e `mencao` guarda
+`preco_alegado_centavos` — o preço que o canal alheio anunciou. Esse
+dado nunca foi usado para Amazon.
+
+Ele não serve como série de preço (é alegação de terceiro, e a regra 3.3
+proíbe histórico da Amazon de qualquer forma), mas serve como **fila de
+sugestão**: o canal concorrente achou, nós conferimos e decidimos. É
+exatamente onde eles são fortes e nós somos cegos.
+
+**3. Ler o preço da página.** Foi como o preço do Eudora foi obtido em
+02/08, com um `curl` único. Funciona, e **fica registrado como recusado
+para rotina**: os termos do Programa de Associados proíbem scraping, e
+aqui o que está em risco não é um coletor quebrado — é a conta que paga
+a comissão. Diferente do Mercado Livre, onde raspar quebraria o dado; na
+Amazon, raspar quebra o negócio.
+
+**Mudaria se:** a Amazon abrir um nível da Creators API sem o requisito
+de vendas, ou se as 10 vendas chegarem — que é o desfecho esperado e
+depende de operação, não de código.

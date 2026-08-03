@@ -14,10 +14,18 @@ cadastrada e sem chamada de rede. Isso responde a pergunta que a D-035
 tinha deixado aberta. O formato saiu de links reais que o dono trouxe de
 canais concorrentes.
 
-**Falta a Amazon como fonte de preço, e não é código:** a PA-API v5 foi
-aposentada em 15/05/2026 e a Creators API pede volume de vendas. Os 74
-anúncios dela no banco estão todos sem preço. Publicação manual funciona
-hoje; o radar achar oferta da Amazon sozinho, não.
+**Falta a Amazon como fonte de preço, e não é código** (D-051): a
+Creators API exige **10 vendas qualificadas nos últimos 30 dias**, sem
+atalho, e revoga o acesso se a conta passar 30 dias sem venda. A PA-API
+v5, que não tinha esse requisito, saiu do ar em 15/05/2026.
+
+Temos 1 venda. **Faltam 9.** O caminho é publicar com link manual até
+somar, que é o que a própria Amazon desenha para conta nova.
+
+A rota que existe e não usamos: a colheita já traz 74 anúncios da Amazon
+de canais de terceiros, e `mencao.preco_alegado_centavos` guarda o preço
+que eles anunciaram. Não vira série (regra 3.3 proíbe), mas vira fila de
+sugestão. **Está em aberto e é a recomendação.**
 
 ### Três defeitos meus no mesmo dia, e o terceiro é o que ensina
 
