@@ -2219,3 +2219,55 @@ e os 500 MB limitam até onde a reserva acompanha o banco principal.
 banco passar dos 500 MB a ponto de a reserva no Supabase deixar de ser
 retorno viável. Aí a discussão vira Hetzner paga, e o roteiro de
 `docs/migracao-para-vps.md` continua valendo com outro provedor.
+
+---
+
+## D-060 · Relato de campo de quem opera há mais tempo, e o que ele contradiz
+**Data:** 2026-08-03
+
+Conversa do dono com um conhecido que opera grupos de promoção há mais
+tempo. Vale registrar porque é a única fonte não comercial que apareceu
+hoje: as outras eram página de venda ou fórum de reclamação.
+
+### O que contradiz uma suposição nossa
+
+**O grupo de Telegram dele foi banido. O WhatsApp dele não.**
+
+Passamos o dia tratando o Telegram como a superfície segura e o
+WhatsApp como a arriscada (D-053). Este relato inverte a experiência
+dele: *"por algum motivo meu grupo tomou ban do nada"* no Telegram,
+enquanto o WhatsApp, com chip separado, *"até hj tá de boa"*.
+
+**Não é para reescrever a D-053 por causa disto.** Um relato não é
+amostra, e "do nada" quase sempre teve motivo que o relator não viu —
+adicionar em massa e denúncia acumulada são os candidatos óbvios. O que
+muda é a leitura de que o risco no Telegram é zero. Ele não é, e a nossa
+automação inteira mora lá, com sete canais.
+
+**O que fazer com isso hoje: nada além de saber.** Se um canal cair, a
+causa provável é volume ou denúncia, não a API do bot, que é oficial.
+
+### Divergência sobre a API da Amazon
+
+Ele diz que a API libera **depois de vender 2 produtos**. A documentação
+lida na D-051 diz **10 vendas qualificadas em 30 dias**.
+
+Pode ser porta antiga, memória imprecisa, ou nível diferente da mesma
+API. **A D-051 fica como está**, porque ela cita documentação e este
+relato é de segunda mão — mas quando as nossas vendas chegarem a 2, vale
+pedir a API e descobrir na prática, em vez de esperar as 10.
+
+### Duas coisas que confirmam o que já estava escrito
+
+**A Amazon exigiu um site para aprovar.** Ele registrou um domínio só
+para ter onde mostrar os links de afiliado. A nossa conta já está
+aprovada, então não muda nada agora — mas vale para o **parceiro da
+Fase 3**, que vai passar pelo mesmo funil, e o `4yu.com.br` já resolve
+esse requisito do lado do dono.
+
+**"Mano eu raspo tudo dos grupo".** É exatamente a D-054: o mercado se
+alimenta de raspagem e redistribuição entre canais. A nossa colheita lê
+o que eles já publicaram, sem correr o risco de nenhum dos dois.
+
+**Mudaria se:** aparecer um segundo relato de canal de Telegram banido,
+ou um dos nossos cair. Aí deixa de ser anedota e vira padrão a estudar.

@@ -247,7 +247,13 @@ Dia de investigação, não de construção. Duas correções de código e quatr
 
 **4. Onde o sistema vai morar (D-055 e D-059), com roteiro pronto em `docs/migracao-para-vps.md`.** A Vercel não pode hospedar o publicador, e não é questão de plano: função dela morre em minutos e o nosso publicador vive 50. Oracle Cloud (grátis, São Paulo) ou Hetzner (~R$27) são as saídas, e uma máquina fecharia três pendências de uma vez. **Espera de propósito** até saber se a D-052 resolveu sozinha.
 
-**5. O gargalo agora é audiência, não sistema (D-056).** Os sete canais publicam sozinhos. Telegram Ads foi avaliado e **não é por onde começar** — divulgação cruzada é grátis e um post pago em canal do nicho custa uns R$200 e dá o número que falta: o custo real por inscrito.
+**5. A Shopee saiu do papel inteira (D-057 e D-058).** Link de afiliado **não depende da Open API** — o `an_redir` é montável por URL, testado com a conta real. E a coleta também não: o painel de afiliado tem **Criativo → Feed de produto**, dois CSV diários com 110 mil itens, preço, desconto, nota e imagem. O catálogo dela saiu de 227 para mais de 4.100 no mesmo dia, e o primeiro post da loja foi ao ar. A Open API foi **aprovada em 03/08** e só melhora o que já funciona.
+
+**6. Três defeitos que só apareceram publicando.** A foto sumiu de todo post porque o prazo de 24h da imagem estava cravado no código, quando ele é da Amazon e nulo nas outras lojas. O canal ficava mudo por horas porque o agendamento do GitHub entrega cerca de uma execução a cada oito — agora quem dispara é o `pg_cron`, de 5 em 5 minutos. E **toda oferta da Shopee era reprovada** porque o coletor não gravava `reputacao_vendedor`; a comporta estava certa, faltava o dado.
+
+**7. O ritmo ganhou folga sorteada e o teto subiu.** Posts saem a cada 3, 4 ou 5 minutos em vez de 5 cravado, porque horário exato é carimbo de robô. E o teto diário foi de 50 para 150, decisão do dono depois de ver dois canais baterem o limite com oferta boa sobrando.
+
+**8. O gargalo agora é audiência, não sistema (D-056).** Os sete canais publicam sozinhos. Telegram Ads foi avaliado e **não é por onde começar** — divulgação cruzada é grátis e um post pago em canal do nicho custa uns R$200 e dá o número que falta: o custo real por inscrito.
 
 ### Contas e credenciais — onde estamos
 
