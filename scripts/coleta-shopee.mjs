@@ -191,7 +191,7 @@ async function main() {
     `SHOPEE_MAX_ITENS` controla o teto para quem quiser uma carga maior
     de uma vez.
   */
-  const TETO = Number(process.env.SHOPEE_MAX_ITENS ?? 3000);
+  const TETO = Number(process.env.SHOPEE_MAX_ITENS ?? 4000);
 
   let vistos = 0;
   let entraram = 0;
@@ -250,10 +250,21 @@ async function main() {
       const nichoId = chaveCategoria ? (porCategoria.get(chaveCategoria) ?? null) : null;
 
       if (!nichoId) {
-        // Sem nicho o anúncio não acha canal, então gravar seria encher
-        // o banco de item que nunca vira post. Ele é contado e o resumo
-        // diz qual categoria mapear.
-        if (chaveCategoria) {
+        /*
+          Sem nicho o anúncio não acha canal, então gravar seria encher
+          o banco de item que nunca vira post.
+
+          MAS SÓ RECLAMA DO QUE NINGUÉM OLHOU. Linha em `nicho_dominio`
+          com nicho nulo quer dizer "olhamos e decidimos que não roteia"
+          — é o caso de Watches e Travel & Luggage, decidido em 03/08.
+          Ausência de linha é outra coisa: é categoria nova.
+
+          A primeira versão disto reclamava dos dois, e teria repetido
+          as mesmas oito categorias em todo relatório, para sempre, até
+          alguém decidir de novo o que já estava decidido. Isso é o que
+          a migration 45 existia para evitar.
+        */
+        if (chaveCategoria && !porCategoria.has(chaveCategoria)) {
           const nome = `${linha.global_category1} > ${linha.global_category2}`;
           const atual = semNicho.get(chaveCategoria) ?? { nome, n: 0 };
           atual.n++;
