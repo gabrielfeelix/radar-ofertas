@@ -410,7 +410,18 @@ loja só, a base do produto fica numa perna só.
   **Confirme a grafia exata na tela da aplicação antes de usar** — ela precisa
   bater caractere por caractere nos dois passos abaixo.
 
-### Falta só o refresh token
+### ✅ A autorização já foi feita — isto aqui é registro, não tarefa
+
+O refresh token **existe e está funcionando**, guardado em
+`credencial_rotativa` no banco, não em variável de ambiente. O motivo é a
+armadilha da seção seguinte: o Mercado Livre troca o token a cada renovação, e
+variável de ambiente envelheceria na primeira. `ML_REFRESH_TOKEN` está vazio no
+`.env` **de propósito** — não tente preencher.
+
+O passo a passo abaixo fica para o dia em que a autorização precisar ser
+refeita, por revogação ou conta nova.
+
+### Como refazer a autorização, se um dia precisar
 
 1. Abra no navegador, trocando `REDIRECT` pela URI exata cadastrada:
 
@@ -440,14 +451,23 @@ loja só, a base do produto fica numa perna só.
 4. Guarde o `refresh_token` da resposta em `ML_REFRESH_TOKEN`, no `.env` e nos
    secrets da Edge Function.
 
-> ⚠️ **Antes de agendar a primeira coleta, leia isto.** O Mercado Livre **troca o
-> refresh token a cada renovação** e invalida o anterior. O adaptador em
-> `supabase/functions/_compartilhado/fontes/mercado-livre.ts` descarta o token
-> novo que vem na resposta, então o valor do `.env` envelhece: a primeira
-> renovação funciona, a próxima execução fria falha e a loja é pulada. Guardar o
-> token rotacionado em lugar que sobreviva à função **é pré-requisito da coleta
-> automática**, não melhoria. Está registrado em "Bloqueado, e por quem" no
-> `AGENTS.md`.
+> ⚠️ **A armadilha do token, e como ela foi resolvida.** O Mercado Livre **troca
+> o refresh token a cada renovação** e invalida o anterior. Guardado em variável
+> de ambiente, o valor envelheceria na primeira renovação e a execução seguinte
+> falharia calada, dizendo só que pulou a loja.
+>
+> Por isso ele **vive no banco**, em `credencial_rotativa`, e o coletor grava o
+> token novo a cada renovação (`guardaRefresh`, em
+> `scripts/coleta-mercado-livre.mjs`). É também por isso que o workflow de coleta
+> **não passa** `ML_REFRESH_TOKEN` no ambiente, e o comentário dele diz isso com
+> todas as letras.
+>
+> **Cuidado ao ler o adaptador da Edge Function**
+> (`supabase/functions/_compartilhado/fontes/mercado-livre.ts`): ele descarta o
+> `refresh_token` novo da resposta. Isso pareceu defeito numa revisão de 03/08 e
+> **não é o caminho que roda hoje** — a coleta acontece pelo script, não pela
+> Edge Function. Vira defeito de verdade no dia em que aquele adaptador for
+> usado para valer.
 
 > **Este é o que vence.** O token do Mercado Livre tem validade e precisa ser
 > renovado; quando vencer, o coletor pula a loja e avisa. Está anotado em
