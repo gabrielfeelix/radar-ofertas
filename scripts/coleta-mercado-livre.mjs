@@ -171,8 +171,29 @@ const BUSCAS = [
   "nintendo switch jogo", "mousepad gamer", "kit modelismo", "album de figurinhas", "cubo magico",
 ];
 
-/** Produtos por termo de busca. */
+/** Produtos por termo de busca, por página. */
 const POR_BUSCA = Number(process.env.ML_PRODUTOS_POR_BUSCA ?? 20);
+
+/**
+ * Quantas páginas por termo, a cada rodada, e onde a janela para.
+ *
+ * Três páginas dão 60 candidatos por termo por rodada. Não é o número
+ * que importa, e sim o cursor que anda: com 126 termos, a janela varre
+ * até o fim de `OFFSET_MAX` em umas dezessete rodadas e recomeça.
+ *
+ * A busca é barata: uma chamada devolve vinte ids. Caro é o produto
+ * escolhido, que custa quatro chamadas, e quem segura isso é o teto de
+ * `ML_DESCOBERTAS_POR_RODADA`, que não mudou.
+ *
+ * O TAMANHO DO QUE ESTÁVAMOS PERDENDO, medido em 04/08 contra a API
+ * real: "brinquedo pet" tem `paging.total` de **10.000** produtos. Nós
+ * víamos vinte, sempre os mesmos.
+ *
+ * E o teto de 1.000 é da API, medido e não suposto: offset 1000
+ * responde com 20 itens, offset 1020 devolve HTTP 400 `bad_request`.
+ */
+const PAGINAS_POR_BUSCA = Number(process.env.ML_PAGINAS_POR_BUSCA ?? 3);
+const OFFSET_MAX = Number(process.env.ML_OFFSET_MAX ?? 1000);
 
 /**
  * Descobrir e reler preço são trabalhos de ritmo diferente, e juntá-los
@@ -354,12 +375,83 @@ async function subcategorias(raiz) {
   return filhas;
 }
 
-/** Ids de produto por termo de busca. É o que faz a base crescer. */
-async function porBusca(termo) {
-  const d = await api(
-    `products/search?site_id=MLB&status=active&limit=${POR_BUSCA}&q=${encodeURIComponent(termo)}`,
-  );
-  return (d.results ?? []).map((p) => p.id);
+/**
+ * Ids de produto por termo de busca. É o que faz a base crescer.
+ *
+ * ELE PEDIA SEMPRE OS MESMOS VINTE PRIMEIROS, e isso congelou a
+ * descoberta. Não havia `offset`: cada rodada perguntava a mesma coisa
+ * e recebia a mesma resposta, e o filtro de "já conhecidos" descartava
+ * tudo. Com 126 termos a 20, a busca tinha um teto duro de 2.520
+ * produtos na vida inteira do projeto — e depois de alcançá-lo ela
+ * passou a contribuir **zero**, para sempre, sem erro e sem aviso.
+ *
+ * COMO O DEFEITO APARECEU: o dono cobrou que o canal de pet não recebia
+ * brinquedo, casinha, arranhador nem coleira. Os termos existiam
+ * ("brinquedo pet", "casinha cachorro", "arranhador gato"), o domínio
+ * estava mapeado, e as comportas não eram o problema. O catálogo é que
+ * tinha 6 brinquedos e 7 casinhas contra 275 antipulgas: cada termo
+ * entregou seus 20 uma vez, em 01/08, e nunca mais.
+ *
+ * É O MESMO DEFEITO QUE ESTE ARQUIVO JÁ DOCUMENTA um nível acima, no
+ * `slice` que pegava sempre os 600 primeiros do rodízio. Lá foi
+ * consertado com o filtro de conhecidos; aqui o filtro é justamente o
+ * que esconde o problema, porque ele descarta em silêncio.
+ *
+ * A JANELA ANDA A CADA RODADA, e é isso que impede o congelamento de
+ * voltar. Uma janela fixa maior (0 a 60, digamos) só adiaria: ela
+ * congelaria em 60. O cursor vive em `parametro`, porque ele precisa
+ * sobreviver ao agendador — cada execução do Actions começa de um clone
+ * limpo, e cursor em memória sempre valeria zero.
+ */
+async function porBusca(termo, inicio) {
+  const ids = [];
+
+  for (let pagina = 0; pagina < PAGINAS_POR_BUSCA; pagina++) {
+    const offset = inicio + pagina * POR_BUSCA;
+
+    /*
+      O Mercado Livre RECUSA offset alto em vez de devolver lista vazia,
+      então o teto é conferido aqui e não descoberto no erro.
+
+      Medido em 04/08 contra a API real, e não lido em documentação:
+      offset 1000 responde com 20 itens; offset 1020 devolve HTTP 400,
+      `bad_request`. Então 1000 é o último offset válido, e não o
+      primeiro inválido — a diferença vale uma página inteira por termo.
+    */
+    if (offset > OFFSET_MAX) break;
+
+    /*
+      A PRIMEIRA PÁGINA ESTOURA, AS SEGUINTES SÓ INTERROMPEM.
+
+      Se a página de entrada falha, o termo falhou de verdade e quem
+      chama precisa saber: ele registra em `problemas`, que é o que
+      aparece no fim da execução. Engolir isso deixaria a busca quebrada
+      parecer busca vazia, e essa confusão é a própria história deste
+      conserto.
+
+      Já numa página funda, com ids bons no bolso, abortar a rodada por
+      causa da terceira chamada seria trocar o certo pelo perfeito.
+    */
+    let d;
+    try {
+      d = await api(
+        `products/search?site_id=MLB&status=active&limit=${POR_BUSCA}` +
+          `&offset=${offset}&q=${encodeURIComponent(termo)}`,
+      );
+    } catch (e) {
+      if (pagina === 0) throw e;
+      console.log(`  busca "${termo}": parei no offset ${offset} (${e.message})`);
+      break;
+    }
+
+    const achados = (d?.results ?? []).map((p) => p.id);
+    ids.push(...achados);
+
+    // Termo raso acabou: insistir nas páginas seguintes só gasta cota.
+    if (achados.length < POR_BUSCA) break;
+  }
+
+  return ids;
 }
 
 /** Quanto a mais vale pagar para ficar com o vendedor melhor (D-033). */
@@ -965,15 +1057,66 @@ async function main() {
     ordem faria os catorze termos de pet entregarem tudo antes de
     "perfume masculino" ser consultado. Um balde por termo, e rodízio.
   */
+  /*
+    O CURSOR DA BUSCA, que é o que faz a janela andar.
+
+    Ele vive no banco e não em memória porque cada execução do Actions
+    começa de um clone limpo: em memória ele valeria zero toda rodada, e
+    a busca voltaria a perguntar sempre a mesma coisa, que é o defeito
+    que este conserto existe para matar.
+
+    Falhando a leitura, ele vale zero e a rodada ainda funciona — só não
+    avança. Descoberta rasa é bem melhor que rodada abortada.
+  */
+  let cursorDaBusca = 0;
+  if (!SO_PRECOS) {
+    const { data: p } = await db
+      .from("parametro")
+      .select("valor")
+      .eq("chave", "descoberta_ml_offset")
+      .is("nicho_id", null)
+      .maybeSingle();
+    cursorDaBusca = Number(p?.valor ?? 0);
+    console.log(`busca começando no offset ${cursorDaBusca}`);
+  }
+
   const baldesDeBusca = new Map();
   for (const termo of SO_PRECOS ? [] : BUSCAS) {
     try {
-      baldesDeBusca.set(termo, await porBusca(termo));
+      baldesDeBusca.set(termo, await porBusca(termo, cursorDaBusca));
     } catch (e) {
       problemas.push(`busca "${termo}": ${e.message}`);
     }
   }
   ids.push(...rodizio(baldesDeBusca));
+
+  /*
+    A janela anda, e dá a volta ao chegar no teto.
+
+    Ela avança MESMO que a rodada não tenha achado nada de novo, e isso
+    é de propósito: parar de avançar quando a página vem repetida é
+    exatamente como a busca ficaria presa de novo, um pouco mais fundo.
+
+    Dando a volta, a varredura recomeça do topo, onde a essa altura já
+    há produto novo — a lista do Mercado Livre muda com o tempo, e o
+    filtro de conhecidos cuida do que não mudou.
+  */
+  if (!SO_PRECOS) {
+    const passo = PAGINAS_POR_BUSCA * POR_BUSCA;
+    const proximo = cursorDaBusca + passo >= OFFSET_MAX ? 0 : cursorDaBusca + passo;
+
+    const { error } = await db
+      .from("parametro")
+      .update({ valor: proximo, atualizado_em: new Date().toISOString() })
+      .eq("chave", "descoberta_ml_offset")
+      .is("nicho_id", null);
+
+    if (error) {
+      problemas.push(`cursor da busca não avançou: ${error.message}`);
+    } else {
+      console.log(`busca: próxima rodada começa no offset ${proximo}`);
+    }
+  }
 
   {
     // Já conhecidos saem fora: relê-los aqui gastaria a cota que faz a
