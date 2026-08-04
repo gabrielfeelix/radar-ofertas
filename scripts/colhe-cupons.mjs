@@ -26,6 +26,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import {
   extraiCupons,
+  fimDoDiaEmSaoPaulo,
   leCanalPublico,
   validadeDoCupom,
 } from "../supabase/functions/_compartilhado/telegram-web.ts";
@@ -92,6 +93,15 @@ async function main() {
 
       for (const post of posts) {
         for (const c of extraiCupons(post.texto)) {
+          /*
+            O NOME DO CANAL NÃO É CUPOM.
+
+            `@CupomDoGnu` assina os posts dele com o próprio nome, e o
+            caminho do rótulo leu `CUPOMDOGNU` como código na primeira
+            rodada. É específico de quem lê, então mora aqui e não no
+            extrator, que não sabe de onde o texto veio.
+          */
+          if (c.codigo.toUpperCase() === fonte.identificador.toUpperCase()) continue;
           // O mesmo cupom aparece em vários canais no mesmo dia — foi
           // assim que a pesquisa o encontrou. Guarda o primeiro e
           // registra em quantos canais apareceu, que é o sinal mais
@@ -146,14 +156,35 @@ async function main() {
   let vencidos = 0;
 
   for (const c of vistos.values()) {
-    const ate = validadeDoCupom(c.dia, c.mes, agora);
+    /*
+      O PRAZO DE QUEM NÃO TRAZ DATA NO CÓDIGO.
+
+      O cupom achado pelo rótulo (`FASHIONML`, `PIPOCA`) não diz até
+      quando vale, e o comentário da tabela `cupom` já avisava qual é o
+      desfecho ruim: *"cupom sem prazo é o que fica publicado depois de
+      morrer"*. Publicar código morto queima mais confiança do que não
+      publicar cupom nenhum.
+
+      Então o prazo é o mais curto que faz sentido: **o fim do dia em
+      São Paulo** (regra 3.9). Se o cupom durar mais que isso, a
+      colheita da hora seguinte o traz de volta com prazo novo, e o
+      custo de errar para menos é um cupom bom que sai de cartaz cedo.
+      Errar para mais é prometer desconto que não existe.
+    */
+    const ate =
+      c.dia != null && c.mes != null
+        ? validadeDoCupom(c.dia, c.mes, agora)
+        : fimDoDiaEmSaoPaulo(agora);
+
     if (!ate) {
       vencidos++;
       continue;
     }
 
-    // O prefixo é o código sem o `DDMM` do fim.
-    const prefixo = c.codigo.slice(0, -4);
+    // O prefixo é o código sem o `DDMM` do fim. Sem data, o código
+    // inteiro é o prefixo, e é assim que ele é mapeado em
+    // `cupom_prefixo`.
+    const prefixo = c.dia != null ? c.codigo.slice(0, -4) : c.codigo;
     const escopo = escopoDe.get(prefixo);
 
     const emQuantos = c.canais.size;
@@ -166,7 +197,11 @@ async function main() {
       `${c.codigo.padEnd(22)} ${String(c.percentual).padStart(2)}%  ` +
       `min ${(c.minimoCentavos / 100).toFixed(2).padStart(7)}  ` +
       `teto ${c.tetoCentavos != null ? (c.tetoCentavos / 100).toFixed(2).padStart(6) : "     —"}  ` +
-      `vence ${String(c.dia).padStart(2, "0")}/${String(c.mes).padStart(2, "0")}  ` +
+      `vence ${
+        c.dia != null
+          ? `${String(c.dia).padStart(2, "0")}/${String(c.mes).padStart(2, "0")}`
+          : "hoje "
+      }  ` +
       `em ${emQuantos} ${emQuantos > 1 ? "canais" : "canal"}  ${marca}`;
 
     if (SECO) {

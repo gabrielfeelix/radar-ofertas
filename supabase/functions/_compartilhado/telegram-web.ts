@@ -276,9 +276,17 @@ export type CupomLido = {
   percentual: number;
   minimoCentavos: number;
   tetoCentavos: number | null;
-  /** O dia e o mês que o próprio código carrega. */
-  dia: number;
-  mes: number;
+  /**
+   * O dia e o mês que o próprio código carrega, quando ele carrega.
+   *
+   * Nulo em cupom achado pelo rótulo (`FASHIONML`, `PIPOCA`), que não
+   * diz até quando vale. Quem grava decide o prazo, e o certo é o mais
+   * curto possível: cupom vivo demais é pior que cupom nenhum.
+   */
+  dia: number | null;
+  mes: number | null;
+  /** Como ele foi achado. `rotulo` é o caminho sem data, e vale menos. */
+  origem: "data" | "rotulo";
 };
 
 /**
@@ -317,7 +325,14 @@ export function extraiCupons(texto: string): CupomLido[] {
   // onde o cupom VIZINHO começa, senão uma mensagem com três cupons
   // seguidos lê o desconto de um e atribui ao outro — que é pior que
   // não achar nada, porque promete no canal um número que não existe.
-  const candidatos: { codigo: string; dia: number; mes: number; de: number; ate: number }[] = [];
+  const candidatos: {
+    codigo: string;
+    dia: number | null;
+    mes: number | null;
+    origem: "data" | "rotulo";
+    de: number;
+    ate: number;
+  }[] = [];
 
   for (const m of texto.matchAll(/\b([A-Z][A-Z0-9]{2,24}?)(\d{2})(\d{2})\b/g)) {
     const [inteiro, prefixo, dd, mm] = m;
@@ -331,8 +346,92 @@ export function extraiCupons(texto: string): CupomLido[] {
     if (!/[A-Z]{3}/.test(prefixo)) continue;
 
     const de = m.index ?? 0;
-    candidatos.push({ codigo: inteiro, dia, mes, de, ate: de + inteiro.length });
+    candidatos.push({ codigo: inteiro, dia, mes, origem: "data", de, ate: de + inteiro.length });
   }
+
+  /*
+    O SEGUNDO CAMINHO: O CÓDIGO SEM DATA, ANCORADO NO RÓTULO.
+
+    POR QUE ELE PRECISOU EXISTIR. Medido em 04/08: os quinze canais que
+    a colheita lê devolveram **zero cupons distintos**, e o último cupom
+    a entrar no banco foi às 19h30 de 03/08. A colheita não estava
+    quebrada — o caminho de cima só enxerga o cupom de campanha do
+    próprio Mercado Livre, que traz `DDMM` no código e só existe em dia
+    de campanha. Entre uma campanha e outra, zero.
+
+    E o que os concorrentes publicam todo dia não tem data nenhuma:
+    `FASHIONML`, `PIPOCA`, `AMODESCONTO` (Esser Moda). Eram invisíveis.
+
+    A ÂNCORA MUDA, A SEGURANÇA NÃO PODE MUDAR JUNTO. O comentário acima
+    está certo: procurar "palavra em maiúscula" acharia PROMOÇÃO,
+    OFERTA e metade dos títulos. Então aqui a âncora é o RÓTULO que o
+    canal escreve antes do código, e sobre ela ficam quatro guardas:
+
+      1. o rótulo tem que estar na mesma linha, e antes do código
+      2. o código não pode ser palavra do vocabulário de oferta
+      3. o percentual continua obrigatório, lá embaixo, para todos
+      4. prefixo não mapeado em `cupom_prefixo` nasce inerte (D-039),
+         então um falso positivo que passe pelos três ainda não publica
+
+    O prazo é o furo conhecido, e está tratado em quem grava: sem data
+    no código, não dá para saber até quando vale.
+  */
+  const ROTULO = /(?:cupom|cupons|c[óo]digo|c[óo]d\.?|use\s+o\s+cupom|voucher)\s*:?\s*$/i;
+
+  /*
+    O vocabulário que aparece em caixa alta num canal de oferta e não é
+    cupom. Lista preta e não lista branca, pela lição da D-036: quando o
+    universo é grande e desconhecido, o desconhecido tem que separar.
+    Aqui, ao contrário, o desconhecido É o cupom — então a lista preta é
+    do que se conhece, e ela é curta de propósito.
+  */
+  const NAO_E_CUPOM = new Set([
+    "CUPOM", "CUPONS", "OFERTA", "OFERTAS", "PROMO", "PROMOCAO", "PROMOÇÃO",
+    "DESCONTO", "DESCONTOS", "FRETE", "GRATIS", "GRÁTIS", "PIX", "LINK",
+    "COMPRE", "AQUI", "AGORA", "HOJE", "NOVO", "MENOR", "PREÇO", "PRECO",
+    "AMAZON", "SHOPEE", "MAGALU", "KABUM", "ATENÇÃO", "ATENCAO", "OFF",
+    // Nome de loja, colhido ao vivo em 04/08: `DAFITI` e `MERCADO`
+    // (de "MERCADO LIVRE") entraram como cupom na primeira rodada.
+    "MERCADO", "LIVRE", "DAFITI", "NETSHOES", "CENTAURO", "AMERICANAS",
+    "SUBMARINO", "CASASBAHIA", "PONTOFRIO", "ALIEXPRESS", "PRIME",
+  ]);
+
+  /*
+    SÓ LETRAS NESTE CAMINHO, E É A EXCLUSÃO DA SHOPEE QUE MANDA.
+
+    O caminho da data excluía o cupom da Shopee de graça, porque ela usa
+    leetspeak: `D1AD0SP41S`, `3XCLU51V020`. Isso não é estética, é
+    contrato — o termo do Programa de Afiliados dela trata repassar
+    cupom de terceiro como violação, com rescisão imediata e retenção de
+    comissão já ganha.
+
+    O caminho do rótulo reabriria essa porta, e o primeiro teste que
+    escrevi provou: `Cupom D1AD0SP41S 20% OFF na Shopee` passava.
+
+    Exigir só letras fecha os dois casos conhecidos e mantém o que
+    interessa: `FASHIONML`, `PIPOCA`, `AMODESCONTO`, `DESCONTAO`. O
+    preço é perder cupom do ML que tenha dígito no meio, e ele é barato:
+    o caminho da data já pega a família com dígito que existe de fato,
+    que é a de campanha.
+  */
+  for (const m of texto.matchAll(/\b([A-Z]{4,24})\b/g)) {
+    const codigo = m[1];
+    const de = m.index ?? 0;
+
+    if (NAO_E_CUPOM.has(codigo)) continue;
+    // Já achado pelo caminho da data, que é melhor: ele traz o prazo.
+    if (candidatos.some((c) => c.de === de || c.codigo === codigo)) continue;
+
+    // O rótulo tem que estar imediatamente antes, na mesma linha.
+    const inicioDaLinha = texto.lastIndexOf("\n", de - 1) + 1;
+    if (!ROTULO.test(texto.slice(inicioDaLinha, de))) continue;
+
+    candidatos.push({ codigo, dia: null, mes: null, origem: "rotulo", de, ate: de + codigo.length });
+  }
+
+  // A janela de cada cupom é medida contra o VIZINHO, então a ordem no
+  // texto tem que valer para os dois caminhos juntos.
+  candidatos.sort((a, b) => a.de - b.de);
 
   const achados = new Map<string, CupomLido>();
 
@@ -416,13 +515,30 @@ export function extraiCupons(texto: string): CupomLido[] {
     const MINIMO = /(?:m[ií]nim[ao]|acima de|a partir de|compras? de)/i;
     const TETO = /(?:at[ée]|limite de|limitad[ao] a|teto|m[áa]ximo de)/i;
 
+    /*
+      O PERCENTUAL PRECISA SER CRÍVEL, e isto nasceu de um falso
+      positivo real: na primeira rodada com o rótulo, `FASHIONML` saiu
+      com **90%**, colhido de uma linha vizinha que falava de outra
+      coisa. Cupom de marketplace no Brasil vive entre 5% e 30%.
+
+      Zero também sai: `EUSOUPRIME 0%` foi achado no mesmo dia, e cupom
+      que não desconta nada não é cupom, é assinatura.
+
+      Vale para os dois caminhos de propósito. O de data nunca produziu
+      um desses, mas a regra é sobre o que é crível, não sobre como o
+      código foi achado.
+    */
+    const percentual = Number(pct[1]);
+    if (percentual < 1 || percentual > 50) continue;
+
     achados.set(c.codigo, {
       codigo: c.codigo,
-      percentual: Number(pct[1]),
+      percentual,
       minimoCentavos: valorApos(bloco, MINIMO) ?? 0,
       tetoCentavos: valorApos(bloco, TETO),
       dia: c.dia,
       mes: c.mes,
+      origem: c.origem,
     });
   }
 
@@ -458,6 +574,27 @@ export function validadeDoCupom(dia: number, mes: number, agora: Date): Date | n
   }
 
   return ate.getTime() > agora.getTime() ? ate : null;
+}
+
+/**
+ * O fim do dia de hoje em São Paulo.
+ *
+ * É o prazo de quem foi achado pelo rótulo e não traz data no código.
+ * O `-03:00` é fixo pelo mesmo motivo da função acima: não há horário
+ * de verão no Brasil desde 2019.
+ *
+ * Curto de propósito. A colheita roda de hora em hora, então cupom que
+ * dura mais volta com prazo novo; cupom que já morreu some sozinho na
+ * virada do dia.
+ */
+export function fimDoDiaEmSaoPaulo(agora: Date): Date {
+  // O dia em São Paulo, e não o dia em UTC: às 23h de Brasília já é o
+  // dia seguinte em UTC, e usar UTC daria um dia a mais de prazo.
+  const emSaoPaulo = new Date(agora.getTime() - 3 * 3_600_000);
+  const ano = emSaoPaulo.getUTCFullYear();
+  const mes = String(emSaoPaulo.getUTCMonth() + 1).padStart(2, "0");
+  const dia = String(emSaoPaulo.getUTCDate()).padStart(2, "0");
+  return new Date(`${ano}-${mes}-${dia}T23:59:59-03:00`);
 }
 
 /** O primeiro valor em reais que aparece depois de uma expressão. */

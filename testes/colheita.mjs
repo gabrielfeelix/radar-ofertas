@@ -195,9 +195,26 @@ confere("31/07 é lido como dia 31, mês 7", varios[0]?.dia === 31 && varios[0]?
 // mensagem de canal comum, e sem a âncora de data viraria lixo no banco.
 confere("PROMOÇÃO não é cupom", extraiCupons("PROMOÇÃO imperdível 50% OFF").length === 0);
 confere("FRETE GRATIS não é cupom", extraiCupons("FRETE GRATIS 10% a mais").length === 0);
+/*
+  ESTE CASO MUDOU DE RESPOSTA EM 04/08, e a mudança é deliberada.
+
+  Ele afirmava que código sem data não passa, porque a única âncora era
+  o sufixo `DDMM`. Só que a colheita passou a devolver zero cupons por
+  dias seguidos: o cupom datado é de campanha do ML e só existe em dia
+  de campanha, enquanto o que os concorrentes publicam todo dia
+  (`FASHIONML`, `PIPOCA`) não tem data nenhuma.
+
+  Agora o rótulo é a segunda âncora, e "Use o cupom DESCONTAO" é
+  exatamente o que ela existe para capturar. O prazo, que era o que a
+  data dava de graça, passou a ser o fim do dia em São Paulo.
+*/
 confere(
-  "código sem data não passa",
-  extraiCupons("Use o cupom DESCONTAO e ganhe 20% OFF").length === 0,
+  "código sem data passa quando vem depois do rótulo",
+  extraiCupons("Use o cupom DESCONTAO e ganhe 20% OFF").length === 1,
+);
+confere(
+  "e sem rótulo continua não passando",
+  extraiCupons("Aproveite DESCONTAO e ganhe 20% OFF").length === 0,
 );
 confere(
   "quatro dígitos que não são data não passam",
@@ -306,6 +323,101 @@ confere("  percentual", gnu[0]?.percentual === 15);
 confere("  minimo tres linhas acima", gnu[0]?.minimoCentavos === 7900);
 confere("  teto", gnu[0]?.tetoCentavos === 2000);
 confere("  e o link do canal nao vira cupom", !gnu.some((c) => /rj0oVrr/i.test(c.codigo)));
+
+// =============================================================
+// CUPOM SEM DATA NO CODIGO, achado pelo rotulo
+//
+// Medido em 04/08: os quinze canais devolveram ZERO cupons, porque o
+// caminho antigo so enxerga o cupom de campanha do ML, que traz DDMM.
+// O que o Esser Moda publica todo dia nao tem data nenhuma.
+// =============================================================
+
+// Literal do canal @ModaEsser, lido em 04/08.
+const esser = extraiCupons(`LACOSTE Camisa Polo Original
+
+De R$ 499,00 por R$ 249,90 (50% OFF)
+
+CUPOM: FASHIONML`);
+
+confere("cupom sem data e achado pelo rotulo", esser.length === 1);
+confere("  com o codigo certo", esser[0]?.codigo === "FASHIONML");
+confere("  sem dia e sem mes", esser[0]?.dia === null && esser[0]?.mes === null);
+confere("  marcado como achado por rotulo", esser[0]?.origem === "rotulo");
+confere("  e com o percentual da linha de cima", esser[0]?.percentual === 50);
+
+// O caminho antigo continua sendo o preferido, e diz de onde veio.
+confere("cupom com data continua marcado como `data`", gnu[0]?.origem === "data");
+confere("  e continua trazendo dia e mes", gnu[0]?.dia === 1 && gnu[0]?.mes === 8);
+
+// -------------------------------------------------------------
+// O que NAO pode virar cupom
+// -------------------------------------------------------------
+
+confere(
+  "palavra em caixa alta sem rotulo nao vira cupom",
+  extraiCupons(`OFERTA IMPERDIVEL AGORA
+30% OFF no LIQUIDIFICADOR PHILCO`).length === 0,
+);
+
+confere(
+  "vocabulario de oferta nao vira cupom nem com rotulo",
+  extraiCupons(`Cupom: DESCONTO
+15% OFF`).length === 0,
+);
+
+confere(
+  "rotulo em outra linha nao conta",
+  extraiCupons(`Use o cupom:
+FASHIONML
+20% OFF`).length === 0,
+);
+
+confere(
+  "sem percentual por perto nao vira cupom",
+  extraiCupons(`Camisa Polo Lacoste
+CUPOM: FASHIONML
+Frete gratis`).length === 0,
+);
+
+confere(
+  "codigo curto demais nao vira cupom",
+  extraiCupons(`Cupom: ABC
+15% OFF`).length === 0,
+);
+
+confere(
+  "codigo com menos de tres letras nao vira cupom",
+  extraiCupons(`Cupom: A1234567
+15% OFF`).length === 0,
+);
+
+// -------------------------------------------------------------
+// Os dois caminhos na mesma mensagem
+// -------------------------------------------------------------
+
+const misto = extraiCupons(`Cupons de hoje
+
+20% OFF acima de R$ 99
+Cupom: PIPOCA
+
+15% OFF acima de R$ 79
+CODIGO: LOJASOFICIAIS0408`);
+
+confere("os dois caminhos convivem", misto.length === 2);
+{
+  const pipoca = misto.find((c) => c.codigo === "PIPOCA");
+  const lojas = misto.find((c) => c.codigo === "LOJASOFICIAIS0408");
+  confere("  o sem data pega o percentual do bloco dele", pipoca?.percentual === 20);
+  confere("  e o com data pega o dele", lojas?.percentual === 15);
+  confere("  sem trocar o minimo entre os dois", pipoca?.minimoCentavos === 9900 && lojas?.minimoCentavos === 7900);
+  confere("  e o com data mantem o prazo", lojas?.dia === 4 && lojas?.mes === 8);
+}
+
+confere(
+  "o mesmo codigo nao entra duas vezes pelos dois caminhos",
+  extraiCupons(`15% OFF
+Cupom: LOJASOFICIAIS0408`).length === 1,
+);
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
