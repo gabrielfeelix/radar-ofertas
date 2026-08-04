@@ -93,6 +93,27 @@ const REGRAS: { nicho: string; padrao: RegExp }[] = [
     padrao:
       /\b(ra[çc][ãa]o|petisco|areia higi[êe]nica|comedouro|bebedouro|arranhador|coleira|antipulgas|whiskas|pedigree|golden|c[ãa]es?|gatos?|felino|canino)\b/i,
   },
+  /*
+    BEBÊ VEM ANTES DE BELEZA, e isto foi um defeito medido em 05/08.
+    Produto de bebê é descrito com as palavras da beleza — "Loção
+    Hidratante Para Uso Diário Johnson's Baby" casa com `hidratante`, e
+    "Sabonete Líquido Glicerina Camomila Johnson's Baby" casa com
+    sabonete. Com `beleza` na frente, loção de bebê ia para o canal de
+    Beleza em vez do Kids, e os dois canais existem. É o mesmo desenho
+    de `pet` na frente de `beleza`, pelo mesmo motivo.
+
+    E "johnson" SOZINHO seria errado, o que só apareceu conferindo o
+    catálogo inteiro antes de escrever a regra: "Cotonetes Flexíveis
+    Johnson & Johnson" e "Fio Dental Reach Essencial Johnson's" são da
+    marca e não são de bebê. É o "Baby" que decide, e por isso ele está
+    no padrão. É a lição do Beauty, onde uma regra escrita de cabeça
+    marcou "Lip Gloss Seringa" como insumo de clínica.
+  */
+  {
+    nicho: "bebe",
+    padrao:
+      /\b(fralda|mamadeira|carrinho de beb[êe]|johnson'?[’']?s?\s*®?\s*baby|chupeta|body beb[êe]|len[çc]os umedecidos|rec[ée]m[- ]nascidos?)\b/i,
+  },
   {
     nicho: "suplemento",
     padrao:
@@ -106,12 +127,12 @@ const REGRAS: { nicho: string; padrao: RegExp }[] = [
   {
     nicho: "eletronico",
     padrao:
-      /\b(notebook|smart ?tv|monitor|placa de v[íi]deo|placa m[ãa]e|mem[óo]ria (gamer|ram)|ssd|processador|water cooler|headphone|fone de ouvido|caixa de som|celular|smartphone|tablet|teclado|mouse|webcam|roteador|impressora|cadeira (gamer|ergon[ôo]mica)|multim[íi]dia|gtx|rtx|ddr4|ddr5)\b/i,
+      /\b(notebook|smart ?tv|monitor|placa de v[íi]deo|placa m[ãa]e|mem[óo]ria (gamer|ram)|ssd|processador|water cooler|headphone|fone de ouvido|caixa de som|celular|smartphone|tablet|teclado|mouse|webcam|roteador|impressora|cadeira (gamer|ergon[ôo]mica)|multim[íi]dia|gtx|rtx|ddr4|ddr5|gopro|c[âa]mera de a[çc][ãa]o)\b/i,
   },
   {
     nicho: "casa",
     padrao:
-      /\b(cooktop|fog[ãa]o|geladeira|micro-?ondas|ar condicionado|ventilador|liquidificador|batedeira|air ?fryer|panela|bule|t[ée]rmico|aspirador|lava e seca|m[áa]quina de lavar|sof[áa]|colch[ãa]o|edredom|toalha)\b/i,
+      /\b(cooktop|fog[ãa]o|geladeira|micro-?ondas|ar condicionado|ventilador|liquidificador|batedeira|air ?fryer|fritadeira|forno el[ée]trico|panela|bule|t[ée]rmico|aspirador|lava e seca|m[áa]quina de lavar|sof[áa]|colch[ãa]o|edredom|toalha)\b/i,
   },
   {
     nicho: "mercado",

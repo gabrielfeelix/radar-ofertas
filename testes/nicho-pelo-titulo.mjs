@@ -132,6 +132,61 @@ confere(
   nichoPeloTitulo("Ração Golden para Gatos Filhotes sabor Leite 1kg") === "pet",
 );
 
+/*
+  BEBE GANHA DE BELEZA, e este era um defeito de verdade: os tres
+  titulos abaixo estavam no catalogo de producao indo para `beleza`,
+  porque produto de bebe e descrito com as palavras da beleza. Os dois
+  canais existem, entao locao de bebe ia para o canal errado.
+*/
+confere(
+  "locao de bebe e bebe, e nao beleza por causa de 'hidratante'",
+  nichoPeloTitulo("Loção Hidratante Para Uso Diário Johnson's Baby, 200ml") === "bebe",
+);
+confere(
+  "sabonete de bebe e bebe, e nao beleza",
+  nichoPeloTitulo("3x Sabonete Líquido Glicerina Camomila JOHNSON’S® Baby, 180mL") === "bebe",
+);
+confere(
+  "shampoo de bebe e bebe, e nao beleza",
+  nichoPeloTitulo("Shampoo Johnson'S Baby Regular 200ml") === "bebe",
+);
+confere(
+  "lencos umedecidos de recem nascido e bebe",
+  nichoPeloTitulo("3x Lenços Umedecidos JOHNSON'S® Baby Recém Nascido, 48 unidades") === "bebe",
+);
+
+/*
+  E A MARCA SOZINHA NAO BASTA. Estes dois sao da mesma marca e nao sao
+  de bebe, e so apareceram porque a regra foi conferida contra o
+  catalogo inteiro antes de ser escrita. Sem o "Baby" no padrao, os dois
+  cairiam no canal Kids.
+*/
+confere(
+  "cotonete da marca nao e bebe",
+  nichoPeloTitulo("Cotonetes Flexíveis de Algodão 300 unidades Johnson & Johnson") !== "bebe",
+);
+confere(
+  "fio dental da marca nao e bebe",
+  nichoPeloTitulo("Fio Dental Reach Essencial Menta 100m Johnson's") !== "bebe",
+);
+
+// -------------------------------------------------------------
+// Buracos achados olhando os 18 sem nicho, em 05/08
+// -------------------------------------------------------------
+
+confere(
+  "gopro e eletronico",
+  nichoPeloTitulo("GoPro Max 360 - Câmera de Ação à Prova d'água, Vídeo 360 5.6K") === "eletronico",
+);
+confere(
+  "camera de acao de outra marca tambem e eletronico",
+  nichoPeloTitulo("Câmera de ação Dji Osmo Action 5 Pro 4k Combo Adventure preta") === "eletronico",
+);
+confere(
+  "fritadeira e casa",
+  nichoPeloTitulo("Fritadeira e Forno Elétrico Style Oven Fry 3 em 1 Elgin 10L") === "casa",
+);
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
