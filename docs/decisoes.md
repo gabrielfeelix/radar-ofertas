@@ -2442,3 +2442,66 @@ O funil inteiro:
    título diz um e **não** diz o outro; ambíguo fica nulo e não publica.
    Errar aqui é pior que não publicar.
 3. **Corrigir `SHOPEE-100708` para `casa`.**
+
+---
+
+## D-064 · A coleta da Shopee NÃO troca o CSV pela API, e o motivo é uma regressão
+
+**04/08/2026.** Investigado a pedido do dono, que pediu para trocar a
+coleta do feed CSV para a Open API. **A troca foi recusada**, e a razão
+só apareceu comparando campo a campo.
+
+**A API tem os mesmos dois feeds do CSV**, o que sugeria troca direta:
+
+```
+428535457031659520_FULL  Shopee Brasil     10.000 itens
+428536169534861312_FULL  Shopee Oficial BR 100.000 itens
+```
+
+E `getItemFeedData(datafeedId, offset, limit)` os lê paginado, com
+`totalCount` e `hasMore`. O `columns` de cada linha vem como **string
+JSON** com os campos nomeados, e existe `feedMode: DELTA` para ler só o
+que mudou.
+
+**Mas faltam três campos, e os três sustentam curadoria:**
+
+| Campo | O CSV tem | A API tem | Para que serve |
+|---|---|---|---|
+| `shop_rating` | ✅ | ❌ | `reputacao_vendedor` |
+| `condition` | ✅ | ❌ | recusa produto usado |
+| `cb_option` | ✅ | ❌ | recusa importado |
+
+**O primeiro é o que mata a ideia.** `shop_rating` vira
+`reputacao_vendedor`, e a falta dele foi **um dos três defeitos achados
+em 03/08**: *"toda oferta da Shopee era reprovada porque o coletor não
+gravava `reputacao_vendedor`; a comporta estava certa, faltava o dado"*.
+Trocar o CSV pela API reintroduziria exatamente esse defeito, um dia
+depois de ele ser consertado.
+
+**O que a API tem e o CSV não:** `global_item_attributes`. Isso é
+atributo de verdade, vindo da Shopee, e é melhor que a leitura de título
+que a D-063 precisou inventar para descobrir o `GENDER`. Vale investigar
+se ele traz gênero — se trouxer, a heurística de título vira rede de
+segurança em vez de fonte.
+
+**A DECISÃO: híbrido, e não substituição.** O CSV continua sendo a fonte
+de catálogo, porque é o único que tem reputação, condição e origem. A
+API entra onde ela é melhor:
+
+1. **`global_item_attributes`** como fonte de atributo, com o título
+   como reserva.
+2. **`productOfferV2(itemId:)` na hora de publicar**, para conferir se o
+   preço e o desconto ainda valem. Hoje publicamos sobre o feed da noite
+   anterior, e desconto some sem avisar. É a "validação em tempo real"
+   que o dono pediu, e o lugar dela é o publicador, não o coletor.
+3. **`conversionReport`** para fechar a Fase 0.
+
+**Uma coisa que a API resolveria e fica pendente:** as URLs do CSV vivem
+em `credencial_rotativa` e **expiram**, exigindo alguém buscar as novas
+no painel. `listItemFeeds` descobre o feed do dia sozinho. Se um dia a
+Shopee acrescentar `shop_rating` ao feed da API, a troca passa a valer
+por esse motivo sozinho.
+
+**Mudaria se:** a API passar a expor `shop_rating`, ou se a comporta de
+reputação deixar de valer para a Shopee — o que não deve acontecer, ela
+existe porque 11 ofertas de perfume foram reprovadas por falta dela.
