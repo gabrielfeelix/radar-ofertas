@@ -73,6 +73,28 @@ versão do classificador de nicho devolvia nulo quando duas regras
 casavam, e jogava fora "Ração para Gatos sabor Leite". Ordem por
 especificidade resolve; "segurança" que perde o óbvio é desistência.
 
+**Marca não é categoria, e a conferência tem que ser contra o catálogo
+INTEIRO, não contra a amostra que você está olhando.** Escrevendo a
+regra de bebê em 04/08 eu ia usar "johnson", porque os três itens da
+Amazon na minha frente eram todos Johnson's Baby. O catálogo completo
+tinha "Cotonetes Johnson & Johnson" e "Fio Dental Reach Johnson's", que
+não são de bebê e iriam para o canal Kids. Uma consulta de dez segundos
+antes de escrever a regra. Amostra estreita mente com confiança.
+
+**Comporta que procura o que NÃO pode estar lá precisa de controle
+positivo.** A do backup procura `TABLE DATA credencial_rotativa` no
+índice do dump. Se o formato do `pg_restore --list` mudar, a busca deixa
+de casar com qualquer coisa e a comporta passa a **aprovar tudo,
+calada** — o mesmo modo de falha que criou o problema. Por isso ela
+exige achar os dados de `anuncio` antes de procurar o que não pode
+existir. Toda comporta escrita como "se achar X, falhe" tem esse buraco.
+
+**Quando não der para testar na sua máquina, faça o teste se provar no
+lugar onde ele roda.** Não há Docker, `pg_dump` nem sudo aqui, então a
+comporta do backup não podia ser rodada localmente. A saída não foi
+"confiar na documentação", foi pôr o controle positivo dentro dela e
+disparar o workflow à mão.
+
 **Migration que casa por emoji não se aplica.** Case sempre por
 variável (`{link}`, `{frete}`), nunca por enfeite que o painel edita.
 
@@ -96,28 +118,59 @@ ou construir algo de fase futura.
 
 ---
 
-## Bloco 1 · Segurança — é do dono, e é o único urgente
+## Bloco 1 · Segurança — fechado, menos a rotação
 
-Aberto desde 04/08 de manhã, e **passou o dia inteiro parado enquanto se
-mexia em coisa menor**. Isso é falha minha de não cobrar.
+**Resolvido na noite de 04/08.** Ficou aberto o dia inteiro, e o que o
+destravou foi medir em vez de planejar.
 
-Dois artefatos do backup semanal são baixáveis por **qualquer conta do
-GitHub**, e carregam o cookie da Central de Afiliados e o refresh token
-do Mercado Livre. Diagnóstico completo em `docs/revisao-04-08.md`, S-01.
+**O que foi feito:**
 
-- apagar `radar-ofertas-2026-08-02.dump` e `radar-ofertas-2026-07-31.dump`
-- rotacionar cookie, csrf e refresh token
+- **O dump parou de carregar a credencial.**
+  `--exclude-table-data='public.credencial_rotativa'` no
+  `backup-semanal.yml`. É `--exclude-table-data` e não
+  `--exclude-table`: a tabela continua no dump e só o conteúdo fica de
+  fora, senão o restore de um projeto novo quebraria nas views e funções
+  que a referenciam.
+- **Uma comporta antes do upload, com controle positivo.** Ela procura
+  `TABLE DATA credencial_rotativa` no índice do dump, mas antes disso
+  **exige achar os dados de `anuncio`**. Sem esse controle, uma mudança
+  de formato do `pg_restore --list` faria a busca não casar com nada e a
+  comporta passaria a aprovar tudo, calada — que é exatamente o modo de
+  falha que criou este problema.
+- **Provado num Postgres de verdade**, disparando o workflow à mão, e
+  não nesta máquina (que não tem Docker, `pg_dump` nem sudo). Saída:
+  `✓ dump tem dados, e credencial_rotativa entrou sem os dela`.
+- **Backup limpo gerado antes de apagar os sujos**, para o projeto não
+  ficar sem backup nenhum no meio do caminho.
+- **Os dois artefatos vazados foram apagados**
+  (`radar-ofertas-2026-08-02.dump` e `radar-ofertas-2026-07-31.dump`).
+  Só resta `radar-ofertas-2026-08-04.dump`.
+- **O comentário mentiroso no topo do workflow foi reescrito.** Ele
+  dizia "artefato do repositório, que é privado", deixou de ser verdade
+  em 01/08 (D-038) e continuou dizendo isso por três dias. Foi ele que
+  fez o descuido parecer seguro.
 
-**Uma coisa mudou a favor:** o refresh token do ML foi rotacionado quatro
-vezes em 04/08 (medições e sondas), então o valor que está no dump já não
-vale. **O cookie da Central continua valendo.**
+### O que continua aberto, e é do dono
 
-**Não rotacione antes de tirar os segredos do schema `public`**
-(`docs/plano-vault.md`), senão o segredo novo é escrito no mesmo lugar
-que vazou.
+**Rotacionar o cookie e o csrf da Central.** O `afiliados_cookie` é de
+01/08, está nos dois dumps que ficaram públicos por dois dias, e
+**continua valendo**. Só o dono faz: sair da Central, entrar de novo, e
+capturar o cURL do botão Gerar na aba Network.
 
-E, independente disso e barato: `--exclude-table` das duas tabelas no
-`pg_dump` e `gpg --symmetric` antes do upload.
+O `refresh_token` do ML **não precisa**: ele rotacionou sozinho várias
+vezes desde então, e o valor que vazou já morreu.
+
+**Decisão do dono em 04/08: a rotação espera o Vault.** Vale registrar
+que o motivo original de esperar caiu, e a medição é esta:
+
+> O `plano-vault.md` dizia "não rotacione antes da Fase 4, senão o
+> segredo novo é escrito no mesmo lugar que vazou". Mas o `public`
+> vazava **pelo backup**, e o backup parou de carregá-lo. Conferido que
+> não sobrou outro caminho: `credencial_rotativa` tem RLS ligado, zero
+> policies, e `anon`/`authenticated` sem grant nenhum. Uma leitura real
+> pela chave pública do painel devolve `permission denied`, HTTP 401.
+
+Ou seja, rotacionar agora seria seguro. Esperar é decisão, não bloqueio.
 
 ---
 
@@ -140,12 +193,46 @@ script, então o caminho é automático.
 
 ### O que falta, em ordem
 
-**1. Aplicar o nicho aos anúncios.** A classificação foi medida contra o
-catálogo real e **nunca foi gravada**. Hoje os 98 anúncios continuam com
-`produto.nicho_id` nulo, e sem nicho não há canal.
+**1. ~~Aplicar o nicho aos anúncios.~~ FEITO em 04/08, à noite**, por
+`scripts/nicho-da-amazon.mjs`. Medido em produção:
+
+| | Antes | Depois |
+|---|---|---|
+| anúncios com nicho | 1 | **74** |
+| anúncios ativos | 99 | **87** |
+
+Dos 74, **63 estão em nicho que tem canal**: eletrônico 39, beleza 15,
+pet 5, bebê 3, suplemento 1. Os outros 11 caem em casa, mercado e
+automotivo, que não têm canal. Sobraram 13 sem nicho, e a maioria é
+higiene e saúde (absorvente, enxaguante bucal), que **é certo continuar
+sem**: o nicho `saude` não tem canal e a decisão sobre ele está no Bloco
+3.
+
+Os 12 desativados são a conversa de canal que virou linha de catálogo.
+Foram para `ativo = false`, alavanca que já existia e que a detecção
+inteira respeita.
+
+**E olhar a amostra achou um defeito de verdade**, que é o motivo de a
+regra ter mudado junto: produto de bebê é descrito com as palavras da
+beleza, e `beleza` estava na frente de `bebe` na lista. "Loção
+Hidratante Para Uso Diário Johnson's Baby" casava com `hidratante` e ia
+para o canal de Beleza, tendo o Kids ali do lado. `bebe` subiu na ordem.
+
+E "johnson" sozinho seria errado, o que só apareceu conferindo o
+catálogo **inteiro** antes de escrever a regra: "Cotonetes Johnson &
+Johnson" e "Fio Dental Reach Johnson's" são da marca e não são de bebê.
+É o "Baby" que decide. São 36 casos de teste agora, todos com título
+real.
+
+**Isso não fez a Amazon publicar, e foi conferido em vez de suposto.**
+São duas travas independentes: `avalia_anuncios` reprova por
+`loja_sem_historico`, e a loja não tem dado nenhum de série (zero pontos
+de preço, zero `preco_original_centavos`), então nem `detecta_quedas`
+nem `detecta_declarados` têm o que ver. Depois de gravar, as ofertas da
+Amazon continuam em 1.
 
 **2. O caminho que transforma menção em oferta.** É o que falta de
-verdade, e ele tem que nascer certo:
+verdade, é o próximo passo, e ele tem que nascer certo:
 
 - a oferta nasce da `mencao` com `preco_alegado_centavos`, **não** de
   `preco_ponto` — construir série de preço da Amazon viola a 3.3 e

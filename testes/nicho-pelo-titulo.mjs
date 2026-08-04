@@ -171,7 +171,7 @@ confere(
 );
 
 // -------------------------------------------------------------
-// Buracos achados olhando os 18 sem nicho, em 05/08
+// Buracos achados olhando os 18 sem nicho, em 04/08 a noite
 // -------------------------------------------------------------
 
 confere(

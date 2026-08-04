@@ -94,7 +94,8 @@ const REGRAS: { nicho: string; padrao: RegExp }[] = [
       /\b(ra[çc][ãa]o|petisco|areia higi[êe]nica|comedouro|bebedouro|arranhador|coleira|antipulgas|whiskas|pedigree|golden|c[ãa]es?|gatos?|felino|canino)\b/i,
   },
   /*
-    BEBÊ VEM ANTES DE BELEZA, e isto foi um defeito medido em 05/08.
+    BEBÊ VEM ANTES DE BELEZA, e isto foi um defeito medido em 04/08, à
+    noite, na hora de gravar a classificação pela primeira vez.
     Produto de bebê é descrito com as palavras da beleza — "Loção
     Hidratante Para Uso Diário Johnson's Baby" casa com `hidratante`, e
     "Sabonete Líquido Glicerina Camomila Johnson's Baby" casa com

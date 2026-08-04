@@ -33,15 +33,50 @@ oferta, e o horário do canal sendo respeitado de verdade.
 
 Está tudo em `docs/handoff.md`, em quatro blocos. O resumo:
 
-1. **Segurança** — os dois artefatos do backup e a rotação. É do dono, é
-   o único urgente, e passou o dia parado.
-2. **Amazon** — classificação por título feita e testada, **nicho ainda
-   não gravado**, e falta o caminho que transforma menção em oferta sem
-   construir série (regra 3.3).
+1. ~~**Segurança**~~ — **fechado na noite de 04/08**, menos a rotação do
+   cookie da Central, que é do dono e que ele decidiu deixar para depois
+   do Vault. Ver logo abaixo.
+2. **Amazon** — o nicho **foi gravado** (1 → 74 anúncios). Falta o
+   caminho que transforma menção em oferta sem construir série (regra
+   3.3), e é o próximo passo.
 3. **Decisões do dono** — cupom sem mapa, saúde com 39% de sex shop,
    F-07 e F-08.
 4. **Técnico** — gravar em lote na coleta da Shopee antes de subir o
    teto, `conversionReport`, e mais cinco itens menores.
+
+## A noite de 04/08: o vazamento fechou, e a Amazon ganhou nicho
+
+**O backup parou de vazar credencial, e os dois artefatos sumiram.** O
+`pg_dump` agora exclui o conteúdo de `credencial_rotativa`, uma comporta
+com controle positivo barra o upload se ele voltar, e a coisa foi
+provada disparando o workflow à mão, num Postgres de verdade. Um backup
+limpo foi gerado **antes** de apagar os dois sujos, para não haver
+janela sem backup.
+
+**Continua aberto e é do dono:** rotacionar o cookie e o csrf da
+Central. O valor de 01/08 esteve público por dois dias e ainda vale. O
+refresh token do ML não precisa, porque já rotacionou sozinho.
+
+**E uma medição que muda o que o `plano-vault.md` recomendava:** ele
+mandava rotacionar só depois da Fase 4, "senão o segredo novo é escrito
+no mesmo lugar que vazou". O `public` vazava **pelo backup**, e o backup
+parou. Conferido que não sobrou outro caminho: RLS ligado, zero
+policies, `anon` sem grant, e uma leitura real pela chave pública
+devolve HTTP 401. Rotacionar agora seria seguro; esperar virou decisão,
+não bloqueio.
+
+**A Amazon saiu de 1 para 74 anúncios com nicho**, e 12 "produtos" que
+eram conversa de canal foram desativados. Sessenta e três dos 74 estão
+em nicho que tem canal. **Nada disso a faz publicar** — foi conferido:
+ela não tem ponto de preço nenhum, e `avalia_anuncios` reprova por
+`loja_sem_historico`. As ofertas da Amazon continuam em 1.
+
+**O defeito que olhar a amostra achou:** `beleza` estava na frente de
+`bebe`, e produto de bebê é descrito com as palavras da beleza. Loção
+Johnson's Baby ia para o canal de Beleza tendo o Kids ao lado. E a
+regra quase nasceu como "johnson", que teria levado cotonete e fio
+dental da mesma marca para o canal de bebê — só apareceu conferindo o
+catálogo inteiro em vez da amostra na tela.
 
 ---
 
