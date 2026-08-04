@@ -47,6 +47,15 @@ export type ModeloDeMensagem = {
    * vinha na resposta da API desde sempre.
    */
   linhaFrete?: string;
+  /**
+   * A linha do cupom dentro do post da oferta (migration 64).
+   *
+   * Some inteira quando não há cupom que sirva, igual à do frete. O
+   * cupom continua saindo como post próprio também (D-039): as duas
+   * coisas convivem, porque quem entrou no canal depois do post de
+   * cupom não o viu.
+   */
+  linhaCupom?: string;
 };
 
 /**
@@ -115,6 +124,36 @@ export type DadosDaMensagem = {
    * mentir para o lado caro, e custa a venda sem motivo.
    */
   freteGratis?: boolean | null;
+  /**
+   * Quantas vendas o vendedor tem, quando a loja informa.
+   *
+   * É o sinal de confiança mais barato que existe, e é o que os canais
+   * que funcionam publicam: *"Loja: BAGATELLE (+10.000 vendas,
+   * mercadolíder)"*. Medido em 04/08: o Mercado Livre informa em **100%**
+   * dos nossos anúncios, a Shopee em nenhum.
+   *
+   * Arredondado para baixo na exibição, e nunca para cima: dizer
+   * "+10.000" com 10.400 é honesto, com 9.900 é mentira pequena.
+   */
+  vendasDoVendedor?: number | null;
+  /**
+   * O selo cru do marketplace (`platinum`, `gold`, `silver`).
+   *
+   * Vem separado da reputação de propósito: `reputacao_vendedor` é
+   * número para a comporta comparar, e o número perde o selo no teto
+   * (verde comum e verde platinum viram 1,0). Este campo é para LER.
+   */
+  seloDoVendedor?: string | null;
+  /** O vendedor é loja oficial do marketplace? */
+  lojaOficial?: boolean | null;
+  /**
+   * O cupom que serve para ESTE produto, se houver.
+   *
+   * Quem decide se serve é quem chama, com o escopo de `cupons_vivos`:
+   * cupom de nicho só vale no nicho, e cupom de outra loja nunca vale.
+   * Aqui ele só é escrito.
+   */
+  cupom?: { codigo: string } | null;
 };
 
 /**
@@ -247,6 +286,81 @@ export function afirmaMinimoSemLastro(texto: string): boolean {
   return PROIBIDAS.some((padrao) => padrao.test(texto));
 }
 
+/**
+ * Como o vendedor é descrito na mensagem.
+ *
+ * POR QUE ISTO EXISTE. Até 04/08 a linha era só o nome, ou a palavra
+ * "Loja oficial". Os canais que funcionam publicam mais, e é o sinal de
+ * confiança mais barato que existe. Copiado de post real do
+ * `@emanalise`, lido em `docs/concorrentes-lidos.md`:
+ *
+ *   🏪 Loja: BAGATELLE (+10.000 vendas, mercadolíder)
+ *
+ * O QUE ENTRA, e cada pedaço só entra quando o dado existe:
+ *
+ *   nome                        sempre que a loja informa
+ *   loja oficial                é o selo mais forte, e substitui o resto
+ *   +N vendas                   Mercado Livre informa em 100%; Shopee, nunca
+ *   MercadoLíder / Platinum     do `power_seller_status` (migration 64)
+ *
+ * O ARREDONDAMENTO É SEMPRE PARA BAIXO, e isso é a regra 3.4 aplicada a
+ * outro número: "+10.000 vendas" com 10.400 é honesto, com 9.900 é
+ * mentira pequena. Mentira pequena sobre número verificável é a mais
+ * cara de todas, porque quem confere uma vez não confia mais em nenhuma.
+ *
+ * Some inteiro quando não há nem nome: linha com parêntese vazio é pior
+ * que linha nenhuma.
+ */
+export function descreveVendedor(dados: {
+  vendedor: string;
+  vendasDoVendedor?: number | null;
+  seloDoVendedor?: string | null;
+  lojaOficial?: boolean | null;
+}): string {
+  const partes: string[] = [];
+
+  const vendas = dados.vendasDoVendedor;
+  if (typeof vendas === "number" && Number.isFinite(vendas) && vendas >= 100) {
+    partes.push(`+${arredondaParaBaixo(vendas)} vendas`);
+  }
+
+  /*
+    O selo do Mercado Livre em português, como o comprador o vê no
+    site. `platinum` e `gold` são MercadoLíder; `silver` é o degrau de
+    entrada e não vale linha.
+  */
+  const selo = dados.seloDoVendedor?.toLowerCase();
+  if (selo === "platinum") partes.push("MercadoLíder Platinum");
+  else if (selo === "gold") partes.push("MercadoLíder Gold");
+  else if (selo === "silver") partes.push("MercadoLíder");
+
+  const nome = dados.lojaOficial ? "Loja oficial" : dados.vendedor?.trim();
+  if (!nome) {
+    // Sem nome, o que sobra ainda vale: "+10.000 vendas" sozinho
+    // informa, e some quando não há nem isso.
+    return partes.length ? escapaHtml(partes.join(", ")) : "";
+  }
+
+  return partes.length
+    ? `${escapaHtml(nome)} (${escapaHtml(partes.join(", "))})`
+    : escapaHtml(nome);
+}
+
+/**
+ * O degrau de baixo mais próximo, na escala que o comprador lê.
+ *
+ * 10.400 vira 10.000 e 9.900 vira 5.000, nunca o contrário. Os degraus
+ * são os mesmos que os canais usam, porque são os que a pessoa
+ * reconhece sem pensar.
+ */
+function arredondaParaBaixo(n: number): string {
+  const degraus = [100_000, 50_000, 10_000, 5_000, 1_000, 500, 100];
+  for (const d of degraus) {
+    if (n >= d) return d.toLocaleString("pt-BR");
+  }
+  return String(n);
+}
+
 /** Renderiza o modelo com os dados de uma oferta. */
 export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem): string {
   // A queda vem primeiro e ignora `podeAfirmarMinimo`: numa oferta de
@@ -316,6 +430,19 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
   const frete = dados.freteGratis ? (modelo.linhaFrete ?? "🚚 Frete grátis") : "";
 
   /*
+    A LINHA DO CUPOM, e ela some junto com o cupom.
+
+    O código vem de texto colhido de canal alheio, que é a entrada menos
+    confiável do sistema inteiro, então vai escapado. O resto da linha é
+    do modelo, que é texto do dono.
+  */
+  const cupom = dados.cupom?.codigo
+    ? preenche(modelo.linhaCupom ?? "🎟 Cupom: <b>{codigo}</b>", {
+        codigo: escapaHtml(dados.cupom.codigo),
+      })
+    : "";
+
+  /*
     As linhas opcionais somem, e o BURACO DELAS TAMBÉM.
 
     `{nota}` e `{frete}` ficam vazios na maioria das mensagens, e cada
@@ -332,13 +459,14 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
     // do dono. O que é dado de fora vai escapado (ver `escapaHtml`).
     frete,
     nota,
+    cupom,
     lastro,
     produto: escapaHtml(dados.produto),
     preco: reais(dados.precoCentavos),
     preco_antes: reais(dados.precoAntesCentavos),
     desconto: String(dados.descontoPct),
     loja: escapaHtml(dados.loja),
-    vendedor: escapaHtml(dados.vendedor),
+    vendedor: descreveVendedor(dados),
     /*
       O LINK TAMBÉM É ESCAPADO, e isto só pôde ser feito depois de medir.
 

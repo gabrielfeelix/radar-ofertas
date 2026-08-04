@@ -17,6 +17,7 @@
 
 import {
   afirmaMinimoSemLastro,
+  descreveVendedor,
   temTravessao,
   identificacaoEstaEscondida,
   montaMensagem,
@@ -479,6 +480,75 @@ confere(
   "cupom: nenhum `&` solto",
   !/&(?!(amp|lt|gt|quot);)/.test(cupomSujo),
 );
+
+// =============================================================
+// O VENDEDOR DESCRITO, e nao so nomeado (migration 64)
+//
+// O formato saiu de post real de concorrente, lido em 04/08:
+//   Loja: BAGATELLE (+10.000 vendas, mercadolider)
+// =============================================================
+
+confere(
+  "so o nome, quando nao ha mais nada",
+  descreveVendedor({ vendedor: "BAGATELLE" }) === "BAGATELLE",
+);
+confere(
+  "nome com vendas",
+  descreveVendedor({ vendedor: "BAGATELLE", vendasDoVendedor: 10400 }) ===
+    "BAGATELLE (+10.000 vendas)",
+);
+confere(
+  "nome com vendas e selo",
+  descreveVendedor({ vendedor: "BAGATELLE", vendasDoVendedor: 10400, seloDoVendedor: "platinum" }) ===
+    "BAGATELLE (+10.000 vendas, MercadoLíder Platinum)",
+);
+confere(
+  "loja oficial substitui o nome",
+  descreveVendedor({ vendedor: "QUEROZ", lojaOficial: true, vendasDoVendedor: 1200 }) ===
+    "Loja oficial (+1.000 vendas)",
+);
+
+// O ARREDONDAMENTO NUNCA SOBE. Numero verificavel arredondado para cima
+// e mentira pequena, e mentira pequena custa mais que numero feio.
+confere("9.900 vira +5.000, e nao +10.000", descreveVendedor({ vendedor: "X", vendasDoVendedor: 9900 }) === "X (+5.000 vendas)");
+confere("10.000 cravado vira +10.000", descreveVendedor({ vendedor: "X", vendasDoVendedor: 10000 }) === "X (+10.000 vendas)");
+confere("120.000 vira +100.000", descreveVendedor({ vendedor: "X", vendasDoVendedor: 120000 }) === "X (+100.000 vendas)");
+confere("101 vira +100", descreveVendedor({ vendedor: "X", vendasDoVendedor: 101 }) === "X (+100 vendas)");
+
+// Vendedor com pouca venda nao ganha linha: "+12 vendas" nao ajuda
+// ninguem, e chama atencao para o que a comporta ja deixou passar.
+confere("99 vendas nao viram linha", descreveVendedor({ vendedor: "X", vendasDoVendedor: 99 }) === "X");
+confere("zero venda nao vira linha", descreveVendedor({ vendedor: "X", vendasDoVendedor: 0 }) === "X");
+confere("venda nula nao vira linha", descreveVendedor({ vendedor: "X", vendasDoVendedor: null }) === "X");
+
+confere("silver e MercadoLider sem sobrenome", descreveVendedor({ vendedor: "X", seloDoVendedor: "silver" }) === "X (MercadoLíder)");
+confere("selo desconhecido e ignorado", descreveVendedor({ vendedor: "X", seloDoVendedor: "bronze" }) === "X");
+confere("sem nome e sem nada devolve vazio", descreveVendedor({ vendedor: "" }) === "");
+confere(
+  "sem nome mas com vendas, o que sobra vale",
+  descreveVendedor({ vendedor: "", vendasDoVendedor: 5200 }) === "+5.000 vendas",
+);
+confere(
+  "o nome do vendedor vai escapado",
+  descreveVendedor({ vendedor: "Cabo <2m> & Cia" }) === "Cabo &lt;2m&gt; &amp; Cia",
+);
+
+// =============================================================
+// O CUPOM COLADO NO POST DA OFERTA (migration 64)
+// =============================================================
+
+{
+  const modeloComCupom = { ...modelo, corpo: "{produto}\n\n{cupom}\n\n{link}", linhaCupom: "🎟 Cupom: <b>{codigo}</b>" };
+  const com = montaMensagem(modeloComCupom, { ...dados, podeAfirmarMinimo: false, cupom: { codigo: "AMODESCONTO" } });
+  confere("o codigo do cupom entra na mensagem", com.includes("🎟 Cupom: <b>AMODESCONTO</b>"));
+
+  const sem = montaMensagem(modeloComCupom, { ...dados, podeAfirmarMinimo: false, cupom: null });
+  confere("sem cupom, a linha some inteira", !sem.includes("Cupom"));
+  confere("  e nao deixa buraco", !/\n{3,}/.test(sem));
+
+  const bravo = montaMensagem(modeloComCupom, { ...dados, podeAfirmarMinimo: false, cupom: { codigo: "A<b>X" } });
+  confere("o codigo vai escapado", bravo.includes("A&lt;b&gt;X"));
+}
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);

@@ -37,6 +37,7 @@ import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
 import {
   RITMO_PADRAO,
   diaEmSaoPaulo,
+  horaEmSaoPaulo,
   inicioDoDiaEmSaoPaulo,
   podePublicarAgora,
 } from "../lib/ritmo.ts";
@@ -236,7 +237,7 @@ async function main() {
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em, gatilho,
     anuncio:anuncio_id (
       id, produto_id, url_original, sku_externo, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
-      avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis,
+      avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, selo_vendedor, frete_gratis,
       preco_leitura_centavos, preco_original_centavos, categoria_ramo,
       marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ),
       produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos )
@@ -275,7 +276,7 @@ async function melhorPrateleira(db, oferta) {
     .from("anuncio")
     .select(
       "id, produto_id, url_original, sku_externo, vendedor, imagem_url, imagem_obtida_em, loja_oficial, " +
-        "avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis, " +
+        "avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, selo_vendedor, frete_gratis, " +
         "preco_leitura_centavos, preco_original_centavos, " +
         "marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ), " +
         "produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos )",
@@ -338,7 +339,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: modeloLinha } = await db
     .from("modelo_mensagem")
     .select(
-      "corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo, corpo_cupom",
+      "corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, linha_cupom, nota_prefixo, corpo_cupom",
     )
     .eq("ativo", true)
     .limit(1)
@@ -351,6 +352,7 @@ async function melhorPrateleira(db, oferta) {
     lastroQueda: modeloLinha.lastro_queda,
     lastroDeclarado: modeloLinha.lastro_declarado,
     linhaFrete: modeloLinha.linha_frete,
+    linhaCupom: modeloLinha.linha_cupom,
     notaPrefixo: modeloLinha.nota_prefixo,
     corpoCupom: modeloLinha.corpo_cupom,
   };
@@ -418,7 +420,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: canais } = await db
     .from("canal")
     .select(
-      "id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
+      "id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
     )
     .eq("ativo", true);
 
@@ -456,6 +458,25 @@ async function melhorPrateleira(db, oferta) {
   }
 
   /** O canal já falou o suficiente hoje? */
+  /*
+    O HORÁRIO DO CANAL, que existia na tela e não no código.
+
+    `canal.horarios_permitidos` é escrito pelo formulário de canal desde
+    sempre e o publicador nunca leu — o dono preenchia e nada acontecia.
+    A migration 65 abriu os sete canais para o dia inteiro ANTES desta
+    leitura entrar, então o comportamento de hoje não muda: o que muda é
+    o campo da tela passar a valer.
+
+    Lista vazia é "sem restrição" e não "nunca publica". A diferença
+    importa: canal criado por script antigo, ou coluna zerada à mão,
+    emudeceria para sempre e o log não diria por quê.
+  */
+  function foraDoHorario(canal) {
+    const horas = canal.horarios_permitidos;
+    if (!Array.isArray(horas) || horas.length === 0) return false;
+    return !horas.includes(horaEmSaoPaulo(new Date()));
+  }
+
   function noTetoDiario(canal) {
     const teto = canal.posts_por_dia_max ?? Infinity;
     return (enviadasHoje[canal.id] ?? 0) >= teto;
@@ -493,6 +514,7 @@ async function melhorPrateleira(db, oferta) {
   let noTeto = 0;
   let cuponsPublicados = 0;
   let adiadosPorProporcao = 0;
+  let foraDeHorario = 0;
   let encerradas = 0;
   const motivos = {};
 
@@ -1095,6 +1117,19 @@ async function melhorPrateleira(db, oferta) {
       gatilho: trocou ? "declarado" : oferta.gatilho,
       notaDoCurador: aPublicar.produto?.nota_curador,
       freteGratis: aPublicar.frete_gratis,
+      /*
+        O VENDEDOR PASSOU A SER DESCRITO, e não só nomeado.
+
+        "+10.000 vendas, MercadoLíder Platinum" é o sinal de confiança
+        mais barato que existe, e é o que os canais que funcionam
+        publicam. O Mercado Livre informa vendas em 100% dos nossos
+        anúncios; a Shopee em nenhum, e lá a linha sai só com o nome.
+      */
+      vendasDoVendedor: aPublicar.vendas_estimadas,
+      seloDoVendedor: aPublicar.selo_vendedor,
+      lojaOficial: aPublicar.loja_oficial,
+      // Cupom que sirva para ESTE produto, ou nada. A linha some junto.
+      cupom: cupomQueServe(aPublicar, precoFinal),
       link: curto,
     });
 
@@ -1176,10 +1211,41 @@ async function melhorPrateleira(db, oferta) {
   const { data: cupons } = await db
     .from("cupons_vivos")
     .select(
-      "id, codigo, valor, valor_minimo_centavos, teto_desconto_centavos, vigente_ate, nicho_id, nicho_slug, geral, marketplace_nome",
+      "id, codigo, valor, valor_minimo_centavos, teto_desconto_centavos, vigente_ate, nicho_id, nicho_slug, geral, marketplace_nome, marketplace_id, marketplace_slug",
     )
     .eq("tipo", "percentual")
     .order("valor", { ascending: false });
+
+  /*
+    O CUPOM QUE SERVE PARA ESTE PRODUTO, e o escopo é o que impede o
+    erro da mangueira de jardim aparecer com outra roupa.
+
+    Três condições, e todas são de recusa:
+
+      LOJA      cupom do Mercado Livre não vale na Shopee. Óbvio, e é o
+                erro mais caro porque o post fica plausível.
+      NICHO     cupom `geral` vale em tudo; cupom de nicho vale só no
+                nicho dele. Prefixo sem mapa entra com `geral = false` e
+                `nicho_id` nulo, e nessa combinação nada serve (D-039).
+      MÍNIMO    cupom com mínimo de R$ 99 num produto de R$ 40 é
+                promessa que falha no carrinho. Some em vez de sair.
+
+    Empate resolve pelo maior desconto, que é a ordem que a consulta já
+    devolve.
+  */
+  function cupomQueServe(anuncio, precoCentavos) {
+    const nichoDoProduto = anuncio?.produto?.nicho_id ?? null;
+    const lojaDoProduto = anuncio?.marketplace?.slug ?? null;
+
+    return (
+      (cupons ?? []).find((c) => {
+        if (c.marketplace_slug && c.marketplace_slug !== lojaDoProduto) return false;
+        if (!c.geral && (!c.nicho_id || c.nicho_id !== nichoDoProduto)) return false;
+        if ((c.valor_minimo_centavos ?? 0) > precoCentavos) return false;
+        return true;
+      }) ?? null
+    );
+  }
 
   const { data: pendentes } = await db
     .from("publicacao")
@@ -1279,6 +1345,16 @@ async function melhorPrateleira(db, oferta) {
         filaDoCanal.set(canal.id, []);
         continue;
       }
+      /*
+        Fora do horário o canal sai DESTA rodada e a fila fica de pé: as
+        publicações continuam `pendente` e saem quando a hora abrir. Não
+        é descarte, é espera, e por isso não conta como reprovação.
+      */
+      if (foraDoHorario(canal)) {
+        foraDeHorario += filaDoCanal.get(canal.id)?.length ?? 0;
+        filaDoCanal.set(canal.id, []);
+        continue;
+      }
 
       const veredito = podePublicarAgora(
         new Date(),
@@ -1355,7 +1431,8 @@ async function melhorPrateleira(db, oferta) {
   console.log(
     `\n${publicadas} publicadas · ${cuponsPublicados} cupons · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
       `${noTeto} no teto do dia · ${adiadosPorProporcao} adiados pela proporção · ` +
-      `${semLink} sem link · ${encerradas} encerradas · ${trocas} trocaram de prateleira`,
+      `${semLink} sem link · ${encerradas} encerradas · ${trocas} trocaram de prateleira · ` +
+      `${foraDeHorario} fora do horário do canal`,
   );
   for (const canal of canais ?? []) {
     const saiu = enviadasHoje[canal.id] ?? 0;

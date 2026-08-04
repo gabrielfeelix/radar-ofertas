@@ -698,6 +698,15 @@ async function relePrecos(db, mktId, porDominio, porCategoria, porRamo) {
           loja_oficial: escolha.oficial,
           reputacao_vendedor: reputacaoDoVendedor(escolha.vendedor),
           vendas_estimadas: escolha.vendedor?.seller_reputation?.transactions?.total ?? null,
+          /*
+            O SELO CRU, guardado porque o número o perde (migration 64).
+
+            `reputacaoDoVendedor` soma o bônus de platinum e fecha com
+            `Math.min(1, ...)`, então verde comum e verde platinum viram
+            o mesmo 1,0. A comporta não se importa; a mensagem sim, e é
+            ela que diz "MercadoLíder Platinum" ao leitor.
+          */
+          selo_vendedor: escolha.vendedor?.seller_reputation?.power_seller_status ?? null,
         })
         .eq("id", a.id);
 
@@ -1185,6 +1194,8 @@ async function main() {
               loja_oficial: Boolean(oferta.official_store_id),
               reputacao_vendedor: reputacaoDoVendedor(vendedor),
               vendas_estimadas: vendedor?.seller_reputation?.transactions?.total ?? null,
+              // O selo cru, que o número perde no teto (migration 64).
+              selo_vendedor: vendedor?.seller_reputation?.power_seller_status ?? null,
               avaliacao: avaliacoes?.rating_average ?? null,
               avaliacao_qtd: avaliacoes?.paging?.total ?? null,
               ultima_coleta_em: new Date().toISOString(),
@@ -1218,6 +1229,8 @@ async function main() {
               vendedor: vendedor?.nickname ?? undefined,
               reputacao_vendedor: reputacaoDoVendedor(vendedor),
               vendas_estimadas: vendedor?.seller_reputation?.transactions?.total ?? null,
+              // O selo cru, que o número perde no teto (migration 64).
+              selo_vendedor: vendedor?.seller_reputation?.power_seller_status ?? null,
               avaliacao: avaliacoes?.rating_average ?? null,
               avaliacao_qtd: avaliacoes?.paging?.total ?? null,
             })

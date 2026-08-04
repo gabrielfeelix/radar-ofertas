@@ -128,6 +128,15 @@ export type AnuncioLinha = {
   avaliacao_qtd: number | null;
   /** Reputação do vendedor, normalizada de 0 a 1. */
   reputacao_vendedor: number | null;
+  /**
+   * O selo cru do marketplace (`platinum`, `gold`, `silver`).
+   *
+   * Existe porque `reputacao_vendedor` o perde: ela soma o bônus de
+   * platinum e fecha em 1,0, então verde comum e verde platinum ficam
+   * iguais. Este campo é para a mensagem LER; quem compara continua
+   * sendo o número (migration 64).
+   */
+  selo_vendedor: string | null;
   loja_oficial: boolean | null;
   vendas_estimadas: number | null;
   ativo: boolean;
@@ -443,6 +452,8 @@ export type ModeloMensagemLinha = {
   lastro_declarado: string;
   /** O que `{frete}` vira quando a loja declara frete grátis. Some quando não. */
   linha_frete: string;
+  /** A linha do cupom dentro do post da oferta. Some quando não há cupom (migration 64). */
+  linha_cupom: string;
   /** Abre a linha da nota do curador. */
   nota_prefixo: string;
   ativo: boolean;
