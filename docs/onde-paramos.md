@@ -78,6 +78,49 @@ regra quase nasceu como "johnson", que teria levado cotonete e fio
 dental da mesma marca para o canal de bebê — só apareceu conferindo o
 catálogo inteiro em vez da amostra na tela.
 
+## Depois, na mesma noite: dois pedidos do dono, e o segundo achou um defeito grande
+
+Ele olhou os canais e cobrou duas coisas. As duas foram medidas antes
+de qualquer conserto, e o diagnóstico óbvio da segunda estava errado.
+
+**1. O Beauty recebia aplique e fibra de cabelo.** Palavras dele:
+*"nunca mais eu quero esse tipo de produto no beauty, empobrece dms o
+grupo. Mulher quer ver maquiagem, creme, hidratante, cuidados
+femininos, coisas de qualidade, um secador, chapinha"*.
+
+`MLB-HAIR_EXTENSIONS` **não estava mapeado**, e era por isso que ele
+entrava: sem linha em `nicho_dominio`, o nicho cai para a categoria
+raiz, que é "Beleza e Cuidado Pessoal" e é grossa demais. Já tinham
+saído 9 posts. Bloqueado pela migration 64, e os 30 anúncios perderam o
+nicho. Conferido depois: **zero** aplique em beleza, e nenhuma oferta
+`nova` na fila. A Shopee não tem nenhum item desses (conferido), e
+inventar o id de categoria dela seria adivinhar nome de domínio.
+
+**2. O Pet não recebia brinquedo, casinha, arranhador nem coleira.** E
+aqui a causa não era nenhuma das três que pareciam óbvias:
+
+| Hipótese | Medido |
+|---|---|
+| falta termo de busca | existem: "brinquedo pet", "casinha cachorro", "arranhador gato", "coleira cachorro" |
+| domínio sem mapa | todos mapeados para pet |
+| comporta reprovando | não: eram 6 brinquedos e 7 casinhas no catálogo, contra 275 antipulgas |
+
+**Era a busca, e o defeito é grande:** `porBusca` chamava
+`products/search` **sem `offset`**. Toda rodada perguntava a mesma coisa
+e recebia os mesmos 20, e o filtro de "já conhecidos" descartava tudo
+sem erro e sem aviso. Com 126 termos, a descoberta por busca tinha um
+teto duro de **2.520 produtos na vida inteira do projeto**, e depois de
+alcançá-lo contribuía zero.
+
+Medido contra a API real: "brinquedo pet" tem `paging.total` de
+**10.000**. E o teto de offset é 1.000, medido também — 1000 responde,
+1020 devolve HTTP 400.
+
+Consertado com um cursor em `parametro` (migration 65), que anda 60 por
+rodada e dá a volta. Ele vive no banco porque cada execução do Actions
+começa de um clone limpo, e cursor em memória valeria zero toda rodada
+— que é exatamente o estado que se estava consertando.
+
 ---
 
 # Onde paramos — 04/08/2026

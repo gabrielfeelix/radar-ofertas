@@ -73,6 +73,23 @@ versão do classificador de nicho devolvia nulo quando duas regras
 casavam, e jogava fora "Ração para Gatos sabor Leite". Ordem por
 especificidade resolve; "segurança" que perde o óbvio é desistência.
 
+**Catálogo pequeno num nicho quase nunca é filtro, mapa ou comporta.
+Vá ver quantos anúncios existem ANTES de investigar o funil.** O dono
+cobrou que o pet não recebia brinquedo, casinha nem coleira. Os termos
+de busca existiam, os domínios estavam mapeados, as comportas não
+reprovavam — o catálogo é que tinha 6 brinquedos contra 275 antipulgas.
+Três hipóteses boas, todas erradas, e a consulta que decidiu levou um
+minuto.
+
+**Busca paginada sem cursor congela em silêncio, e o filtro de
+duplicados é o que esconde.** `porBusca` pedia `products/search` sem
+`offset`: toda rodada perguntava a mesma coisa, recebia a mesma
+resposta, e o filtro de "já conhecidos" descartava tudo sem erro e sem
+aviso. Teto duro de 2.520 produtos na vida do projeto. Medido depois:
+"brinquedo pet" tem `paging.total` de **10.000**. Toda paginação deste
+projeto merece a pergunta "o que faz a janela andar?", e a resposta não
+pode ser "nada".
+
 **Marca não é categoria, e a conferência tem que ser contra o catálogo
 INTEIRO, não contra a amostra que você está olhando.** Escrevendo a
 regra de bebê em 04/08 eu ia usar "johnson", porque os três itens da
