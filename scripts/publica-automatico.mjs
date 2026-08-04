@@ -31,7 +31,8 @@ import { createClient } from "@supabase/supabase-js";
 import { geraLinks } from "../lib/gerador-ml.ts";
 import { montaLinkDeAfiliado } from "../lib/afiliado.ts";
 import { classificaFalhaDeLink } from "../lib/falha-de-link.ts";
-import { geraLinkCurtoDaShopee } from "../lib/shopee-api.ts";
+import { geraLinkCurtoDaShopee, itemDaShopee } from "../lib/shopee-api.ts";
+import { revalidaPreco } from "../lib/revalida-preco.ts";
 import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
 import {
   RITMO_PADRAO,
@@ -234,7 +235,7 @@ async function main() {
     preco_anterior_centavos,
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em, gatilho,
     anuncio:anuncio_id (
-      id, produto_id, url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
+      id, produto_id, url_original, sku_externo, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
       avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis,
       preco_leitura_centavos, preco_original_centavos, categoria_ramo,
       marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ),
@@ -273,7 +274,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: melhor } = await db
     .from("anuncio")
     .select(
-      "id, produto_id, url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial, " +
+      "id, produto_id, url_original, sku_externo, vendedor, imagem_url, imagem_obtida_em, loja_oficial, " +
         "avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, frete_gratis, " +
         "preco_leitura_centavos, preco_original_centavos, " +
         "marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ), " +
@@ -509,6 +510,17 @@ async function melhorPrateleira(db, oferta) {
     consertar o que não está quebrado, e some com o defeito de verdade.
   */
   const semLinkPorMotivo = {};
+
+  /*
+    O QUE A REVALIDAÇÃO DE PREÇO DA SHOPEE FEZ NESTA RODADA.
+
+    Contado por desfecho porque as quatro coisas querem reações
+    diferentes de quem lê o log: `confirmado` é o caso normal,
+    `melhorou` é o ganho, `morreu` é curadoria funcionando, e
+    `sem_resposta` alto é a API de terceiro caindo — e aí o sistema está
+    publicando sobre o feed da véspera sem ninguém perceber.
+  */
+  const revalidacao = {};
 
   /*
     CANAL TRAVADO NESTA RODADA.
@@ -849,13 +861,92 @@ async function melhorPrateleira(db, oferta) {
   /* A parte que monta e manda, depois de decidido QUAL anúncio sai. */
   async function enviaComAnuncio(pub, canal, oferta, aPublicar, trocou) {
 
-    const precoFinal = trocou ? aPublicar.preco_leitura_centavos : oferta.preco_atual_centavos;
+    let precoFinal = trocou ? aPublicar.preco_leitura_centavos : oferta.preco_atual_centavos;
     const referenciaFinal = trocou
       ? aPublicar.preco_original_centavos
       : oferta.preco_referencia_centavos;
-    const descontoFinal = trocou
+    let descontoFinal = trocou
       ? Math.round((1 - precoFinal / referenciaFinal) * 100)
       : Math.round(Number(oferta.desconto_pct));
+    let podeAfirmarMinimo = trocou ? false : oferta.pode_afirmar_minimo;
+
+    /*
+      O PREÇO DA SHOPEE É CONFERIDO AGORA, ANTES DE MONTAR A MENSAGEM.
+
+      O catálogo da Shopee vem do feed de produto (D-058), que a loja
+      publica uma vez por dia. A publicação nasce quando a oferta é
+      detectada e sai quando o ritmo do canal permite — medido na fila
+      de produção em 04/08, a mediana esperava **19,9 horas**.
+
+      O que a medição disse, em amostra aleatória de 120 pendentes:
+      94% com o preço inalterado, 6% com o preço mais BAIXO (até -49%) e
+      as subidas raras e pequenas (1,7% e 2,9%, numa segunda amostra).
+      Ou seja: o ganho principal não é evitar mentira, é publicar o preço
+      bom quando ele já melhorou. A mentira é rara, e ainda assim é ela
+      que a regra 3.4 não deixa passar.
+
+      VEM ANTES DO LINK de propósito: oferta morta não gasta chamada de
+      geração de link.
+
+      A QUEDA DA API NÃO PODE VIRAR CANAL MUDO. Sem resposta, publica com
+      o dado do feed, exatamente como antes — a mesma lógica da queda do
+      link curto, logo abaixo. `lib/shopee-api.ts` já tem timeout.
+    */
+    if (aPublicar.marketplace?.slug === "shopee" && credShopee.appId && credShopee.appSecret) {
+      // O SKU da Shopee é `{loja}.{item}` (`scripts/coleta-shopee.mjs`),
+      // e a API pergunta pelo item.
+      const sku = String(aPublicar.sku_externo ?? "");
+      const itemId = sku.includes(".") ? sku.split(".")[1] : sku;
+      const vivo = itemId ? await itemDaShopee(itemId, credShopee) : null;
+
+      if (!vivo) {
+        revalidacao.sem_resposta = (revalidacao.sem_resposta ?? 0) + 1;
+      } else {
+        const veredito = revalidaPreco({
+          precoPublicadoCentavos: precoFinal,
+          referenciaCentavos: referenciaFinal,
+          gatilho: trocou ? "declarado" : oferta.gatilho,
+          podeAfirmarMinimo,
+          precoVivoCentavos: Math.round(Number(vivo.price) * 100),
+          toleranciaAltaPct: par.tolerancia_alta_pct ?? 3,
+          descontoTetoPct: par.desconto_declarado_teto_pct ?? 70,
+        });
+
+        if (veredito.acao === "descarta") {
+          console.log(`  ⤫ ${canal.nome}: ${veredito.motivo}`);
+          await db
+            .from("oferta")
+            .update({
+              status: "rejeitada",
+              motivo_rejeicao: veredito.motivo,
+              decidida_em: new Date().toISOString(),
+            })
+            .eq("id", oferta.id);
+          motivos[veredito.motivo.split("(")[0]] =
+            (motivos[veredito.motivo.split("(")[0]] ?? 0) + 1;
+          reprovadas++;
+          revalidacao.morreu = (revalidacao.morreu ?? 0) + 1;
+          // Mesma regra da F-01: quem perde a oferta perde as publicações
+          // dela, senão elas voltam `pendente` para sempre.
+          await encerraPublicacoesDaOferta(oferta.id, veredito.motivo);
+          return false;
+        }
+
+        if (veredito.acao === "publica") {
+          console.log(
+            `  ~ ${canal.nome}: preço mudou desde o feed, ` +
+              `R$ ${(precoFinal / 100).toFixed(2)} → R$ ${(veredito.precoCentavos / 100).toFixed(2)}`,
+          );
+          revalidacao[veredito.precoCentavos < precoFinal ? "melhorou" : "piorou"] =
+            (revalidacao[veredito.precoCentavos < precoFinal ? "melhorou" : "piorou"] ?? 0) + 1;
+          precoFinal = veredito.precoCentavos;
+          descontoFinal = veredito.descontoPct;
+          podeAfirmarMinimo = veredito.podeAfirmarMinimo;
+        } else {
+          revalidacao.confirmado = (revalidacao.confirmado ?? 0) + 1;
+        }
+      }
+    }
 
     let curto = pub.link_afiliado;
     if (!curto) {
@@ -995,7 +1086,9 @@ async function melhorPrateleira(db, oferta) {
       vendedor: aPublicar.loja_oficial ? "Loja oficial" : (aPublicar.vendedor ?? ""),
       janelaDias: oferta.referencia_janela_dias,
       observadoDesde: oferta.detectada_em.slice(0, 10),
-      podeAfirmarMinimo: trocou ? false : oferta.pode_afirmar_minimo,
+      // Já vem decidido lá em cima: a troca de prateleira zera, e o
+      // preço que subiu desde o feed também (regra 3.4).
+      podeAfirmarMinimo,
       // A nossa leitura anterior, que vira o {queda} do lastro. Numa
       // troca de prateleira ela não vale: a série é do outro anúncio.
       precoAnteriorCentavos: trocou ? null : oferta.preco_anterior_centavos,
@@ -1291,6 +1384,22 @@ async function melhorPrateleira(db, oferta) {
     }
   }
   if (reprovadas > 0) console.log(`motivos: ${JSON.stringify(motivos)}`);
+
+  if (Object.keys(revalidacao).length > 0) {
+    console.log(`preço da Shopee conferido na hora: ${JSON.stringify(revalidacao)}`);
+    /*
+      Sem resposta não é chatice de log: é o sistema voltando a publicar
+      sobre o feed da véspera, que é o estado que este conserto existe
+      para tirar. Se for a maioria, alguém tem que olhar a credencial.
+    */
+    const total = Object.values(revalidacao).reduce((a, b) => a + b, 0);
+    if ((revalidacao.sem_resposta ?? 0) > total / 2) {
+      console.log(
+        "  → a Open API da Shopee não respondeu na maioria dos itens. " +
+          "Confira SHOPEE_APP_ID e SHOPEE_APP_SECRET; até lá o preço publicado é o do feed.",
+      );
+    }
+  }
 }
 
 /*

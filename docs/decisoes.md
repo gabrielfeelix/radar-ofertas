@@ -2505,3 +2505,101 @@ por esse motivo sozinho.
 **Mudaria se:** a API passar a expor `shop_rating`, ou se a comporta de
 reputação deixar de valer para a Shopee — o que não deve acontecer, ela
 existe porque 11 ofertas de perfume foram reprovadas por falta dela.
+
+---
+
+## D-065 · O preço da Shopee é conferido na hora de publicar, e quem decide vida e morte é a regra que já existia
+
+**04/08/2026.** Item 2 da D-064, executado. É a parte que o handoff
+mandava fazer primeiro, por ser a de maior retorno e menor risco.
+
+**O problema, medido antes de escrever qualquer linha.** O catálogo da
+Shopee vem do feed de produto (D-058), que a loja publica uma vez por
+dia. A publicação nasce quando a oferta é detectada e sai quando o
+ritmo do canal permite. Na fila de produção de 04/08, a mediana
+esperava **19,9 horas** (496 pendentes da Shopee contra 56 do Mercado
+Livre).
+
+**O que a medição disse**, amostra aleatória de 120 pendentes, preço do
+banco contra `productOfferV2` de agora:
+
+```
+igual 113 (94%)  ·  subiu 0  ·  caiu 7
+caiu mais de 5%: 4   ·   mais de 20%: 2
+maior mergulho: R$ 236,90 → R$ 119,90
+desconto declarado que encolheu mais de 5 pontos: 0
+```
+
+Numa primeira amostra de 40, não aleatória, apareceram duas subidas:
+1,7% e 2,9%.
+
+**Isso muda a justificativa do item.** Ele foi proposto como conserto de
+mentira de preço, e mentira de preço é rara e pequena: as subidas são
+~1% dos casos e cabem em 3%. O ganho de verdade é o outro lado — em ~5%
+dos posts o preço **já melhorou** e nós anunciamos o pior. Publicar
+R$ 236,90 quando a loja pede R$ 119,90 não quebra regra nenhuma; só
+joga fora o post.
+
+**A DECISÃO, e a parte que importa é o que ela NÃO inventou.**
+
+`lib/revalida-preco.ts` decide, e ele reusa dois parâmetros que já
+existem em vez de criar limiar novo:
+
+| Situação | O que acontece | De onde vem a regra |
+|---|---|---|
+| Preço igual | segue como estava | — |
+| Caiu | publica o preço de agora, desconto recalculado | — |
+| Subiu até `tolerancia_alta_pct` | publica o preço de agora, **sem afirmar mínimo** | regra 3.4 |
+| Subiu acima disso | oferta `rejeitada`, publicações encerradas | `expira_ofertas`, mesma conta |
+| Desconto passa do teto e o gatilho é `declarado` | `rejeitada` | `desconto_declarado_teto_pct` |
+| A API não respondeu | publica com o dado do feed | queda do link curto |
+
+**Por que reusar `tolerancia_alta_pct` em vez de escolher um número.**
+`expira_ofertas` já responde "quando a oferta morreu por o preço ter
+subido", e a resposta dela é esse parâmetro. Um segundo limiar aqui
+daria duas respostas para a mesma pergunta, e metade dos defeitos
+achados em 04/08 nasceram assim: regra escrita num lugar e reimplementada
+noutro com valor diferente.
+
+**Por que o teto do desconto só vale em oferta `declarado`.** Ali a
+referência é a alegação da LOJA, e `original_price` inflado é problema
+conhecido. Se o preço caiu a ponto de a alegação virar "-75%", o
+provável não é a promoção do século, é o "de" ser mentira. Em `serie` e
+`queda` a referência é medição nossa, e desconto grande ali é notícia
+verdadeira, que é justamente o que a D-062 preservou.
+
+**Por que preço que subiu perde o direito de afirmar mínimo.** A nossa
+série nunca viu aquele preço. Dizer "menor preço que observamos" sobre
+um número que não está na série seria a regra 3.4 quebrada por um
+detalhe de sincronismo, e ninguém veria.
+
+**A queda da API não pode virar canal mudo**, e isso é lei aqui desde a
+D-057: sem resposta, publica com o dado do feed, como antes. O rodapé da
+execução avisa quando a maioria dos itens ficou sem resposta, porque aí o
+sistema voltou silenciosamente a publicar sobre o feed da véspera.
+
+**O A/B, contra a fila pendente de produção**, com a mesma função que o
+publicador roda, sem escrever no banco e sem falar com o Telegram.
+Amostra de 150:
+
+```
+antes:  150 sairiam com o preço do feed
+depois: segue 143 · melhorou 5 · piorou 1 · descartou 1 · sem resposta 0
+        descarte: desconto_incrivel_apos_revalidacao(75pct)
+```
+
+O "piorou 1" foi de R$ 29,88 para R$ 29,90: dois centavos, dentro da
+tolerância, publicado com o preço certo.
+
+**Fica de fora, de propósito:** o preço revalidado **não** é gravado em
+lugar nenhum. `publicacao` só tem `preco_na_fila_centavos`, que é
+histórico do momento da fila, e o texto que saiu fica em
+`publicacao.mensagem`, então dá para auditar. Coluna nova pede migration
+e a migration pede o dono.
+
+**Custa uma chamada de rede por post da Shopee**, antes da geração do
+link e não depois, para oferta morta não gastar link.
+
+**Mudaria se:** a Shopee passar a publicar o feed mais de uma vez por
+dia, ou se a fila deixar de esperar horas — com fila de minutos, 94% de
+confirmação vira 99% e o item deixa de se pagar.

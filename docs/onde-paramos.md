@@ -45,8 +45,12 @@ virou o lastro, que é onde ela vale.
 3. **O canal de perfume masculino** (D-063): mais termos de busca,
    `GENDER` pelo título da Shopee, e `SHOPEE-100708` para `casa`.
    Diagnosticado e **não** consertado.
-4. **Trocar a coleta da Shopee do CSV para a API.** Hoje só o link usa a
-   Open API; o catálogo ainda vem do feed do dia anterior.
+4. ~~**Trocar a coleta da Shopee do CSV para a API.**~~ Recusado com
+   motivo (D-064): a API não tem `shop_rating`. O que a API resolve é o
+   preço na hora de publicar, e **isso está feito** (D-065): a fila
+   esperava 19,9 h na mediana, e agora o preço é conferido no último
+   instante. Continua aberto o item 2.2 do handoff,
+   `global_item_attributes` como fonte de `GENDER`.
 5. **`conversionReport`**, que é como a Fase 0 fecha do lado da Shopee.
 
 ## O que eu afirmei hoje e estava errado

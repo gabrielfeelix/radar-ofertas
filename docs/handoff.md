@@ -140,31 +140,24 @@ Trocar reintroduziria isso.
 
 O CSV continua sendo a fonte de catálogo. A API entra em três lugares.
 
-### 2.1 Validar o preço na hora de publicar ← comece por aqui
+### 2.1 Validar o preço na hora de publicar — FEITO em 04/08 (D-065)
 
-**Maior retorno, menor risco.** Hoje o publicador manda post sobre o
-feed da noite anterior, e desconto some sem avisar.
+`lib/revalida-preco.ts` decide e `enviaComAnuncio` aplica, antes da
+geração do link. Registro completo, com os números, na **D-065**.
 
-`productOfferV2(itemId:)` devolve preço, desconto, vendas, nota e
-comissão **de agora**. `lib/shopee-api.ts` já tem `itemDaShopee()`
-pronto e testado contra a API real.
+O que a medição respondeu, e ela mudou a justificativa do item: a fila
+da Shopee espera **19,9 h** na mediana, e em amostra aleatória de 120
+pendentes o preço estava **igual em 94%**, mais baixo em 6% e mais alto
+em ~1% (nunca acima de 3%). Ou seja, o ganho não é evitar mentira de
+preço, é publicar o preço bom quando ele já melhorou.
 
-Onde: `scripts/publica-automatico.mjs`, em `enviaComAnuncio`, antes de
-montar a mensagem.
+A regra de vida e morte reusa `tolerancia_alta_pct`, que é o mesmo
+parâmetro de `expira_ofertas`. **Não invente um segundo limiar aqui.**
 
-**Cuidados:**
-- A chamada é de rede, dentro do laço que dorme. `lib/shopee-api.ts` já
-  põe timeout — não remova.
-- **Falha da API não pode virar canal mudo.** Se não responder, publique
-  com o dado do feed, como hoje. É a mesma lógica da queda do
-  `an_redir`.
-- Se o preço mudou, decida: republicar com o novo, ou cancelar. Note que
-  já existe `preco_na_fila_centavos` e o conceito de publicação
-  `bloqueada` — leia `lib/publicacoes.ts` antes de inventar um terceiro.
-
-**Como provar que funcionou:** compare `oferta.preco_atual_centavos` com
-o preço da API numa amostra, e conte quantas divergem. Se for perto de
-zero, o item não vale o trabalho — e isso também é resultado.
+**Falta:** o preço revalidado não é gravado. `publicacao` só tem
+`preco_na_fila_centavos`; o texto que saiu fica em `publicacao.mensagem`,
+então dá para auditar, mas análise que compare publicação com oferta lê
+o preço velho. Coluna nova pede migration, e migration pede o dono.
 
 ### 2.2 `global_item_attributes` como fonte de atributo
 
