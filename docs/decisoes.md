@@ -2732,3 +2732,76 @@ não quebra nada. O código cai para o caminho de reserva, o log avisa uma
 vez no começo da execução, e tudo parece funcionar. Duas frentes ficaram
 prontas e inertes por um dia sem ninguém notar. Toda variável nova
 precisa entrar no workflow **no mesmo commit** que o código que a lê.
+
+---
+
+## D-068 · O `global_item_attributes` da Shopee NÃO substitui a leitura de título
+
+**04/08/2026.** Item 2.2 do handoff, investigado e **recusado**. O
+handoff dizia: *"Se ele trouxer gênero, ele é melhor que a heurística de
+título que a D-063 precisou inventar"*, com a ordem de precedência
+"atributo da loja > título". **Medido, e é o contrário.**
+
+**O campo existe.** No feed pequeno (`feed_brasil`, 10 mil itens), 86%
+das linhas trazem `global_item_attributes`. Mas ele não traz nome de
+atributo: é uma lista de `{attr_id, attr_val_id, formatted_value}`, com
+o id numérico e nada que diga o que ele significa.
+
+**O gênero é o `attr_id 100022`**, descoberto pelos valores:
+
+```
+751 linhas · Unisex(381) · Female(247) · Male(59) · Girl(44) · Boy(20)
+```
+
+**A comparação com `lib/genero-pelo-titulo.ts`, nas mesmas 10 mil linhas:**
+
+| | |
+|---|---|
+| o título resolve | 1.091 |
+| e o atributo está **calado** | 888 (81%) |
+| concordam | 159 |
+| **discordam** | **44** |
+| só o atributo sabe | 209 |
+
+**Nas 44 discordâncias o atributo diz `Unisex` e o título é explícito:**
+
+```
+título Masculino, atributo Unisex  ← Camiseta de Compressão Masculina KEMZE
+título Feminino,  atributo Unisex  ← Tênis Feminino Confortável Enfermagem
+título Masculino, atributo Unisex  ← Corrente Masculina Aço Inox 316L Jesus
+título Feminino,  atributo Unisex  ← Peruca Feminina Cabelo Curto Senhora
+```
+
+O vendedor preenche o campo por obrigação e escolhe a opção que dá menos
+trabalho. **O atributo é mais preguiçoso, não mais preciso.** Adotar a
+precedência "atributo > título" pioraria 44 casos para melhorar nenhum.
+
+**E os 209 "só o atributo sabe" não salvam o item**, porque a amostra
+mostra ruído no meio:
+
+```
+Male    ← Glucosamina 1500mg + Condroitina 1200mg + MSM 600mg
+Male    ← Escapulário de moeda antiga Jesus e Maria
+Female  ← Liz Desodorante Colônia de O Boticário     ← este está certo
+```
+
+**TERCEIRO MOTIVO, e ele fecha sozinho:** `global_item_attributes` só
+existe no `feed_brasil`, que é o feed **sem `shop_rating`** — e a D-066
+passou a descartá-lo justamente por isso, porque item sem reputação de
+vendedor é reprovado por `vendedor_desconhecido` de qualquer jeito. Para
+usar o atributo seria preciso reabrir a porta que acabou de ser fechada,
+e trocar 27% da cota diária por um sinal que perde do título.
+
+**A DECISÃO: o item 2.2 fica fechado.** `lib/genero-pelo-titulo.ts`
+continua sendo a fonte, e continua sendo covarde de propósito: devolve
+nulo quando o título não é inequívoco, porque publicar no canal errado é
+pior que não publicar.
+
+**Mudaria se:** a Open API passar a expor atributo nomeado por item
+(`productOfferV2` hoje não expõe), ou se o feed grande ganhar a coluna.
+Aí a comparação vale a pena de novo — mas com o mesmo teste, e a
+precedência tem que ser decidida pelo número, não por parecer.
+
+**O canal de perfume masculino continua dependendo do título**, e o que
+o destrava é catálogo, não atributo: a D-066 levou a entrada diária dele
+de 9 para 121 itens.
