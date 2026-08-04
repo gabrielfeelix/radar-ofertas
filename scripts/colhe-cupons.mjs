@@ -24,6 +24,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 
+import { escopoDoCupom } from "../lib/escopo-do-cupom.ts";
 import {
   extraiCupons,
   fimDoDiaEmSaoPaulo,
@@ -71,7 +72,10 @@ async function main() {
     .from("cupom_prefixo")
     .select("prefixo, nicho_id, geral");
 
-  const escopoDe = new Map((prefixos ?? []).map((p) => [p.prefixo, p]));
+  // A busca é por PREFIXO, e o mais longo ganha. Igualdade exata só
+  // funcionava enquanto todo cupom trazia `DDMM` no fim; sem data, o
+  // "prefixo" é o código inteiro e nada casava (`lib/escopo-do-cupom.ts`).
+  const listaDeEscopos = prefixos ?? [];
 
   const { data: fontes } = await db
     .from("fonte_descoberta")
@@ -184,8 +188,7 @@ async function main() {
     // O prefixo é o código sem o `DDMM` do fim. Sem data, o código
     // inteiro é o prefixo, e é assim que ele é mapeado em
     // `cupom_prefixo`.
-    const prefixo = c.dia != null ? c.codigo.slice(0, -4) : c.codigo;
-    const escopo = escopoDe.get(prefixo);
+    const escopo = escopoDoCupom(c.codigo, listaDeEscopos);
 
     const emQuantos = c.canais.size;
     const marca = escopo?.geral
