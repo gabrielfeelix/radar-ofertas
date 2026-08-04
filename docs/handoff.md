@@ -1,265 +1,242 @@
 # Handoff — o que falta, e como trabalhar aqui
 
-Escrito em 04/08/2026, ao fim de uma sessão longa. Você está pegando um
-sistema que **funciona e publica sozinho em sete canais**. Não é
-greenfield: cada coisa estranha que você achar provavelmente tem um
-motivo escrito em `docs/decisoes.md`.
+Reescrito em 04/08/2026, à noite, ao fim de uma sessão longa. A versão
+anterior deste arquivo foi cumprida quase inteira e o que sobrou dela
+está aqui embaixo, junto do que apareceu no caminho.
 
 **Ordem de leitura antes de tocar em qualquer coisa:** `AGENTS.md`
-inteiro → `docs/onde-paramos.md` → `docs/revisao-04-08.md` (traz o
-método de conferência de cada achado) → este arquivo.
+inteiro → `docs/o-que-04-08-descobriu.md` (os números que mudaram sete
+decisões) → `docs/onde-paramos.md` → este arquivo.
 
 ---
 
 ## Parte 1 · Como trabalhar aqui
 
-Isto vem primeiro de propósito. O maior risco deste repositório não é
-escrever código errado, é **afirmar coisa não medida** — e a
-`onde-paramos` tem uma seção inteira de erros passados que são todos do
-mesmo tipo.
+Isto vem primeiro de propósito, e a lista cresceu hoje.
 
 ### Meça antes de afirmar. Sempre.
 
-Você tem acesso de leitura ao banco de produção. Use antes de opinar:
+Você tem leitura do banco de produção e do log do Actions. Em 04/08,
+**sete afirmações caíram quando alguém foi conferir** — incluindo três
+minhas, e uma delas era uma migration pronta para subir.
 
 ```bash
+# banco de produção, por SQL, com o token do cofre da 4YU
 export SUPABASE_ACCESS_TOKEN=$(grep "^SUPABASE_ACCESS_TOKEN=" \
-  ~/dev/gabriel/4yu-apps/.secrets/4yu.env | cut -d= -f2- | tr -d '"'"'" ')
+  ~/dev/gabriel/4yu-apps/.secrets/4yu.env | cut -d= -f2- | tr -d '"' | tr -d "'" | tr -d ' ')
 ref=$(grep "^SUPABASE_PROJECT_REF=" .env.producao | cut -d= -f2-)
 curl -s -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
      -H "Content-Type: application/json" -d '{"query":"select 1"}' \
      "https://api.supabase.com/v1/projects/$ref/database/query"
-```
 
-E o log de produção responde mais que o código:
-
-```bash
-gh run list --workflow=publica.yml --limit 30 --json databaseId,conclusion
+# log de produção
+gh run list --workflow=publica.yml --limit 20 --json databaseId,conclusion,headSha
 gh run view <id> --log | grep -E "publicadas ·|✗ |⤫ "
 ```
 
-**Em 04/08 eu escrevi quatro afirmações com confiança e as quatro
-caíram quando fui testar.** Estão listadas no topo de
-`docs/revisao-04-08.md`, de propósito. Se as suas não caírem nenhuma
-vez, provavelmente você não está testando.
-
 ### O que este projeto exige de uma mudança
 
-1. **Rodar `pnpm verifica`** — tipos, lint e ~380 asserções.
+1. **`pnpm verifica`** — tipos, lint e ~450 asserções.
 2. **`node --check` nos `scripts/*.mjs`** — `pnpm verifica` **não olha
-   essa pasta**, nem tipo nem lint. Foi por isso que a lógica nova de
-   classificação foi para `lib/`.
-3. **Migration testada contra Postgres de verdade**, não só lida.
-4. **Comparar antes e depois em produção**, com número.
+   essa pasta**. É por isso que lógica nova vai para `lib/`.
+3. **Migration testada contra Postgres de verdade.** O Docker sobe nesta
+   máquina desde 04/08: `npx supabase migration up --local`.
+4. **Antes e depois medidos em produção**, com número.
 
-### As armadilhas que me pegaram hoje
+### As armadilhas, e as cinco de baixo são novas
 
-Cada uma custou tempo. Nenhuma é óbvia.
+**Variável de ambiente nova entra no workflow no MESMO commit que o
+código que a lê.** Duas frentes prontas ficaram inertes um dia inteiro
+porque `SHOPEE_APP_ID` não existia como segredo. Variável que falta não
+quebra nada: o código cai para o caminho de reserva, avisa uma vez no
+começo da execução, e tudo parece funcionar.
 
-**O banco local está vazio, e isso esconde constraint.** Escrevi um
-`insert ... select` sem `operacao_id`. Passou no local, porque o select
-não retornou linha e a constraint nunca foi exercitada. Quebrou na
-nuvem. **Migration que insere: teste com dado semeado, não com banco
-vazio.**
+**A API do Supabase mata qualquer consulta aos 8 segundos.** É o
+`statement_timeout` do papel `authenticator`, e vale para todo
+`/rest/v1/`. O papel `postgres`, da conexão direta, não tem limite.
+Operação pesada vai por `psql` sobre `SUPABASE_DB_URL`, com
+`PGOPTIONS="-c statement_timeout=..."`.
 
-**Migration que casa por emoji não se aplica.** As migrations 28 e 49
-procuravam `🛒` e o banco local tinha `👉` — nunca rodaram, e ninguém
-viu porque na nuvem alguém tinha editado o modelo à mão. Sempre case por
-**variável** (`{link}`, `{frete}`), nunca por enfeite editável.
+**`alter function ... set statement_timeout` NÃO resolve isso.** Testado
+contra Postgres real, em `sql` e em `plpgsql`: a função morre igual. O
+cronômetro é armado quando a consulta externa começa e mudar o valor no
+meio não o rearma. A migration 63 existe só para registrar esse teste,
+porque a ideia parece óbvia e é recomendada por aí.
 
-**Heurística de título gera falso positivo em produto-alvo.** Marquei
-"Lip Gloss Seringa" como insumo de clínica e "Kit 13 Pçs Pincéis" como
-atacado. Os dois são exatamente o que o canal de beleza existe para
-publicar. **Depois de escrever a regra, rode contra o catálogo real e
-olhe uma amostra do que ela pegou.**
+**Regra de título tem que rodar contra o catálogo real antes de
+aplicar, e você tem que OLHAR a amostra.** Foi assim que apareceram os 12
+"produtos" da Amazon que não são produto ("Se prepara cupom Amazon
+16:30") e os falsos positivos do Beauty.
 
-**Um sinal só vale dentro de um contexto.** "1,5L" quer dizer revenda em
-shampoo e quer dizer o produto em panela. A mesma regex, dois
-significados opostos.
+**Regra que exige casamento único descarta o caso fácil.** A primeira
+versão do classificador de nicho devolvia nulo quando duas regras
+casavam, e jogava fora "Ração para Gatos sabor Leite". Ordem por
+especificidade resolve; "segurança" que perde o óbvio é desistência.
 
-**`pnpm db:reset` apaga tudo.** Nunca use para aplicar migration. Use
-`npx supabase migration up --local`.
+**Migration que casa por emoji não se aplica.** Case sempre por
+variável (`{link}`, `{frete}`), nunca por enfeite que o painel edita.
+
+**Hora: grave em UTC, mostre em São Paulo** (regra 3.9). Mostrei
+`16:10Z` para o dono e ele leu como 16h de Brasília, com razão.
+
+**`pnpm db:reset` apaga tudo.** Use `npx supabase migration up --local`.
 
 ### O que nunca muda sem conversa
 
-As regras 3.1 (segredo), 3.2 (WhatsApp), 3.3 (Amazon), 3.4 (mentir sobre
-preço) e 3.10 (`#publi`) do `AGENTS.md`. O resto é decisão que valeu até
-ser contrariada pela realidade, e o dono autorizou mudar — registrando
-em `decisoes.md`.
+Regras 3.1 (segredo), 3.2 (WhatsApp), 3.3 (Amazon), 3.4 (mentir sobre
+preço) e 3.10 (`#publi`).
+
+**A 3.4 foi flexibilizada pelo dono em 04/08**, e só para a Amazon: ele
+autorizou republicar o preço que os canais concorrentes alegam. **A 3.3
+continua inteira**, porque ela protege a conta e não a estética: nenhuma
+série de preço da Amazon pode ser construída.
 
 **E peça antes de:** deploy, mexer em variável de produção, criar tabela,
 ou construir algo de fase futura.
 
 ---
 
-## Bloco 1 · Segurança — é o único urgente
+## Bloco 1 · Segurança — é do dono, e é o único urgente
 
-### 1.1 O que o dono precisa fazer, e você não pode
+Aberto desde 04/08 de manhã, e **passou o dia inteiro parado enquanto se
+mexia em coisa menor**. Isso é falha minha de não cobrar.
 
-Dois artefatos do backup semanal estão baixáveis por **qualquer conta do
+Dois artefatos do backup semanal são baixáveis por **qualquer conta do
 GitHub**, e carregam o cookie da Central de Afiliados e o refresh token
 do Mercado Livre. Diagnóstico completo em `docs/revisao-04-08.md`, S-01.
 
 - apagar `radar-ofertas-2026-08-02.dump` e `radar-ofertas-2026-07-31.dump`
 - rotacionar cookie, csrf e refresh token
 
-**Não faça a rotação antes do 1.2.** Rotacionar agora escreve o segredo
-novo no mesmo lugar que vazou.
+**Uma coisa mudou a favor:** o refresh token do ML foi rotacionado quatro
+vezes em 04/08 (medições e sondas), então o valor que está no dump já não
+vale. **O cookie da Central continua valendo.**
 
-### 1.2 Tirar os segredos do schema `public`
+**Não rotacione antes de tirar os segredos do schema `public`**
+(`docs/plano-vault.md`), senão o segredo novo é escrito no mesmo lugar
+que vazou.
 
-**Plano completo, com as quatro fases, em `docs/plano-vault.md`.** Ele já
-tem o inventário (5 credenciais), os 6 leitores, os 2 escritores e a
-restrição de desenho.
-
-**O risco número um não é o cookie, é o refresh token.** O Mercado Livre
-invalida o anterior a cada renovação. Se você quebrar a gravação, o
-coletor seguinte morre com `invalid_grant` e alguém tem que reautorizar
-a aplicação à mão. Toda a cautela do plano existe por isso.
-
-**Não pule a Fase 3 do plano**, que é ver uma renovação de token
-acontecer em produção antes de apagar a tabela.
-
-### 1.3 Cifrar o artefato do backup
-
-Independente do 1.2, e barato: `--exclude-table` das duas tabelas e
-`gpg --symmetric` antes do upload, com a senha em secret. Mesmo sem
-segredo, o dump leva o catálogo e os e-mails da tabela `usuario`.
-
-**Fechar o repositório não é opção**, e o número decide: 1.063 minutos de
-Actions num dia contra 2.000/mês do plano privado — uns US$ 180/mês.
+E, independente disso e barato: `--exclude-table` das duas tabelas no
+`pg_dump` e `gpg --symmetric` antes do upload.
 
 ---
 
-## Bloco 2 · A Shopee híbrida (D-064)
+## Bloco 2 · A Amazon, meia construída
 
-**Leia a D-064 antes de começar.** Eu recusei trocar o feed CSV pela
-Open API, e o motivo é que a API **não tem `shop_rating`** — que vira
-`reputacao_vendedor`, cuja falta foi um dos três defeitos de 03/08.
-Trocar reintroduziria isso.
+**Decisão do dono em 04/08:** republicar o preço que os canais
+concorrentes alegam, aceitando furar a 3.4, até somar as **10 vendas** que
+liberam a Creators API (temos 1). Ele disse que não consegue rodar
+script, então o caminho é automático.
 
-O CSV continua sendo a fonte de catálogo. A API entra em três lugares.
+### O que já está feito
 
-### 2.1 Validar o preço na hora de publicar — FEITO em 04/08 (D-065)
+`lib/nicho-pelo-titulo.ts`, com 27 casos de teste. Duas funções:
 
-`lib/revalida-preco.ts` decide e `enviaComAnuncio` aplica, antes da
-geração do link. Registro completo, com os números, na **D-065**.
+- `ehTituloDeProduto` — separa produto de conversa de canal. **12 dos 99
+  anúncios da Amazon não são produto**: "Cupom Amazon #anuncio", "Se
+  prepara cupom Amazon 16:30", "Novo brinde L'Oréal Elseve".
+- `nichoPeloTitulo` — 69 classificados, 18 sem nicho. Os que têm canal
+  somam 59: eletrônico 37, beleza 16, pet 5, suplemento 1.
 
-O que a medição respondeu, e ela mudou a justificativa do item: a fila
-da Shopee espera **19,9 h** na mediana, e em amostra aleatória de 120
-pendentes o preço estava **igual em 94%**, mais baixo em 6% e mais alto
-em ~1% (nunca acima de 3%). Ou seja, o ganho não é evitar mentira de
-preço, é publicar o preço bom quando ele já melhorou.
+### O que falta, em ordem
 
-A regra de vida e morte reusa `tolerancia_alta_pct`, que é o mesmo
-parâmetro de `expira_ofertas`. **Não invente um segundo limiar aqui.**
+**1. Aplicar o nicho aos anúncios.** A classificação foi medida contra o
+catálogo real e **nunca foi gravada**. Hoje os 98 anúncios continuam com
+`produto.nicho_id` nulo, e sem nicho não há canal.
 
-**Falta:** o preço revalidado não é gravado. `publicacao` só tem
-`preco_na_fila_centavos`; o texto que saiu fica em `publicacao.mensagem`,
-então dá para auditar, mas análise que compare publicação com oferta lê
-o preço velho. Coluna nova pede migration, e migration pede o dono.
+**2. O caminho que transforma menção em oferta.** É o que falta de
+verdade, e ele tem que nascer certo:
 
-### 2.2 `global_item_attributes` — FECHADO em 04/08, e recusado (D-068)
+- a oferta nasce da `mencao` com `preco_alegado_centavos`, **não** de
+  `preco_ponto` — construir série de preço da Amazon viola a 3.3 e
+  custa a conta
+- só menção **recente**. Medido: só 13 das 208 foram vistas em 24h, então
+  o volume real é de alguns posts por dia, não uma enxurrada
+- `marketplace.base_de_historico = false` faz `detecta_ofertas` reprovar
+  a Amazon por `loja_sem_historico`, e **isso está certo**. O caminho
+  novo é outro, não é afrouxar esse
+- a mensagem não pode afirmar desconto que não medimos. O `{lastro}` da
+  Amazon deve sair vazio, como já sai o `lastro_declarado`
 
-**Não faça.** A premissa deste item era que o atributo da loja vence a
-leitura de título. **Medido nas 10 mil linhas do feed, é o contrário:**
-
-```
-o título resolve ............ 1.091
-  e o atributo está calado ..   888  (81%)
-  concordam .................   159
-  DISCORDAM .................    44   ← e o título ganha nas 44
-```
-
-Nas 44, o atributo diz `Unisex` para título explícito ("Camiseta de
-Compressão **Masculina**", "Tênis **Feminino**"). O vendedor preenche o
-campo por obrigação e escolhe a opção que dá menos trabalho.
-
-E ele só existe no `feed_brasil`, que é o feed **sem `shop_rating`** —
-descartado pela D-066, porque item sem reputação é reprovado depois de
-qualquer jeito.
-
-Número, prova e o que mudaria a decisão: **D-068**.
-
-### 2.3 `conversionReport` — é isto que fecha a Fase 0
-
-`conversionReport` e `validatedReport` devolvem a comissão com `orderId`
-e `checkoutId`. Com o link curto já carregando o subid (conferido:
-`utm_content=radarteste----`), o ciclo fecha **sem depender do relatório
-do Mercado Livre**.
-
-Falta o passo que não é código: **uma compra real, feita por outra
-pessoa**. Autocompra é violação de termo nos três programas. Está no
-`docs/roadmap.md`, Fase 0.
+**3. Quando somar 10 vendas:** Creators API, preço de verdade, e o
+caminho acima vira redundante.
 
 ---
 
-## Bloco 3 · Os canais
+## Bloco 3 · Decisões que estão com o dono
 
-### 3.1 Medir se o perfume destravou
-
-Em 04/08 os masculinos publicáveis foram de 17 para 26, e **18 termos de
-busca novos entraram** — mas eles só aparecem na descoberta seguinte.
-
-**Meça de novo depois de uma rodada da rotina diária:**
-
-```sql
-select n.slug, count(*) produtos,
-       count(*) filter (where p.atributos->>'GENDER'='Masculino') masculinos
-  from produto p join nicho n on n.id=p.nicho_id
- where n.slug in ('perfume','beleza') group by 1;
-```
-
-Se não subiu, o problema não eram os termos, e a D-063 precisa ser
-revisitada.
-
-### 3.2 Beauty — o que ficou aberto é editorial, não técnico
-
-O filtro de suprimento profissional está no ar (migrations 55 a 57). O
-que **não** está resolvido, e é decisão do dono:
-
-- **Produto que não é beleza** chega no canal: cinta modeladora (é
-  `moda`), escova de dente (higiene), barbeador masculino.
-- **Título que aponta defeito no corpo de quem lê:** "Diminui Barriga",
-  "Pálpebra Flácida". Isso não expulsa por irrelevância, expulsa por
-  desconforto — e a pessoa não reclama, ela silencia o canal.
-
-**Não resolva isso com regex sem falar com o dono.** É escolha
-editorial, e o custo de errar é barrar produto que faz a pessoa ficar.
-
-### 3.3 Voz por canal — precisa de decisão antes de código
-
-Hoje existe **um `modelo_mensagem` para os sete canais**. Dar emoji e
-tom próprios ao Beauty significa modelo por canal: mudança de schema, de
-`lib/mensagem.ts` e da tela `/ajustes/modelos`.
-
-O dono levantou isso e **não decidiu**. Pergunte antes de construir.
+- **Cupom sem mapa.** `BABIESPETSRELAMPAGO` cobre bebê e pet ao mesmo
+  tempo e a tabela só aceita um nicho. `AGOSTOCHEGOU` não diz o escopo
+  pelo nome. Sem mapa, não publicam — que é o desfecho seguro.
+- **Saúde: 39% do nicho é sex shop.** Não abra o canal antes de decidir.
+  Canal marcado como sensível no Telegram **some do iOS e do Android** por
+  padrão, que é onde está toda a audiência. Detalhe em
+  `docs/nichos-sem-canal.md`.
+- **Casa fica com material de construção.** Decidido pelo dono em 04/08:
+  não separar para `ferramenta`.
+- **F-07** — o botão "publicar todas" ignora o ritmo.
+- **F-08** — nenhuma Server Action confere papel. Gatilho: o primeiro
+  operador de verdade receber acesso.
 
 ---
 
-## Avulsos, todos com diagnóstico pronto em `docs/revisao-04-08.md`
+## Bloco 4 · Técnico, em aberto
 
-- **F-07** — o botão "publicar todas" da tela `/publicar` ignora o ritmo.
-  Zero referências a `podePublicarAgora` ali. É decisão, não defeito.
-- **F-08** — nenhuma Server Action confere papel. Não morde hoje (só
-  existe uma conta); o gatilho é o primeiro operador de verdade
-  receber acesso, junto com a D-027.
-- **`next` 16.2.12 → 16.3.0** — resolve quatro avisos de `postcss`.
-- **A troca de prateleira** deixa `publicacao.oferta_id` apontando para o
-  anúncio velho. O texto publicado fica em `publicacao.mensagem`, então
-  dá para auditar, mas análise que vá de publicação para anúncio lê o
-  errado.
+**Por ordem de quanto dói.**
+
+1. **A coleta da Shopee grava um item por vez.** 4.000 itens levam **48
+   minutos**, com três chamadas ao banco cada. Sobraram **1.163
+   candidatos de nicho com canal** que não couberam na cota, e subir
+   `SHOPEE_MAX_ITENS` agora traz catálogo publicável de verdade — mas
+   sem gravar em lote o passo passa de uma hora e meia. **Gravar em lote
+   antes de subir o teto.**
+2. **`BORA` é cupom da KaBuM e está sendo gravado como cupom do Mercado
+   Livre.** O colhedor é ML-only e não confere de que loja o cupom é. Ele
+   nasce sem mapa e não publica, então não morde hoje.
+3. **`vendas_estimadas` é nulo em 100% dos anúncios da Shopee.** A
+   comporta `vendedor_novato` é cega lá, e a linha "+N vendas" da
+   mensagem nunca aparece em post da Shopee.
+4. **`conversionReport` da Shopee** — é o que fecha a Fase 0 sem depender
+   do relatório do ML. O link curto já carrega o subid.
+5. **Gravar o preço revalidado** (D-065). Quando o publicador corrige o
+   preço no último instante, o número novo não fica em coluna nenhuma.
+   Acontece em ~6% dos posts da Shopee. **Sobe junto com a migration do
+   item 4**, que é quando a pergunta "que preço nós anunciamos?" passa a
+   ter dono.
+6. **A troca de prateleira** deixa `publicacao.oferta_id` apontando para
+   o anúncio velho. O texto publicado fica em `publicacao.mensagem`,
+   então dá para auditar, mas análise que vá de publicação para anúncio
+   lê o errado.
+7. **`next` 16.2.12 → 16.3.0**, que resolve quatro avisos de `postcss`.
+8. **O agendador do GitHub continua não entregando.** A coleta horária
+   ficou das 18h26 às 20h22 sem rodar. A D-052 já sabia; o `pg_cron`
+   cobre o publicador, não a coleta.
 
 ---
 
-## Três coisas que eu faria diferente se recomeçasse
+## O que NÃO fazer, com o motivo medido
 
-1. **Teria medido antes de escrever o diagnóstico**, não depois. Quatro
-   afirmações minhas caíram, e todas cairiam mais barato se eu tivesse
-   consultado o banco primeiro.
-2. **Teria rodado cada heurística de título contra o catálogo real antes
-   de aplicar.** Os três falsos positivos do Beauty apareceram em
-   produção, e apareceriam numa consulta de trinta segundos.
-3. **Teria semeado dado no banco local antes de testar migration que
-   insere.** O banco vazio deu falsa confiança e o erro só apareceu na
-   nuvem.
+- **Não troque a coleta da Shopee do CSV pela API** (D-064): a API não
+  tem `shop_rating`, e a falta dele reprovava toda oferta da Shopee.
+- **Não use `global_item_attributes` como fonte de gênero** (D-068):
+  medido, o atributo perde do título em 44 casos e fica calado em 81%.
+- **Não classifique nicho pelo canal que achou o produto.** Foi o defeito
+  consertado em 01/08; canal de pet publica fone de ouvido.
+- **Não tente ler preço de Pix pela API.** `/items/{id}`,
+  `/items/{id}/prices` e `/items/{id}/sale_price` devolvem **403** para o
+  nosso app, e a rota que funciona não tem campo de meio de pagamento.
+- **Não afrouxe a comporta de reputação para reaproveitar o feed pequeno
+  da Shopee.** Ele não tem `shop_rating` e por isso é descartado; o certo
+  seria enriquecer a reputação, nunca baixar a régua.
+
+---
+
+## Três coisas que eu faria diferente
+
+1. **Teria cobrado o Bloco 1 na primeira hora.** Ele é o único item
+   urgente e foi o único que não andou.
+2. **Teria testado a migration antes de escrevê-la com confiança.** A 62
+   estava errada e só não subiu porque o dono mandou testar.
+3. **Teria commitado os documentos assim que foram escritos.** Três
+   arquivos de 652 linhas ficaram fora do Git por horas, e dois deles
+   eram citados como fonte por commits meus.

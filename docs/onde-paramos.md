@@ -1,3 +1,50 @@
+# Onde paramos — 04/08/2026, à noite
+
+**Chegou agora? Leia nesta ordem:** `AGENTS.md` →
+`docs/o-que-04-08-descobriu.md` → `docs/handoff.md`.
+
+O dia teve duas sessões. A da manhã foi a revisão
+(`docs/revisao-04-08.md`); a da noite mexeu no funil inteiro e está
+registrada em `docs/o-que-04-08-descobriu.md`, com os números.
+
+## Em uma frase
+
+O sistema publica sozinho em sete canais, o catálogo dos cinco canais que
+estavam mudos encheu, e o gargalo voltou a ser audiência.
+
+## O que a sessão da noite mudou
+
+| O quê | Antes | Depois |
+|---|---|---|
+| Cota diária da coleta (D-066) | 31% aproveitável | **100%** |
+| Entrada diária do perfume | 9 | **121** |
+| Entrada diária do pet | 113 | **720** |
+| Link curto da Shopee (D-067) | 0 de 85 posts | no ar |
+| Preço da Shopee na publicação (D-065) | feed da véspera | conferido na hora |
+| Cupons colhidos | 0 | 8 |
+| Detecção pesada | morria aos 8 s | 2.124 ofertas em 82 s |
+| Teto por canal | 150 | 300 |
+
+E três coisas passaram a existir na mensagem: o vendedor descrito
+(`+10.000 vendas, MercadoLíder Platinum`), o cupom colado no post da
+oferta, e o horário do canal sendo respeitado de verdade.
+
+## O que está aberto
+
+Está tudo em `docs/handoff.md`, em quatro blocos. O resumo:
+
+1. **Segurança** — os dois artefatos do backup e a rotação. É do dono, é
+   o único urgente, e passou o dia parado.
+2. **Amazon** — classificação por título feita e testada, **nicho ainda
+   não gravado**, e falta o caminho que transforma menção em oferta sem
+   construir série (regra 3.3).
+3. **Decisões do dono** — cupom sem mapa, saúde com 39% de sex shop,
+   F-07 e F-08.
+4. **Técnico** — gravar em lote na coleta da Shopee antes de subir o
+   teto, `conversionReport`, e mais cinco itens menores.
+
+---
+
 # Onde paramos — 04/08/2026
 
 ## O dia da revisão, e do que ela virou
