@@ -80,17 +80,47 @@ jobs:
         # primeiro e fica com o anúncio. `detecta_declarados` lê o "de"
         # que a loja declara, que é alegação de terceiro, e só pega o
         # que sobrou. Invertê-las trocaria medição por alegação.
+        #
+        # POR CONEXÃO DIRETA, E NÃO PELA API. Isto conserta as duas
+        # falhas de 04/08, e a causa foi medida dos dois lados.
+        #
+        # No log do Actions, as duas rodadas que quebraram morreram
+        # 8,32 s e 8,29 s depois de `detecta_quedas` responder. Oito
+        # segundos cravados nas duas não é lentidão nossa, é limite de
+        # papel. Lido do banco de produção:
+        #
+        #   authenticator   statement_timeout=8s   ← o do PostgREST
+        #   postgres        (sem limite)           ← o da conexão direta
+        #
+        # O `authenticator` é o papel com que o PostgREST entra, então
+        # TODA chamada de `/rest/v1/rpc/` morre aos oito segundos. E não
+        # adianta a função pedir mais: `alter function ... set
+        # statement_timeout` foi testado contra Postgres de verdade, em
+        # `sql` e em `plpgsql`, e nos dois a função morreu igual. O
+        # cronômetro é armado na consulta externa e mudar o valor no
+        # meio não o rearma.
+        #
+        # Pelo `SUPABASE_DB_URL` a conexão entra como `postgres`, que não
+        # tem limite: uma consulta de 12 segundos passou, conferida
+        # contra a nuvem em 04/08.
+        #
+        # O `psql` já vem no runner do Ubuntu, então não há passo de
+        # instalação. O backup semanal usa a mesma variável.
+        #
+        # O ESTRAGO QUE ISTO EVITA É MAIOR QUE A DETECÇÃO PERDIDA: este
+        # passo roda com `set -e`, então o erro derrubava o job inteiro
+        # e a colheita de cupom e a reserva do publicador, que vêm
+        # depois, nem começavam.
         env:
-          URL: ${{ secrets.SUPABASE_URL }}
-          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DB: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
           echo "### Ofertas detectadas" >> "$GITHUB_STEP_SUMMARY"
           for funcao in detecta_quedas detecta_declarados; do
-            resposta=$(curl --silent --show-error --fail-with-body --max-time 120 \
-              -X POST "$URL/rest/v1/rpc/$funcao" \
-              -H "apikey: $CHAVE" -H "Authorization: Bearer $CHAVE" \
-              -H "Content-Type: application/json" -d '{}')
+            # `-A -t` devolve só o valor, sem moldura nem cabeçalho, que
+            # é o que cabe no resumo do passo.
+            resposta=$(psql "$DB" --no-psqlrc -v ON_ERROR_STOP=1 -A -t \
+              -c "select row_to_json(t) from public.$funcao() t")
             echo "$funcao: $resposta"
             echo "- \`$funcao\` $resposta" >> "$GITHUB_STEP_SUMMARY"
           done
