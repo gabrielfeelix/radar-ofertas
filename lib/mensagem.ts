@@ -296,37 +296,30 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
     loja: escapaHtml(dados.loja),
     vendedor: escapaHtml(dados.vendedor),
     /*
-      O LINK NÃO É ESCAPADO, e isto é decisão medida, não esquecimento.
+      O LINK TAMBÉM É ESCAPADO, e isto só pôde ser feito depois de medir.
 
-      Pela especificação ele deveria ser: o link da Shopee e o da Amazon
-      levam `&` entre os parâmetros, e vão dentro de `href="..."` desde a
-      migration 49.
+      O link da Shopee e o da Amazon levam `&` entre os parâmetros, e vão
+      dentro de `href="..."` desde a migration 49. A especificação manda
+      escapar; o medo era o contrário — que o Telegram passasse `&amp;`
+      literal para a URL, o destino lesse `amp;affiliate_id` e **a
+      comissão não fosse atribuída**. Post bonito, zero real, que é o
+      pior modo de falha deste projeto.
 
-      MAS A PRODUÇÃO JÁ RESPONDEU. Em 04/08, 212 publicações de Shopee
-      saíram desde aquela migration, todas com `&` cru dentro do href, e
-      **todas foram aceitas pelo Telegram** — estão em `publicacao` com
-      estado `enviada`, que só acontece quando a API devolve ok. O `&`
-      cru funciona: é fato, com 212 casos.
+      MEDIDO EM 04/08, com o bot de verdade. Mandei as duas formas para
+      um canal e li o campo `url` da entidade `text_link` que a própria
+      API devolve — que é a URL como o Telegram a guardou, sem depender
+      de ninguém clicar:
 
-      O que NÃO está provado é o contrário — que o Telegram decodifica
-      `&amp;` de volta para `&` dentro do atributo. A especificação diz
-      que `&amp;` é uma das quatro entidades aceitas, o que sugere que
-      sim, mas sugerir não basta aqui: se ele passar a entidade literal
-      para a URL, o destino recebe `&amp;affiliate_id=...`, lê o
-      parâmetro como `amp;affiliate_id` e **a comissão não é atribuída**.
-      O post continuaria bonito e não pagaria nada, que é o pior modo de
-      falha que este projeto tem.
+        com `&amp;`  →  ...&affiliate_id=18378371108&sub_id=teste01----
+        com `&` cru  →  ...&affiliate_id=18378371108&sub_id=teste01----
 
-      Então o campo que carrega o dinheiro fica como está, no
-      comportamento que 212 posts comprovam. Trocar isso exige um teste
-      com o bot de verdade, mandando as duas formas para um canal de
-      rascunho e comparando a URL que chega. Enquanto esse teste não
-      existir, mexer aqui é apostar.
+      Idênticas, e idênticas à original. Ele decodifica a entidade dentro
+      do atributo. As duas mensagens de teste foram apagadas em seguida.
 
-      O resto da mensagem é escapado normalmente: lá o `<` de um título
-      quebraria de fato, e o risco é só de texto.
+      Com isso o escape deixa de ter risco e passa a valer para a
+      mensagem inteira, sem exceção.
     */
-    link: dados.link,
+    link: escapaHtml(dados.link),
   });
 
   return texto.replace(/\n{3,}/g, "\n\n").trim();

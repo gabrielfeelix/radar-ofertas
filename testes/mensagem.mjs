@@ -414,23 +414,26 @@ confere(
   !/</.test(semTagsDoModelo),
 );
 /*
-  O LINK FICA CRU, DE PROPÓSITO, e este teste existe para ninguém
-  "consertar" isso sem medir antes.
+  O LINK É ESCAPADO, e o que este teste protege é o inverso do óbvio:
+  que ele continue ÍNTEGRO depois de escapado.
 
-  Em 04/08, 212 publicações de Shopee saíram com `&` cru dentro do href
-  e todas foram aceitas pelo Telegram. Escapar seria seguir a
-  especificação, mas ninguém provou que ele decodifica `&amp;` de volta
-  dentro do atributo — e se não decodificar, o destino lê
-  `amp;affiliate_id` e a comissão não é atribuída. Post bonito, zero
-  real.
+  O `&` separa os parâmetros do link da Shopee e do da Amazon, e é ele
+  que carrega `affiliate_id` e `sub_id`. Se o escape corrompesse a URL,
+  o post sairia bonito e não pagaria nada.
 
-  Trocar isto exige mandar as duas formas para um canal de rascunho com
-  o bot de verdade e comparar a URL que chega.
+  Medido com o bot de verdade em 04/08: mandei as duas formas para um
+  canal e li o campo `url` da entidade `text_link` que a API devolve. As
+  duas chegaram idênticas à original — o Telegram decodifica `&amp;`
+  dentro do atributo. Por isso dá para escapar sem risco.
 */
 const href = comEntradaSuja.match(/href="([^"]*)"/)?.[1] ?? "";
 confere("o href existe", href.length > 0);
-confere("o link atravessa exatamente como entrou", href === LINK_SHOPEE);
-confere("o `&` do link continua cru", href.includes("&affiliate_id="));
+confere("o `&` do link virou entidade", href.includes("&amp;affiliate_id="));
+confere(
+  "e a URL continua íntegra ao ser decodificada",
+  href.replace(/&amp;/g, "&") === LINK_SHOPEE,
+);
+confere("nenhum `&` solto sobrou no href", !/&(?!(amp|lt|gt|quot);)/.test(href));
 
 // O outro lado da regra: o modelo é do dono e o HTML dele fica.
 confere("a tag <b> do modelo sobrevive", comEntradaSuja.includes("<b>"));

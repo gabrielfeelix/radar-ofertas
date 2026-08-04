@@ -189,7 +189,7 @@ vazia:
 
 ## F-04 · Falta escape de HTML, e o risco era menor do que eu disse
 
-**produção decidiu · PARCIALMENTE consertado, e a parte que faltou é deliberada**
+**produção decidiu · CONSERTADO por inteiro**
 
 A regra do Telegram é literal: `<`, `>` e `&` que não sejam tag ou
 entidade têm que virar `&lt;`, `&gt;` e `&amp;`.
@@ -212,21 +212,32 @@ código e nome de loja do cupom. Os textos que o dono escreve no painel
 passam inteiros, senão o `<a href>` e o `<b>` do modelo virariam
 `&lt;a href&gt;` à vista de todo mundo.
 
-**O que NÃO foi feito, de propósito: o link.** Escapá-lo seguiria a
-especificação, mas ninguém provou que o Telegram decodifica `&amp;` de
-volta dentro do atributo. Se ele passar a entidade literal, o destino lê
-`amp;affiliate_id` e **a comissão não é atribuída** — post bonito, zero
-real. Contra isso há 212 posts provando que o `&` cru funciona. Mexer no
-campo que carrega o dinheiro sem medir seria apostar.
+**O link ficou de fora numa primeira passada**, porque escapá-lo tinha um
+risco assimétrico: se o Telegram passasse `&amp;` literal para a URL, o
+destino leria `amp;affiliate_id` e **a comissão não seria atribuída** —
+post bonito, zero real. Contra isso havia 212 posts provando que o `&`
+cru funciona, e nada provando o contrário.
 
-**O teste que decide**, e ele precisa do bot de verdade (o token do
-`.env` está inválido; o bom só existe nos secrets): mandar as duas
-formas para um canal de rascunho e comparar a URL que chega ao clicar.
-Se `&amp;` chegar decodificado, escapa-se o link também e some a última
-exceção.
+**Medido em 04/08, com o bot de verdade, e o risco não existe.** Mandei
+as duas formas para um canal e li o campo `url` da entidade `text_link`
+que a própria API devolve — que é a URL como o Telegram a guardou, sem
+depender de ninguém clicar:
 
-Verificado por 45 casos de teste, incluindo o lado negativo — que as
-tags do modelo sobrevivem e que o link atravessa intacto.
+```
+com &amp;   →  ...&affiliate_id=18378371108&sub_id=teste01----
+com & cru   →  ...&affiliate_id=18378371108&sub_id=teste01----
+```
+
+Idênticas entre si e idênticas à original: ele decodifica a entidade
+dentro do atributo. As duas mensagens de teste foram apagadas em
+seguida, pelo `deleteMessage`.
+
+Com isso o escape passou a valer para a mensagem inteira, **sem
+exceção**, e o item deixou de ter ponta solta.
+
+Verificado por 46 casos de teste, incluindo os dois lados negativos: que
+as tags do modelo sobrevivem, e que a URL continua íntegra ao ser
+decodificada.
 
 ---
 
@@ -442,8 +453,7 @@ rodada de publicação em cinco minutos; a decisão é do dono.
 2. **Aplicar a migration 51** na nuvem, se e quando ele quiser
    (`pnpm db:publica`, com o token do cofre da 4YU). Conferida como
    no-op no modelo que está lá.
-3. **O teste do `&amp;` no href** com o bot de verdade, que fecha o F-04.
-4. **F-07 (ritmo na tela) e F-08 (papel nas ações)** — decisões, não
+3. **F-07 (ritmo na tela) e F-08 (papel nas ações)** — decisões, não
    defeitos.
-5. **D-01** — atualizar `AGENTS.md` e `onde-paramos.md`.
-6. `next` 16.2.12 → 16.3.0, que resolve quatro avisos de `postcss`.
+4. **D-01** — atualizar `AGENTS.md` e `onde-paramos.md`.
+5. `next` 16.2.12 → 16.3.0, que resolve quatro avisos de `postcss`.
