@@ -29,6 +29,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { atributosComGenero } from "../lib/genero-pelo-titulo.ts";
+import { atributosComUso } from "../lib/uso-do-produto.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.CHAVE;
@@ -354,7 +355,14 @@ async function main() {
               titulo nao e inequivoco. Ver `lib/genero-pelo-titulo.ts`:
               publicar no canal errado e pior que nao publicar.
             */
-            atributos: atributosComGenero(linha.title, null),
+            /*
+              Dois atributos saem do titulo, pelo mesmo motivo: o feed
+              nao traz nenhum. GENDER destrava o canal masculino (D-063)
+              e USO tira suprimento de salao do Beauty.
+            */
+            atributos:
+              atributosComUso(linha.title, atributosComGenero(linha.title, null)) ??
+              atributosComGenero(linha.title, null),
           })
           .select("id")
           .single();
