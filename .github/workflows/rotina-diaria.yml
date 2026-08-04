@@ -156,8 +156,10 @@ jobs:
           # decidida no banco pela função manutencao_diaria.
           # Devolve `jsonb`, e não tabela: é `select f()` e não
           # `select ... from f() t`. Conferido contra o banco.
-          resposta=$(psql "$DB" --no-psqlrc -v ON_ERROR_STOP=1 -A -t \
-            -c "set statement_timeout = '600s'" \
+          # `PGOPTIONS` e não `-c "set ..."`: o SET imprime o próprio
+          # nome e ele colava na resposta que vai para o resumo.
+          resposta=$(PGOPTIONS="-c statement_timeout=600s" \
+            psql "$DB" --no-psqlrc -v ON_ERROR_STOP=1 -A -t \
             -c "select public.manutencao_diaria()")
           echo "$resposta"
           echo "### Manutenção" >> "$GITHUB_STEP_SUMMARY"

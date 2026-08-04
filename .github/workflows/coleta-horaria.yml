@@ -119,16 +119,20 @@ jobs:
           for funcao in detecta_quedas detecta_declarados; do
             # `-A -t` devolve só o valor, sem moldura nem cabeçalho, que
             # é o que cabe no resumo do passo.
+            #
             # O FREIO CONTINUA EXISTINDO, só deixou de ser de oito
             # segundos. Sem limite nenhum, função travada rodaria até o
             # teto do job, e a D-015 escolheu falhar alto de propósito.
             #
             # AQUI FUNCIONA e dentro da função não funciona, e a
-            # diferença é o cronômetro: este `set` roda ANTES da
-            # consulta, então ela nasce com o limite certo. Dentro da
-            # função o pedido chega com a consulta já em andamento.
-            resposta=$(psql "$DB" --no-psqlrc -v ON_ERROR_STOP=1 -A -t \
-              -c "set statement_timeout = '120s'" \
+            # diferença é o cronômetro: o limite entra na CONEXÃO, então
+            # a consulta nasce com ele. Dentro da função o pedido chega
+            # com a consulta já em andamento, e não rearma nada.
+            #
+            # Por `PGOPTIONS` e não por um `-c "set ..."` solto: o SET
+            # imprime o próprio nome, e ele saía colado na resposta.
+            resposta=$(PGOPTIONS="-c statement_timeout=120s" \
+              psql "$DB" --no-psqlrc -v ON_ERROR_STOP=1 -A -t \
               -c "select row_to_json(t) from public.$funcao() t")
             echo "$funcao: $resposta"
             echo "- \`$funcao\` $resposta" >> "$GITHUB_STEP_SUMMARY"
