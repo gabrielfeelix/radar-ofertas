@@ -138,8 +138,25 @@ const BUSCAS = [
   "whey protein", "creatina", "barra de proteina", "colageno", "pre treino",
   "halter", "kettlebell", "tapete yoga", "faixa elastica", "corda de pular",
   "luva academia", "coqueteleira", "bicicleta ergometrica", "caneleira peso", "termogenico",
-  // Beleza e perfume
-  "perfume masculino", "perfume feminino", "protetor solar", "hidratante corporal", "serum facial",
+  /*
+    PERFUME TINHA DOIS TERMOS EM 109, e o canal masculino era alimentado
+    por UM deles (D-063). Perfume era o 4o menor nicho do sistema: 81
+    produtos, contra 3.206 de casa. Nao era o filtro que segurava o
+    canal, era nao haver o que publicar.
+
+    Os termos abaixo cobrem os tres jeitos de a pessoa procurar perfume:
+    pelo genero, pela marca que ela ja conhece, e pela familia olfativa.
+    Perfume arabe entra porque e o que mais aparece no catalogo da
+    Shopee hoje, e importado porque e onde mora o desconto grande.
+  */
+  // Perfume
+  "perfume masculino", "perfume feminino", "perfume importado", "perfume arabe",
+  "perfume masculino importado", "perfume feminino importado",
+  "body splash", "colonia masculina", "deo colonia feminino", "eau de parfum",
+  "perfume natura", "perfume boticario", "perfume granado", "perfume amadeirado",
+  "kit perfume", "perfume 100ml", "lattafa", "armaf",
+  // Beleza
+  "protetor solar", "hidratante corporal", "serum facial",
   "shampoo", "condicionador", "base maquiagem", "batom", "esmalte",
   "secador de cabelo", "prancha cabelo", "barbeador eletrico", "creme para pentear", "desodorante",
   // Bebê e infantil

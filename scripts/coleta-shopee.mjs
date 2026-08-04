@@ -28,6 +28,8 @@
 
 import { createClient } from "@supabase/supabase-js";
 
+import { atributosComGenero } from "../lib/genero-pelo-titulo.ts";
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.CHAVE;
 
@@ -342,6 +344,17 @@ async function main() {
             operacao_id: mkt.operacao_id,
             nicho_id: nichoId,
             titulo_canonico: linha.title,
+            /*
+              O GENERO SAI DO TITULO, porque o feed nao traz atributo
+              nenhum. Sem isto, todo perfume da Shopee fica invisivel
+              para o canal masculino, que filtra por `GENDER` com
+              `exige_atributo` (D-063): 33 produtos, zero publicaveis.
+
+              A regra e covarde de proposito e devolve `null` quando o
+              titulo nao e inequivoco. Ver `lib/genero-pelo-titulo.ts`:
+              publicar no canal errado e pior que nao publicar.
+            */
+            atributos: atributosComGenero(linha.title, null),
           })
           .select("id")
           .single();
