@@ -133,20 +133,32 @@ jobs:
           node scripts/coleta-shopee.mjs | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Manutenção e detecção de ofertas
+        # POR CONEXÃO DIRETA, PELO MESMO MOTIVO DA DETECÇÃO HORÁRIA.
+        #
+        # Este passo nunca falhou, e mesmo assim mudou: ele é a função
+        # mais pesada do sistema (expurgo, expiração, compactação e
+        # detecção, tudo numa chamada) e estava atrás do mesmo teto de
+        # oito segundos do papel `authenticator`, que derrubou a coleta
+        # horária duas vezes em 04/08.
+        #
+        # O `--max-time 600` do curl enganava: ele é o limite do CLIENTE.
+        # Quem mata a consulta aos oito segundos é o banco, e o curl só
+        # recebe o 500 pronto.
+        #
+        # A D-066 triplica o catálogo publicável, e esta função percorre
+        # o catálogo inteiro. Esperar ela estourar em produção para
+        # consertar seria escolher descobrir pelo pior caminho.
         env:
-          URL: ${{ secrets.SUPABASE_URL }}
-          CHAVE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DB: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           set -euo pipefail
           # Expurgo, expiração, compactação e detecção — nesta ordem,
           # decidida no banco pela função manutencao_diaria.
-          resposta=$(curl --silent --show-error --fail-with-body \
-            --max-time 600 \
-            -X POST "$URL/rest/v1/rpc/manutencao_diaria" \
-            -H "apikey: $CHAVE" \
-            -H "Authorization: Bearer $CHAVE" \
-            -H "Content-Type: application/json" \
-            -d '{}')
+          # Devolve `jsonb`, e não tabela: é `select f()` e não
+          # `select ... from f() t`. Conferido contra o banco.
+          resposta=$(psql "$DB" --no-psqlrc -v ON_ERROR_STOP=1 -A -t \
+            -c "set statement_timeout = '600s'" \
+            -c "select public.manutencao_diaria()")
           echo "$resposta"
           echo "### Manutenção" >> "$GITHUB_STEP_SUMMARY"
           echo '```json' >> "$GITHUB_STEP_SUMMARY"
