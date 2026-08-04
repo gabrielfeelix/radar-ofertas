@@ -10,9 +10,19 @@ name: Backup semanal
 # mais em lugar nenhum do mundo. Perder o banco é perder o produto.
 #
 # Este workflow faz um dump semanal e guarda como artefato do
-# repositório, que é privado. Não é uma solução de nível empresarial;
-# é o suficiente para transformar "perdi tudo" em "perdi no máximo
-# uma semana", de graça.
+# repositório. Não é uma solução de nível empresarial; é o suficiente
+# para transformar "perdi tudo" em "perdi no máximo uma semana", de
+# graça.
+#
+# ATENÇÃO, E ISTO JÁ CUSTOU CARO: o repositório é PÚBLICO desde 01/08
+# (D-038), e artefato de repositório público é baixável por qualquer
+# conta logada do GitHub. O comentário que estava aqui dizia "que é
+# privado" e continuou dizendo isso por três dias depois de deixar de
+# ser verdade. Dois dumps subiram nesse estado carregando o cookie da
+# Central de Afiliados e o refresh token do Mercado Livre.
+#
+# Por isso o dump não leva mais o conteúdo de `credencial_rotativa`.
+# Trate tudo que sai daqui como leitura pública.
 
 on:
   schedule:
@@ -58,10 +68,51 @@ jobs:
           # Formato custom (-Fc): comprimido e restaurável seletivamente.
           # Só o schema public: o resto é do próprio Supabase e volta
           # sozinho num projeto novo.
+          #
+          # `--exclude-table-data` e não `--exclude-table`: a TABELA
+          # continua no dump, só o CONTEÚDO fica de fora. A diferença
+          # importa na hora de restaurar — com a tabela ausente, o
+          # restore de um projeto novo quebraria nas views e funções
+          # que a referenciam. Do jeito que está, o banco volta inteiro
+          # e `credencial_rotativa` volta vazia, que é o certo: cookie
+          # e refresh token são recolados à mão, e o que estava lá na
+          # hora do desastre já teria expirado de qualquer forma.
           pg_dump --format=custom --no-owner --no-privileges \
-                  --schema=public --file="$arquivo" "$PGURL"
+                  --schema=public \
+                  --exclude-table-data='public.credencial_rotativa' \
+                  --file="$arquivo" "$PGURL"
           ls -lh "$arquivo"
           echo "ARQUIVO=$arquivo" >> "$GITHUB_ENV"
+
+      - name: Confere que nenhum segredo entrou no dump
+        run: |
+          set -euo pipefail
+          # A comporta, e ela roda ANTES do upload de propósito: um
+          # `--exclude-table-data` apagado por engano volta a vazar em
+          # silêncio, e da última vez a gente só descobriu numa revisão,
+          # três dias depois.
+          pg_restore --list "$ARQUIVO" > /tmp/toc.txt
+
+          # Controle positivo, e ele é o que dá valor ao teste negativo.
+          # A comporta abaixo procura a linha "TABLE DATA <tabela>" no
+          # índice do dump. Se esse formato mudar de nome numa versão
+          # futura do pg_restore, a busca deixa de casar com QUALQUER
+          # coisa e a comporta passaria a aprovar tudo, calada. Então
+          # antes de procurar o que não pode estar lá, exigimos achar o
+          # que TEM que estar: `anuncio` sempre tem linhas.
+          if ! grep -qE 'TABLE DATA .*[[:space:]]anuncio[[:space:]]' /tmp/toc.txt; then
+            echo "✗ nao achei os dados de 'anuncio' no indice do dump"
+            echo "  ou o backup veio vazio, ou o formato do pg_restore --list mudou"
+            echo "  e esta comporta parou de enxergar. Nao suba o artefato."
+            sed -n '1,40p' /tmp/toc.txt
+            exit 1
+          fi
+
+          if grep -qE 'TABLE DATA .*credencial_rotativa' /tmp/toc.txt; then
+            echo "✗ o dump carrega o conteudo de credencial_rotativa, e o artefato e publico"
+            exit 1
+          fi
+          echo "✓ dump tem dados, e credencial_rotativa entrou sem os dela"
 
       - name: Guarda o backup
         uses: actions/upload-artifact@v4
