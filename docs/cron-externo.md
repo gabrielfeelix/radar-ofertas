@@ -71,6 +71,11 @@ Os três caminhos convivem, e a trava no banco impede post duplicado:
 2. agendamento do GitHub, de 15 em 15 — funciona cerca de uma vez a cada oito
 3. reserva na coleta horária, de hora em hora
 
+**A rotina diária ganhou o mesmo tratamento em 04/08**, por
+`dispara_rotina_diaria()`, às **00:00 UTC (21:00 em São Paulo)** — depois de a
+Shopee atualizar o feed de produto. O cron do GitHub continua tentando às 09:00
+como segundo caminho.
+
 Some tudo quando o publicador virar processo permanente numa máquina nossa
 (`docs/migracao-para-vps.md`).
 

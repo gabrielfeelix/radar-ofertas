@@ -2137,8 +2137,22 @@ disparar, e a rotina diária é um agendamento que comprovadamente roda.
 Dá para viver com o atraso porque o desconto do feed é declarado pela
 loja, não uma queda medida por nós — ele muda menos ao longo do dia.
 
+**Resolvido em 04/08, e antes do VPS.** A rotina diária ganhou gatilho
+por `pg_cron` às **00:00 UTC, que é 21:00 em São Paulo** — quase uma
+hora depois do horário em que a Shopee atualiza. A oferta passa a sair
+no mesmo dia em que ela publicou.
+
+O que forçou a correção foi o custo aparecer: em 04/08 o cron do GitHub
+pedia 09:00 UTC e, às 11:15, **não tinha rodado**. Sem a rotina não há
+descoberta, não há coleta da Shopee e não há detecção — o dia inteiro
+dependia de uma execução que o GitHub decide se dispara. E a rodada de
+03/08 tinha chegado a ler o feed **velho**, por rodar às 19:31,
+quarenta minutos antes de o novo sair.
+
+O cron do GitHub continua ligado às 09:00, como segundo caminho.
+
 **Mudaria se:** o sistema sair para um servidor com cron de verdade
-(D-055), aí a coleta vai para as 21h e a oferta sai no mesmo dia.
+(D-055), aí não há gatilho nenhum — o processo simplesmente não para.
 
 ---
 
