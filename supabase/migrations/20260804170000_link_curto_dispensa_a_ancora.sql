@@ -1,0 +1,58 @@
+-- =============================================================
+-- 52 · O link volta a aparecer, agora que ele é curto
+--
+-- DESFAZ A MIGRATION 49, e o motivo dela deixou de existir.
+--
+-- A 49 escondeu o link atrás de `<a href="{link}">Compre aqui</a>`
+-- porque o da Shopee era montado por nós (`an_redir`, D-057) e
+-- carregava a URL do produto codificada dentro de si:
+--
+--   https://s.shopee.com.br/an_redir?origin_link=https%3A%2F%2Fshopee
+--   .com.br%2Fproduct%2F23892667814...&affiliate_id=18378371108&sub_id=
+--
+-- Três linhas de URL, ocupando mais espaço que o preço. A própria 49
+-- dizia que era remendo: *"a solução definitiva já está a caminho, e
+-- por isso esta é modesta: a Open API da Shopee foi aprovada em 03/08 e
+-- gera link curto"*.
+--
+-- Ela chegou. A credencial entrou em 04/08 e `generateShortLink`
+-- devolve `s.shopee.com.br/AAG6Zk4mf0` — e o subid sobrevive, conferido
+-- resolvendo o link: `utm_content=radarteste----` e
+-- `utm_source=an_18378371108`.
+--
+-- POR QUE MOSTRAR O LINK É MELHOR QUE ESCONDÊ-LO
+--
+-- Decisão do dono. E tem lastro: link visível é conferível antes do
+-- toque, e âncora genérica em canal de oferta é o padrão de quem
+-- encurta com serviço de terceiro para mascarar o destino. O leitor não
+-- sabe explicar, mas o `s.shopee.com.br` no texto diz de onde vem.
+--
+-- O TAMANHO DE CADA LOJA, DEPOIS DESTA
+--
+--   Mercado Livre  meli.la/1QPWrnS               ~24 caracteres
+--   Shopee         s.shopee.com.br/AAG6Zk4mf0    ~30
+--   Amazon         .../dp/B01...?tag=...&ascsubtag=...  ~110
+--
+-- A Amazon continua longa, e fica assim de propósito: `linkCode` e
+-- `ref_` poderiam sair (o próprio `lib/afiliado.ts` diz que não são
+-- necessários para a comissão), mas mexer em parâmetro de atribuição
+-- sem uma venda para conferir é o tipo de economia que custa caro. Fica
+-- anotado para quando houver venda pela Amazon.
+--
+-- POR QUE `replace` E NÃO `regexp_replace`
+--
+-- A 49 escreveu a âncora com `replace` e uma string literal. O inverso
+-- exato dela é outro `replace` com a mesma string, e isso é
+-- determinístico: casa o que a 49 criou, e nada além. `regexp_replace`
+-- daria o mesmo resultado no caso feliz e abriria a porta para casar o
+-- que ninguém previu — num campo que o dono edita à mão pelo painel.
+--
+-- Se alguém tiver trocado o texto da âncora à mão, esta migration não
+-- casa e não faz nada. É o lado certo de errar: o post continua
+-- publicando, só com a âncora que a pessoa escolheu.
+-- =============================================================
+
+update public.modelo_mensagem
+   set corpo = replace(corpo, '<a href="{link}">Compre aqui</a>', '{link}'),
+       atualizado_em = now()
+ where position('<a href="{link}">Compre aqui</a>' in corpo) > 0;

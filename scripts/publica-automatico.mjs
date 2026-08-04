@@ -31,6 +31,7 @@ import { createClient } from "@supabase/supabase-js";
 import { geraLinks } from "../lib/gerador-ml.ts";
 import { montaLinkDeAfiliado } from "../lib/afiliado.ts";
 import { classificaFalhaDeLink } from "../lib/falha-de-link.ts";
+import { geraLinkCurtoDaShopee } from "../lib/shopee-api.ts";
 import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
 import {
   RITMO_PADRAO,
@@ -230,6 +231,7 @@ async function main() {
 
   const SELECAO = `
     id, operacao_id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
+    preco_anterior_centavos,
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em, gatilho,
     anuncio:anuncio_id (
       id, produto_id, url_original, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
@@ -389,6 +391,21 @@ async function melhorPrateleira(db, oferta) {
     publicar, e não emudecer inteiro.
   */
   const temSessaoDaCentral = Boolean(sessao.cookie && sessao.csrf);
+
+  /*
+    A credencial da Open API da Shopee, aprovada em 03/08 e em uso desde
+    04/08. Vem do ambiente, e não de `credencial_rotativa`, porque ela
+    não rotaciona: é par fixo de App ID e secret do painel de afiliado.
+    Faltando, a Shopee volta a usar o `an_redir` montado à mão.
+  */
+  const credShopee = {
+    appId: process.env.SHOPEE_APP_ID,
+    appSecret: process.env.SHOPEE_APP_SECRET,
+  };
+
+  if (!credShopee.appId || !credShopee.appSecret) {
+    console.log("Sem SHOPEE_APP_ID/SECRET: os links da Shopee saem no formato longo (an_redir).");
+  }
 
   if (!temSessaoDaCentral) {
     console.log(
@@ -864,7 +881,38 @@ async function melhorPrateleira(db, oferta) {
       */
       const loja = aPublicar.marketplace?.slug;
 
-      if (loja === "amazon" || loja === "shopee") {
+      /*
+        A SHOPEE PASSA PELA OPEN API, E CAI PARA O `an_redir` SE ELA FALHAR.
+
+        O `an_redir` (D-057) carrega a URL do produto codificada dentro
+        de si, e o resultado eram três linhas de URL no post — feio a
+        ponto de a migration 49 escondê-lo atrás de "Compre aqui". A Open
+        API foi aprovada em 03/08 e a credencial chegou em 04/08: ela
+        devolve `s.shopee.com.br/AAG6Zk4mf0`, e o subid sobrevive
+        (conferido resolvendo o link: `utm_content=radarteste----`,
+        `utm_source=an_18378371108`).
+
+        A QUEDA É OBRIGATÓRIA, e não zelo. API de terceiro sai do ar, e
+        canal mudo por causa disso seria trocar um problema de estética
+        por um de receita — o `an_redir` é feio e paga comissão igual.
+      */
+      if (loja === "shopee" && credShopee.appId && credShopee.appSecret) {
+        const viaApi = await geraLinkCurtoDaShopee(aPublicar.url_original, pub.subid, credShopee);
+        if (viaApi.curto) {
+          curto = viaApi.curto;
+        } else {
+          console.log(`  … ${canal.nome}: link curto falhou (${viaApi.motivo}), usando an_redir`);
+        }
+      }
+
+      if (curto) {
+        /*
+          A Open API da Shopee já resolveu, e este ramo existe para a
+          cadeia não continuar: sem ele, `curto` preenchido caía no
+          `else if (!temSessaoDaCentral)` abaixo e o post da Shopee
+          morria por falta de uma sessão que ele nem usa.
+        */
+      } else if (loja === "amazon" || loja === "shopee") {
         const link = montaLinkDeAfiliado(aPublicar.url_original, pub.subid, loja);
         if (!link.rastreado) {
           console.log(`  ✗ ${canal.nome}: ${link.motivo}`);
@@ -948,6 +996,9 @@ async function melhorPrateleira(db, oferta) {
       janelaDias: oferta.referencia_janela_dias,
       observadoDesde: oferta.detectada_em.slice(0, 10),
       podeAfirmarMinimo: trocou ? false : oferta.pode_afirmar_minimo,
+      // A nossa leitura anterior, que vira o {queda} do lastro. Numa
+      // troca de prateleira ela não vale: a série é do outro anúncio.
+      precoAnteriorCentavos: trocou ? null : oferta.preco_anterior_centavos,
       gatilho: trocou ? "declarado" : oferta.gatilho,
       notaDoCurador: aPublicar.produto?.nota_curador,
       freteGratis: aPublicar.frete_gratis,

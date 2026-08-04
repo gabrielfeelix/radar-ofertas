@@ -82,6 +82,19 @@ export type DadosDaMensagem = {
   link: string;
   /** A série alcançou o mínimo para afirmar mínimo histórico? */
   podeAfirmarMinimo: boolean;
+  /**
+   * A leitura ANTERIOR nossa, quando existe.
+   *
+   * É o que vira `{queda}` no lastro, e é o único número da mensagem que
+   * não veio da loja. O "de" e o "por" são alegação e preço dela; a
+   * queda é medição nossa, entre duas leituras.
+   *
+   * Isto é o que o canal tem e o concorrente não: quem repassa oferta
+   * alheia só sabe o que a loja disse. Por isso o lastro carrega o
+   * número, e não uma frase genérica: "baixou 18%" se confere, "vimos o
+   * preço mudar" não diz nada.
+   */
+  precoAnteriorCentavos?: number | null;
   /** O que fez a oferta existir. Ausente = série, que era o único caso antes. */
   gatilho?: GatilhoDaOferta;
   /**
@@ -151,6 +164,7 @@ export const VARIAVEIS = [
   { chave: "loja", explica: "Mercado Livre, Shopee, Amazon" },
   { chave: "vendedor", explica: "quem vende no anúncio" },
   { chave: "lastro", explica: "a frase do histórico — muda com a série" },
+  { chave: "queda", explica: "quanto baixou desde a nossa leitura anterior, em porcento. Só existe dentro do lastro de queda" },
   { chave: "nota", explica: "a sua opinião sobre o produto, escrita na ficha dele. Some quando não há" },
   { chave: "frete", explica: "a linha de frete grátis. Some quando a loja não declara" },
   { chave: "link", explica: "o link com subid, do nosso redirecionador" },
@@ -247,12 +261,42 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
           ? modelo.lastroCom
           : modelo.lastroSem;
 
-  const lastro = preenche(molde, {
-    janela: String(dados.janelaDias),
-    desde: formataDia(dados.observadoDesde),
-    antes: reais(dados.precoAntesCentavos),
-    agora: reais(dados.precoCentavos),
-  });
+  /*
+    A QUEDA É A ÚNICA COISA QUE NÓS MEDIMOS.
+
+    `{antes}` e `{agora}` são preços da loja. `{queda}` é a diferença
+    entre duas leituras NOSSAS, e é o que sustenta a confiança: nenhum
+    canal que repassa oferta alheia consegue dizer isso.
+
+    Arredonda para inteiro porque "baixou 18%" é o que a pessoa lê;
+    "17,86%" tem cara de planilha e não de gente.
+  */
+  const quedaPct =
+    dados.precoAnteriorCentavos && dados.precoAnteriorCentavos > dados.precoCentavos
+      ? Math.round(
+          ((dados.precoAnteriorCentavos - dados.precoCentavos) / dados.precoAnteriorCentavos) * 100,
+        )
+      : null;
+
+  /*
+    Sem o número, a linha da queda não sai.
+
+    `⚡ Baixou % desde a leitura de ontem.` é pior que linha nenhuma: o
+    buraco no lugar do número faz a mensagem inteira parecer quebrada, e
+    numa oferta de queda o `preco_anterior` sempre existe — se ele
+    faltar, algo está errado e o silêncio é o desfecho certo.
+  */
+  const semNumeroDaQueda = dados.gatilho === "queda" && quedaPct == null && molde.includes("{queda}");
+
+  const lastro = semNumeroDaQueda
+    ? ""
+    : preenche(molde, {
+        janela: String(dados.janelaDias),
+        desde: formataDia(dados.observadoDesde),
+        antes: reais(dados.precoAntesCentavos),
+        agora: reais(dados.precoCentavos),
+        queda: quedaPct != null ? String(quedaPct) : "",
+      });
 
   // A linha inteira some quando não há nota. Deixar o prefixo sozinho
   // seria pior que não ter: um emoji solto numa mensagem por dia é
