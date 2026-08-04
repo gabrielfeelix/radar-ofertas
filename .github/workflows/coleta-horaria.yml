@@ -149,6 +149,12 @@ jobs:
           # A Shopee é o mesmo caso, pelo redirecionador `an_redir`
           # (D-057). Sem esta variável o anúncio da Shopee não sai.
           AFILIADO_SHOPEE: ${{ secrets.AFILIADO_SHOPEE }}
+          # A Open API (D-061 e D-065). Este passo é a reserva de hora em
+          # hora do publicador, e ele precisa das mesmas credenciais que
+          # o `publica.yml` — senão a reserva publica link longo e preço
+          # do feed da véspera enquanto o principal publica certo.
+          SHOPEE_APP_ID: ${{ secrets.SHOPEE_APP_ID }}
+          SHOPEE_APP_SECRET: ${{ secrets.SHOPEE_APP_SECRET }}
         run: |
           set -o pipefail
           node --experimental-strip-types \

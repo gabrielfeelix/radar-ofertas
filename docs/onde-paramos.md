@@ -52,6 +52,14 @@ virou o lastro, que é onde ela vale.
    instante. Continua aberto o item 2.2 do handoff,
    `global_item_attributes` como fonte de `GENDER`.
 5. **`conversionReport`**, que é como a Fase 0 fecha do lado da Shopee.
+6. **Gravar o preço revalidado da Shopee** (D-065). Quando o publicador
+   corrige o preço no último instante, o número novo não fica em coluna
+   nenhuma: `publicacao` só tem `preco_na_fila_centavos`, que é o preço
+   de quando entrou na fila. Dá para auditar pelo texto em
+   `publicacao.mensagem`, mas não dá para somar num relatório. Acontece
+   em ~6% dos posts da Shopee. **Decisão do dono em 04/08: fica como
+   pendência e sobe junto com a migration do `conversionReport`**, que é
+   quando a pergunta "que preço nós anunciamos?" passa a ter dono.
 
 ## O que eu afirmei hoje e estava errado
 

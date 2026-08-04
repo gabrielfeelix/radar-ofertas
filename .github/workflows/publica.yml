@@ -81,6 +81,15 @@ jobs:
           # A Shopee é o mesmo caso, pelo redirecionador `an_redir`
           # (D-057). Sem esta variável o anúncio da Shopee não sai.
           AFILIADO_SHOPEE: ${{ secrets.AFILIADO_SHOPEE }}
+          # A Open API da Shopee (D-061), e ela decide DUAS coisas que
+          # nasceram desligadas em produção por falta destas linhas:
+          # o link curto `s.shopee.com.br/AAxxxx` em vez do `an_redir`
+          # de três linhas, e a revalidação do preço na hora de publicar
+          # (D-065). Medido em 04/08: 85 posts da Shopee saíram com o
+          # link longo depois do código do link curto entrar, e o log
+          # dizia `Sem SHOPEE_APP_ID/SECRET` em toda execução.
+          SHOPEE_APP_ID: ${{ secrets.SHOPEE_APP_ID }}
+          SHOPEE_APP_SECRET: ${{ secrets.SHOPEE_APP_SECRET }}
         run: |
           # `pipefail` porque o `| tee` mascara o código de saída do
           # node: sem ele, o step passa como sucesso mesmo quando o

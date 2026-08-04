@@ -2603,3 +2603,132 @@ link e não depois, para oferta morta não gastar link.
 **Mudaria se:** a Shopee passar a publicar o feed mais de uma vez por
 dia, ou se a fila deixar de esperar horas — com fila de minutos, 94% de
 confirmação vira 99% e o item deixa de se pagar.
+
+---
+
+## D-066 · A cota da coleta da Shopee passa a ir para quem tem onde publicar
+
+**04/08/2026.** A pendência achada ao investigar por que Pet, Geek e
+Perfumes recebiam pouco. Não era filtro, não era curadoria: era a
+escolha de quem entra no catálogo.
+
+**O DEFEITO.** A coleta lê os dois feeds da Shopee, aplica as comportas
+de desconto e nota, e grava os **4.000 de maior desconto**
+(`SHOPEE_MAX_ITENS`). O critério de corte era o desconto, e só ele.
+
+**Medido no feed de 04/08**, com os dois CSV baixados e as comportas
+reais aplicadas:
+
+```
+110.000 lidos · 20.082 passaram nas comportas
+os 4.000 de maior desconto:
+  em nicho com canal ........ 1.541  (39%)
+  com reputação de vendedor . 3.049  (76%)
+  aproveitáveis de fato ..... 1.231  (31%)
+```
+
+**Dois terços da cota diária iam para item sem como virar post.** Ou de
+um nicho onde não existe canal (casa, moda, automotivo, papelaria,
+esporte, saúde, ferramenta, mercado), ou sem `shop_rating`, que a
+comporta `vendedor_desconhecido` reprova sempre.
+
+Enquanto isso, o feed tinha 121 perfumes disponíveis e o canal recebia
+**9 por dia**. Pet tinha 812 e recebia 113.
+
+**É O MESMO DEFEITO DO MERCADO LIVRE EM 01/08**, e o registro de lá
+descreve este: *"a descoberta gastava as 600 vagas por ordem de lista.
+As primeiras raízes enchiam o teto e Brinquedos, Bebês e Beleza não
+recebiam nada"*. A saída foi rodízio, um balde por raiz.
+
+**A DECISÃO.** `lib/cota-da-coleta.ts`, com três regras:
+
+1. **Sem reputação não entra.** Respeita `reputacao_nula_reprova`: se o
+   dono desligar a comporta, o filtro se desliga junto. Na prática isto
+   descarta quase todo o feed pequeno, que não tem a coluna — e nenhum
+   item dele chegava a publicar de qualquer forma.
+2. **Rodízio por nicho, quem tem canal primeiro.** Dentro do nicho, o
+   maior desconto continua ganhando. O critério antigo não estava
+   errado; ele só não podia ser o critério global.
+3. **A sobra vai para os nichos sem canal**, também em rodízio. Não é
+   generosidade: o dono quer abrir canal de casa e de moda, e catálogo
+   que parou de ser atualizado nasce morto.
+
+**O A/B, contra o feed real do dia**, sem escrever nada:
+
+| | antes | depois |
+|---|---|---|
+| escolhidos | 4.000 | 4.000 |
+| em nicho com canal | 1.541 (39%) | **4.000 (100%)** |
+| com reputação | 3.049 (76%) | **4.000 (100%)** |
+| aproveitáveis | 1.231 (31%) | **4.000 (100%)** |
+
+Por nicho, entrada diária:
+
+```
+perfume      9 → 121        pet        113 → 720
+geek        46 → 108        beleza     264 → 721
+games       30 →  97        bebe       387 → 721
+suplemento  63 → 261        eletronico 432 → 721
+brinquedo  197 → 530
+```
+
+**O que isto NÃO conserta:** `fitness` continua em zero pela Shopee,
+porque o feed não tem candidato de fitness que passe nas comportas. O
+canal Fitness é servido por `suplemento`, que quadruplica.
+
+**Sobrou fila:** 1.163 candidatos de nicho com canal não couberam nos
+4.000. O log passou a dizer isso, porque agora subir `SHOPEE_MAX_ITENS`
+traz catálogo publicável em vez de lixo — antes subir o teto só
+aumentaria o desperdício.
+
+**Mudaria se:** o feed pequeno passar a trazer `shop_rating`, ou se a
+reputação passar a ser enriquecida pela API antes de gravar. Aí o filtro
+de reputação vira enriquecimento, e não descarte. Ver D-064, item 2.2:
+o feed pequeno é o único que traz `global_item_attributes`.
+
+---
+
+## D-067 · O `publica.yml` nunca passou a credencial da Open API da Shopee
+
+**04/08/2026.** Duas frentes nasceram desligadas em produção pelo mesmo
+motivo, e nenhuma delas tinha defeito de código.
+
+**O sintoma**, medido no banco: das publicações da Shopee enviadas desde
+as 12h UTC de 04/08, **0 saíram com link curto e 85 com o `an_redir`**
+de três linhas, incluindo posts das 17h34, 17h38 e 17h41, muito depois
+de o código do link curto entrar (commit `c22ed13`, 13h50).
+
+**A prova, no log do Actions**, execução 30933024061:
+
+```
+Sem SHOPEE_APP_ID/SECRET: os links da Shopee saem no formato longo (an_redir).
+```
+
+**A causa é mais funda do que o `env` do workflow.** `gh secret list`
+mostra dez segredos no repositório, e **`SHOPEE_APP_ID` e
+`SHOPEE_APP_SECRET` não estão entre eles**. Não é só o workflow não
+repassar: os valores nunca foram cadastrados no GitHub. Eles existem no
+`.env` local, que é onde o A/B da D-065 rodou — e é por isso que ali
+funcionou.
+
+**O que isso desligava:**
+
+- o link curto `s.shopee.com.br/AAxxxx` (D-061)
+- a revalidação de preço na hora de publicar (D-065), que faz uma
+  chamada à mesma API
+
+**O conserto tem duas metades.** A do repositório está feita: as duas
+variáveis entraram no `env` de `publica.yml` e de `coleta-horaria.yml`,
+que é a reserva de hora em hora do publicador. A outra metade é
+cadastrar os dois segredos, e isso **é do dono** — AGENTS §8, variável
+de produção.
+
+**Como conferir depois:** a linha `Sem SHOPEE_APP_ID/SECRET` some do
+log, o post da Shopee passa a sair com `s.shopee.com.br/`, e o rodapé
+passa a imprimir `preço da Shopee conferido na hora: {...}`.
+
+**A lição, e ela não é sobre a Shopee:** variável de ambiente que falta
+não quebra nada. O código cai para o caminho de reserva, o log avisa uma
+vez no começo da execução, e tudo parece funcionar. Duas frentes ficaram
+prontas e inertes por um dia sem ninguém notar. Toda variável nova
+precisa entrar no workflow **no mesmo commit** que o código que a lê.

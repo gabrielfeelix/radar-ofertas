@@ -30,6 +30,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { atributosComGenero } from "../lib/genero-pelo-titulo.ts";
 import { atributosComUso } from "../lib/uso-do-produto.ts";
+import { escolheCota } from "../lib/cota-da-coleta.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.CHAVE;
@@ -180,6 +181,35 @@ async function main() {
   const porCategoria = new Map((mapeamento ?? []).map((m) => [m.dominio_externo, m.nicho_id]));
 
   /*
+    QUAIS NICHOS TÊM CANAL, e é isto que decide para onde a cota vai.
+
+    Medido no feed de 04/08: dos 4.000 itens que a regra antiga
+    escolhia, **1.541 eram de nicho com canal e 1.231 eram aproveitáveis
+    de fato**. Dois terços da cota diária iam para item que não tem como
+    virar post, enquanto o canal de perfume recebia 9 por dia tendo 121
+    disponíveis. O porquê inteiro está em `lib/cota-da-coleta.ts`.
+
+    Lido do banco a cada rodada, e não de lista fixa: canal novo passa a
+    valer na coleta seguinte, sem ninguém publicar versão. É o que faz
+    "abrir canal de casa" ser uma linha de cadastro.
+  */
+  const { data: nichosDoBanco } = await db.from("nicho").select("id, slug");
+  const slugDoNicho = new Map((nichosDoBanco ?? []).map((n) => [n.id, n.slug]));
+
+  const { data: canaisAtivos } = await db
+    .from("canal")
+    .select("ativo, canal_nicho ( nicho_id )")
+    .eq("ativo", true);
+
+  const nichosComCanal = new Set();
+  for (const c of canaisAtivos ?? []) {
+    for (const cn of c.canal_nicho ?? []) {
+      const s = slugDoNicho.get(cn.nicho_id);
+      if (s) nichosComCanal.add(s);
+    }
+  }
+
+  /*
     LER TUDO PRIMEIRO, ESCREVER O MELHOR DEPOIS.
 
     Os dois feeds somam 110 mil itens, e uns 24 mil passam nas comportas
@@ -277,18 +307,68 @@ async function main() {
         continue;
       }
 
-      candidatos.push({ linha, sku, agora, antes, nota, nichoId, chaveCategoria, desconto });
+      /*
+        A REPUTAÇÃO É CALCULADA AQUI, e não mais só na hora de gravar.
+
+        Ela decide se o item entra na cota: quem chega sem `shop_rating`
+        é reprovado depois por `vendedor_desconhecido`, sempre. Gastar
+        vaga com ele é gastar escrita para produzir uma reprovação
+        garantida — eram 27% da carga diária, medido em 03 e 04/08.
+
+        O feed pequeno não tem a coluna, então isto o descarta quase
+        inteiro. É o certo hoje: nenhum item dele chegava a publicar.
+      */
+      const notaLoja = Number(linha.shop_rating);
+      const reputacao =
+        Number.isFinite(notaLoja) && notaLoja > 0 ? Math.min(1, notaLoja / 5) : null;
+
+      candidatos.push({
+        linha,
+        sku,
+        agora,
+        antes,
+        nota,
+        nichoId,
+        chaveCategoria,
+        desconto,
+        reputacao,
+        // O que `lib/cota-da-coleta.ts` usa para dividir as vagas.
+        nicho: slugDoNicho.get(nichoId) ?? "?",
+        temReputacao: reputacao != null,
+      });
     }
   }
 
-  candidatos.sort((a, b) => b.desconto - a.desconto);
-  const escolhidos = candidatos.slice(0, TETO);
+  /*
+    A COTA VAI PARA QUEM TEM ONDE PUBLICAR.
+
+    Era `sort(desconto).slice(4000)`, e isso é a mesma armadilha que o
+    Mercado Livre teve em 01/08: escolher por uma dimensão só faz o
+    nicho grande comer a vaga do pequeno. Lá virou rodízio por raiz;
+    aqui vira rodízio por nicho, com quem tem canal servido primeiro.
+  */
+  const cota = escolheCota(candidatos, {
+    teto: TETO,
+    nichosComCanal,
+    // Se o dono desligar a comporta, o filtro daqui se desliga junto.
+    exigeReputacao: (par.reputacao_nula_reprova ?? 1) === 1,
+  });
+  const escolhidos = cota.escolhidos;
+
   console.log(
-    `\n${vistos} lidos · ${candidatos.length} passaram nas comportas · gravando os ${escolhidos.length} de maior desconto`,
+    `\n${vistos} lidos · ${candidatos.length} passaram nas comportas · gravando ${escolhidos.length}`,
   );
+  console.log(`  descartados: ${JSON.stringify(cota.descartados)}`);
+  console.log(`  por nicho: ${JSON.stringify(cota.porNicho)}`);
+  if (cota.descartados.sem_vaga_com_canal > 0) {
+    console.log(
+      `  → ${cota.descartados.sem_vaga_com_canal} candidatos de nicho COM canal não couberam. ` +
+        "Subir `SHOPEE_MAX_ITENS` traria mais catálogo publicável.",
+    );
+  }
 
   {
-    for (const { linha, sku, agora, antes, nota, nichoId, chaveCategoria } of escolhidos) {
+    for (const { linha, sku, agora, antes, nota, nichoId, chaveCategoria, reputacao } of escolhidos) {
       let { data: anuncio } = await db
         .from("anuncio")
         .select("id, produto_id")
@@ -310,14 +390,11 @@ async function main() {
         entraria como 4,9 e passaria em qualquer comporta, inclusive nas
         que deveriam barrar.
 
-        O feed pequeno não tem a coluna. Item que só existe lá continua
-        sem reputação e continua reprovado, o que é o comportamento
-        certo: não temos como saber.
+        O feed pequeno não tem a coluna. Item que só existe lá **não
+        chega mais até aqui**: desde 04/08 ele é descartado na divisão da
+        cota, porque a comporta o reprovaria depois de qualquer jeito
+        (`lib/cota-da-coleta.ts`). O valor abaixo vem calculado de lá.
       */
-      const notaLoja = Number(linha.shop_rating);
-      const reputacao =
-        Number.isFinite(notaLoja) && notaLoja > 0 ? Math.min(1, notaLoja / 5) : null;
-
       const campos = {
         dominio_externo: chaveCategoria,
         categoria_raiz: linha.global_category1 || null,
