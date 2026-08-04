@@ -30,6 +30,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { geraLinks } from "../lib/gerador-ml.ts";
 import { montaLinkDeAfiliado } from "../lib/afiliado.ts";
+import { classificaFalhaDeLink } from "../lib/falha-de-link.ts";
 import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
 import {
   RITMO_PADRAO,
@@ -373,9 +374,27 @@ async function melhorPrateleira(db, oferta) {
     csrf: (segredos ?? []).find((s) => s.chave === "afiliados_csrf")?.valor ?? "",
   };
 
-  if (!sessao.cookie || !sessao.csrf) {
-    console.log("Falta a sessão da Central de Afiliados em `credencial_rotativa`. Nada sai sem link.");
-    return;
+  /*
+    SEM SESSÃO, SÓ O MERCADO LIVRE PARA. As outras duas seguem.
+
+    Isto era um `return` que encerrava a execução inteira, e ele
+    contradizia o que este mesmo arquivo promete 340 linhas abaixo sobre
+    a Amazon: *"nunca falha por sessão expirada, que é o motivo número
+    um de canal mudo aqui"*.
+
+    A promessa é verdadeira e a guarda a anulava. Amazon e Shopee montam
+    o link por URL, sem sessão e sem etiqueta cadastrada (D-049, D-057);
+    só o Mercado Livre precisa do gerador da Central. No dia em que o
+    cookie expirar, o certo é o canal continuar publicando o que dá para
+    publicar, e não emudecer inteiro.
+  */
+  const temSessaoDaCentral = Boolean(sessao.cookie && sessao.csrf);
+
+  if (!temSessaoDaCentral) {
+    console.log(
+      "Sem a sessão da Central em `credencial_rotativa`: o Mercado Livre não gera link " +
+        "nesta rodada. Amazon e Shopee seguem normalmente.",
+    );
   }
 
   const { data: canais } = await db
@@ -456,7 +475,87 @@ async function melhorPrateleira(db, oferta) {
   let noTeto = 0;
   let cuponsPublicados = 0;
   let adiadosPorProporcao = 0;
+  let encerradas = 0;
   const motivos = {};
+
+  /*
+    POR QUE O LINK NÃO SAIU, contado por causa.
+
+    O rodapé desta execução dizia sempre *"sem link é quase sempre
+    sessão da Central expirada"*, e em 04/08 isso era falso o dia
+    inteiro: a sessão gerou 37 links na mesma rodada em que 11 falharam.
+    O motivo real estava três linhas acima, no log — `URL not allowed in
+    affiliates program` — e o aviso mandava renovar uma credencial
+    sadia.
+
+    Palpite fixo em rodapé é pior que rodapé nenhum: ele manda alguém
+    consertar o que não está quebrado, e some com o defeito de verdade.
+  */
+  const semLinkPorMotivo = {};
+
+  /*
+    CANAL TRAVADO NESTA RODADA.
+
+    Erro de cadastro do canal (etiqueta que não existe na Central, ou
+    canal sem etiqueta nenhuma) vale para TODOS os itens da fila dele.
+    Sem isto, cada item da fila repete a mesma chamada e recebe a mesma
+    recusa: um erro de configuração vira dezenas de batidas no painel de
+    outra empresa, por rodada.
+
+    Trava só na memória, e de propósito: consertar a etiqueta tem que
+    voltar a funcionar na rodada seguinte, sem ninguém desfazer nada no
+    banco.
+  */
+  const canaisTravados = new Set();
+
+  /**
+   * Encerra as publicações de uma oferta que não tem como dar certo.
+   *
+   * O QUE ISTO CONSERTA, medido em produção em 04/08: publicação que
+   * falhava continuava `pendente`, e a fila da rodada seguinte é lida
+   * por `estado = 'pendente'`. Não havia estado terminal nem contador de
+   * tentativa, então o mesmo item voltava para sempre. A prova é a
+   * mesma linha em 4 de 4 execuções examinadas, com uma hora entre
+   * elas:
+   *
+   *   11:14  ⤫ Radar Tech: prateleira melhor sem lastro (R$ 317.00)
+   *   10:21  ⤫ Radar Tech: prateleira melhor sem lastro (R$ 317.00)
+   *
+   * E o custo não é log feio: cada retentativa de link é uma chamada ao
+   * gerador da Central com a sessão do dono. O contador de "sem link"
+   * subiu de 7 para 11 ao longo do dia, e onze execuções concluídas
+   * davam da ordem de noventa chamadas mortas por dia.
+   *
+   * `cancelada` e não um estado novo: ele já existe na migration 16, a
+   * tela já sabe mostrá-lo, e `desfazCancelamento` já sabe voltar
+   * atrás. Estado novo pediria migration, e migration eu não teria como
+   * aplicar nem conferir daqui.
+   *
+   * ENCERRA TODAS AS PUBLICAÇÕES DA OFERTA, e não só a deste canal: a
+   * causa é da oferta (a prateleira, a URL recusada), então ela vale
+   * para todo canal que fosse recebê-la.
+   */
+  async function encerraPublicacoesDaOferta(ofertaId, motivo) {
+    const { data, error } = await db
+      .from("publicacao")
+      .update({ estado: "cancelada", cancelada_em: new Date().toISOString() })
+      .eq("oferta_id", ofertaId)
+      .eq("estado", "pendente")
+      .select("id");
+
+    // O erro é conferido porque a D-040 é literalmente sobre não
+    // conferir o retorno de um update de `publicacao`.
+    if (error) {
+      console.log(`  ! não consegui encerrar as publicações da oferta: ${error.message}`);
+      return;
+    }
+
+    const quantas = (data ?? []).length;
+    encerradas += quantas;
+    if (quantas > 0) {
+      console.log(`    ↳ ${quantas} publicação(ões) encerrada(s): ${motivo}`);
+    }
+  }
 
   for (const oferta of ordenadas) {
     const anuncio = oferta.anuncio;
@@ -649,8 +748,15 @@ async function melhorPrateleira(db, oferta) {
     const anuncio = oferta?.anuncio;
     if (!oferta || !anuncio) return false;
 
+    /*
+      Falta de etiqueta é do CANAL, não deste item. Trava o canal na
+      rodada para não repetir o mesmo aviso uma vez por oferta da fila
+      dele. É a pendência do Beauty com `radargeral` (D-045).
+    */
     if (!canal.etiqueta_afiliado) {
-      console.log(`  ✗ ${canal.nome}: sem etiqueta de afiliado cadastrada`);
+      console.log(`  ✗ ${canal.nome}: sem etiqueta de afiliado cadastrada, canal parado nesta rodada`);
+      canaisTravados.add(canal.id);
+      semLinkPorMotivo.canal_sem_etiqueta = (semLinkPorMotivo.canal_sem_etiqueta ?? 0) + 1;
       return false;
     }
 
@@ -680,12 +786,51 @@ async function melhorPrateleira(db, oferta) {
         .eq("id", oferta.id);
       motivos.prateleira_melhor_sem_lastro = (motivos.prateleira_melhor_sem_lastro ?? 0) + 1;
       reprovadas++;
+      // A oferta acabou de ser rejeitada; a publicação dela tinha que
+      // morrer junto e não morria. Ficavam as duas discordando: oferta
+      // `rejeitada`, publicação `pendente` e voltando toda rodada.
+      await encerraPublicacoesDaOferta(oferta.id, "prateleira melhor sem lastro próprio");
       return false;
     }
 
     const aPublicar = escolha.usar;
     const trocou = escolha.trocou;
+
+    /*
+      A COMPORTA VALE PARA QUEM DE FATO VAI SER PUBLICADO.
+
+      `reprova()` rodou lá em cima sobre o anúncio da oferta. Se a
+      prateleira trocou, quem sai é OUTRO anúncio, de outro vendedor —
+      e `melhor_anuncio_do_produto` não aplica comporta nenhuma, só
+      ordena por loja oficial, reputação e preço (migration 30). Um
+      vendedor com reputação 0,5, abaixo do piso de 0,6, ganha de um com
+      reputação nula e entra por aqui.
+
+      É a migration 32 se repetindo: *"as comportas aprovavam olhando o
+      histórico da pessoa errada"*, agora por outra porta. Medido em
+      04/08: uma troca em onze execuções. Acontece pouco, e curadoria é
+      o que separa este projeto de um repassador.
+    */
+    if (trocou) {
+      const motivoDaTroca = reprova(aPublicar, par);
+      if (motivoDaTroca) {
+        console.log(
+          `  ⤫ ${canal.nome}: a prateleira melhor não passa nas comportas (${motivoDaTroca}), fica a original`,
+        );
+        motivos[`troca_${motivoDaTroca.split("(")[0]}`] =
+          (motivos[`troca_${motivoDaTroca.split("(")[0]}`] ?? 0) + 1;
+        // Não é motivo para descartar a oferta: a prateleira original
+        // passou nas comportas e continua publicável. Só não trocamos.
+        return enviaComAnuncio(pub, canal, oferta, anuncio, false);
+      }
+    }
+
     if (trocou) trocas++;
+    return enviaComAnuncio(pub, canal, oferta, aPublicar, trocou);
+  }
+
+  /* A parte que monta e manda, depois de decidido QUAL anúncio sai. */
+  async function enviaComAnuncio(pub, canal, oferta, aPublicar, trocou) {
 
     const precoFinal = trocou ? aPublicar.preco_leitura_centavos : oferta.preco_atual_centavos;
     const referenciaFinal = trocou
@@ -724,9 +869,30 @@ async function melhorPrateleira(db, oferta) {
         if (!link.rastreado) {
           console.log(`  ✗ ${canal.nome}: ${link.motivo}`);
           semLink++;
+
+          /*
+            A MESMA CLASSIFICAÇÃO DO OUTRO CAMINHO, e de propósito.
+
+            URL quebrada no banco não conserta sozinha. Falta de
+            variável de ambiente, sim: é deploy, e a rodada seguinte
+            pode já ter a variável — então continua pendente.
+          */
+          const tipo = classificaFalhaDeLink({ motivo: link.motivo });
+          semLinkPorMotivo[tipo] = (semLinkPorMotivo[tipo] ?? 0) + 1;
+
+          if (tipo === "permanente") {
+            await encerraPublicacoesDaOferta(oferta.id, `URL inválida (${loja})`);
+          }
           return false;
         }
         curto = link.url;
+      } else if (!temSessaoDaCentral) {
+        // O Mercado Livre é o único que depende da sessão. Fica
+        // pendente e sai quando a sessão for renovada.
+        console.log(`  ✗ ${canal.nome}: sem sessão da Central, o link do Mercado Livre não sai`);
+        semLink++;
+        semLinkPorMotivo.sessao_da_central = (semLinkPorMotivo.sessao_da_central ?? 0) + 1;
+        return false;
       } else {
         const { gerados, falhas } = await geraLinks(
           [aPublicar.url_original],
@@ -734,8 +900,34 @@ async function melhorPrateleira(db, oferta) {
           sessao,
         );
         if (gerados.length === 0) {
-          console.log(`  ✗ ${canal.nome}: link não gerado (${falhas[0]?.motivo ?? "sem resposta"})`);
+          const falha = falhas[0];
+          console.log(`  ✗ ${canal.nome}: link não gerado (${falha?.motivo ?? "sem resposta"})`);
           semLink++;
+
+          /*
+            AQUI É ONDE OS NOVENTA PEDIDOS MORTOS POR DIA NASCIAM.
+
+            Antes, qualquer falha devolvia `false` e a publicação
+            continuava `pendente` — inclusive as que nunca teriam
+            conserto. A cada rodada a fila era relida e a mesma URL
+            recusada batia de novo no painel da Central.
+          */
+          const tipo = classificaFalhaDeLink(falha);
+          semLinkPorMotivo[tipo] = (semLinkPorMotivo[tipo] ?? 0) + 1;
+
+          if (tipo === "permanente") {
+            await encerraPublicacoesDaOferta(
+              oferta.id,
+              `o programa de afiliados recusa esta URL (${falha?.motivo})`,
+            );
+          } else if (tipo === "canal") {
+            // Etiqueta que não existe na Central: vale para toda a fila
+            // deste canal, então para por aqui em vez de repetir.
+            console.log(
+              `    ↳ ${canal.nome}: a etiqueta "${canal.etiqueta_afiliado}" não está cadastrada na Central. Canal parado nesta rodada.`,
+            );
+            canaisTravados.add(canal.id);
+          }
           return false;
         }
         curto = gerados[0].curto;
@@ -931,6 +1123,13 @@ async function melhorPrateleira(db, oferta) {
     for (const canal of doTelegram) {
       const fila = filaDoCanal.get(canal.id);
       if (!fila || fila.length === 0) continue;
+      // Erro de cadastro do canal já apareceu nesta rodada: o resto da
+      // fila dele daria o mesmo erro, uma chamada de rede por item.
+      if (canaisTravados.has(canal.id)) {
+        esperando += fila.length;
+        filaDoCanal.set(canal.id, []);
+        continue;
+      }
       if (noTetoDiario(canal)) {
         noTeto++;
         filaDoCanal.set(canal.id, []);
@@ -1012,14 +1211,33 @@ async function melhorPrateleira(db, oferta) {
   console.log(
     `\n${publicadas} publicadas · ${cuponsPublicados} cupons · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
       `${noTeto} no teto do dia · ${adiadosPorProporcao} adiados pela proporção · ` +
-      `${semLink} sem link · ${trocas} trocaram de prateleira`,
+      `${semLink} sem link · ${encerradas} encerradas · ${trocas} trocaram de prateleira`,
   );
   for (const canal of canais ?? []) {
     const saiu = enviadasHoje[canal.id] ?? 0;
     console.log(`  ${canal.nome}: ${saiu}/${canal.posts_por_dia_max ?? "sem teto"} hoje`);
   }
+
+  /*
+    O RODAPÉ DIZ O QUE MEDIU, e não o que costuma ser.
+
+    A versão anterior afirmava sempre *"sem link é quase sempre sessão
+    da Central expirada"*. Em 04/08 isso foi falso o dia inteiro: a
+    sessão gerou 37 links na mesma rodada em que 11 falharam por `URL
+    not allowed in affiliates program`. O aviso mandava renovar uma
+    credencial sadia e escondia o defeito de verdade.
+  */
   if (semLink > 0) {
-    console.log("Sem link é quase sempre sessão da Central expirada. Renove e rode de novo.");
+    console.log(`sem link, por motivo: ${JSON.stringify(semLinkPorMotivo)}`);
+    if (semLinkPorMotivo.sessao_da_central || semLinkPorMotivo.transitorio) {
+      console.log("  → sessão da Central: renove o cookie e o csrf em `credencial_rotativa`.");
+    }
+    if (semLinkPorMotivo.permanente) {
+      console.log("  → o programa recusou a URL. Já encerradas, não voltam na próxima rodada.");
+    }
+    if (semLinkPorMotivo.canal || semLinkPorMotivo.canal_sem_etiqueta) {
+      console.log("  → etiqueta de afiliado do canal: cadastre na Central (D-045).");
+    }
   }
   if (reprovadas > 0) console.log(`motivos: ${JSON.stringify(motivos)}`);
 }
