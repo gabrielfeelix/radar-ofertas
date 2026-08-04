@@ -67,6 +67,68 @@ confere("atributo nasce quando e profissional", atributosComUso("Kit 12 Spray", 
 confere("nao sobrescreve o que ja existe", atributosComUso("Kit 12 Spray", { USO: "pessoal" }) === null);
 confere("mantem os outros atributos", atributosComUso("Kit 12 Spray", { GENDER: "Feminino" })?.GENDER === "Feminino");
 
+/*
+  ACENTO, E ELE DERRUBOU A CORRECAO DA MIGRATION 57 SEM NINGUEM VER.
+
+  O regex de la foi escrito sem acento e o catalogo tem acento. Em SQL,
+  `~*` e insensivel a MAIUSCULA e nao a acento, entao
+  `kit *[1-9][0-9] *(pcs|pecas|pincei)` nunca casou com "Kit 13 Pcs" de
+  verdade, que no banco e "Kit 13 Pcs" com c-cedilha. A migration 57
+  jamais consertou o titulo que ela propria nomeia.
+
+  Aqui `normaliza` derruba o acento antes, entao os dois casam. Estes
+  testes existem para essa diferenca nao voltar calada.
+*/
+console.log("\nacento\n");
+confere("kit de pinceis com acento nao barra",
+  !ehSuprimentoProfissional("Kit 13 Pçs Pincéis de Maquiagem Com Bolsa de Veludo"));
+confere("o mesmo sem acento tambem nao barra",
+  !ehSuprimentoProfissional("Kit 13 Pcs Pinceis de Maquiagem Com Bolsa de Veludo"));
+
+/*
+  CONJUNTO DE PECAS DIFERENTES, e a contradicao que existia entre duas
+  regras vizinhas: `kit NN` excluia `pecas` com todo cuidado, e a linha
+  seguinte marcava qualquer `NN pecas` de novo. A segunda ganhava.
+
+  Medido em 04/08 a noite: nove kits de pincel estavam marcados como
+  profissional no catalogo de producao.
+*/
+console.log("\nconjunto de pecas diferentes\n");
+confere("kit 32 pecas de pinceis nao barra",
+  !ehSuprimentoProfissional("Kit 32 Peças Conjunto De Pincéis De Maquiagem Para Pó Sombra"));
+confere("kit de pincel com 13 unidades nao barra",
+  !ehSuprimentoProfissional("Kit Pincel De Maquiagem Com 13 Unidades Sombra Blush"));
+confere("kit 15 pinceis de unha nao barra",
+  !ehSuprimentoProfissional("Kit 15 Pincéis Decoração De Unhas + 5 Boleadores"));
+confere("paleta com kit de pinceis nao barra",
+  !ehSuprimentoProfissional("Paleta LABRANCHE Face 46 Cores + Kit 8 Pincéis"));
+confere("mas dez caixas de cilios continua barrando",
+  ehSuprimentoProfissional("New Show KIT 10 Caixas Cilios Posticos 6D MINK"));
+confere("e doze sprays iguais continua barrando",
+  ehSuprimentoProfissional("Kit 12 Spray Liso Obrigatorio 200ml Belkit"));
+confere("insumo de clinica ganha do conjunto de pecas",
+  ehSuprimentoProfissional("Kit Limpeza Extensão de Cílios Com Pump Espumador Pincel"));
+
+/*
+  VOLUME SO CONTA EM BELEZA, e isto vivia SO no SQL da migration 56.
+  Esta funcao, que e a regra viva dos coletores, continuou marcando
+  chaleira de 2,7 L como insumo de salao. Nao gerou post errado porque
+  o unico canal que exclui `USO` e o Beauty e panela nao e do nicho
+  dele, mas ligar a marcacao no coletor do ML sem isto desfaria as 741
+  correcoes daquela migration.
+*/
+console.log("\nvolume depende do nicho\n");
+confere("um litro e meio de shampoo barra quando o volume conta",
+  ehSuprimentoProfissional("Kit Absolut Repair Shampoo e Condicionador 1,5L", true));
+confere("chaleira de 2,7 L NAO barra quando o volume nao conta",
+  !ehSuprimentoProfissional("Chaleira Bule Aluminio C/ Apito Roma Vanilla Brinox 2,7 L", false));
+confere("e a mesma chaleira barraria se o volume contasse, que e o defeito antigo",
+  ehSuprimentoProfissional("Chaleira Bule Aluminio C/ Apito Roma Vanilla Brinox 2,7 L", true));
+confere("agulha barra mesmo com o volume desligado",
+  ehSuprimentoProfissional("Agulha Lebel 32g 4mm Caixa Com 100 Unidades", false));
+confere("o argumento chega por atributosComUso",
+  atributosComUso("Panela De Pressao Inducao Ecoglide 4,2l", null, false) === null);
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");

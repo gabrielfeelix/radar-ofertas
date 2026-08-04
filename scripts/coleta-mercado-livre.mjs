@@ -35,6 +35,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { atributosDe, chaveDeIdentidade } from "../lib/identidade.ts";
+import { atributosComUso } from "../lib/uso-do-produto.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const API = "https://api.mercadolibre.com";
@@ -869,6 +870,21 @@ async function main() {
     .eq("marketplace_id", mkt.id);
 
   const porRamo = new Map((porRamoLinhas ?? []).map((r) => [r.ramo, r.nicho_id]));
+
+  /*
+    Os nichos em que volume grande significa "tamanho de salão".
+
+    Fora daqui, litro é o produto: panela de 4,2 L é panela. É a regra da
+    migration 56, que existia só em SQL e por isso não valia para quem
+    escreve no banco. Vive como consulta e não como lista fixa porque id
+    de nicho não se decora.
+  */
+  const { data: nichosDeVolumeLinhas } = await db
+    .from("nicho")
+    .select("id")
+    .in("slug", ["beleza", "perfume"]);
+
+  const nichosDeVolume = new Set((nichosDeVolumeLinhas ?? []).map((n) => n.id));
   const categoriasNovas = new Set();
 
   let produtosNovos = 0;
@@ -1223,8 +1239,43 @@ async function main() {
           título, que é o comportamento antigo. Perde-se a comparação
           entre catálogos, não o produto.
         */
-        const atributos = atributosDe(produto);
-        const identidade = chaveDeIdentidade(atributos, produto.domain_id, produto.name);
+        /*
+          O `USO` ENTRA AQUI, e não entrava, e essa era a falha da
+          migration 55.
+
+          Ela marcou `USO = profissional` num `update` de uma vez só, em
+          04/08 às 14h16, e o Beauty passou a excluir o que estivesse
+          marcado. Só que **nada aplicava a regra dali para frente no
+          Mercado Livre**: quem importava `atributosComUso` era só o
+          coletor da Shopee. Resultado medido: na noite do mesmo dia, 32
+          produtos entraram casando com a regra e sem a marca.
+
+          E eles não têm segunda chance. A escrita de `atributos` em
+          produto que já existe é guardada por `is("atributos", null)`,
+          justamente para não sobrescrever — e produto novo já nasce com
+          o objeto preenchido pela API. Nulo ele nunca mais fica, então
+          a marca nunca mais aparece.
+
+          `atributosComUso` devolve nulo quando não tem o que marcar, e
+          por isso o `??` mantém os atributos da API intactos. O `GENDER`
+          não entra aqui como na Shopee: no Mercado Livre ele vem da
+          própria API, dentro de `atributosDe` (D-068).
+        */
+        const atributosApi = atributosDe(produto);
+
+        /*
+          A IDENTIDADE É CALCULADA SOBRE OS ATRIBUTOS DA API, e de
+          propósito, não por descuido. Identidade é o que o produto É;
+          `USO` é etiqueta editorial nossa, sobre para quem ele serve.
+
+          Hoje isso não mudaria nada, porque `COMPOEM` é lista BRANCA de
+          atributos nomeados e `USO` não está nela — conferido antes de
+          escrever. Mas depender disso seria depender de uma lista que
+          já mudou três vezes, e o estrago seria mudo: a chave mudaria,
+          o mesmo produto viraria dois, e a série de preço partiria em
+          duas sem erro nenhum.
+        */
+        const identidade = chaveDeIdentidade(atributosApi, produto.domain_id, produto.name);
 
         let { data: linha } = identidade
           ? await db
@@ -1264,6 +1315,21 @@ async function main() {
         const nichoDoProduto = decideNicho(produto.domain_id, raiz, porDominio, porCategoria, ramo, porRamo);
 
         if (raiz && !porCategoria.has(raiz)) categoriasNovas.add(raiz);
+
+        /*
+          O `USO` É DECIDIDO AQUI, depois do nicho, e a ordem é a razão
+          de ele não estar lá em cima junto dos atributos da API.
+
+          `volumeConta` só é verdadeiro em beleza e perfume, que é a
+          regra da migration 56: "litro" quer dizer tamanho de salão num
+          shampoo e quer dizer o produto numa panela. Sem esse cuidado,
+          ligar a marcação neste coletor encheria o banco de chaleira
+          marcada como profissional, desfazendo as 741 correções que
+          aquela migration fez.
+        */
+        const atributos =
+          atributosComUso(produto.name, atributosApi, nichosDeVolume.has(nichoDoProduto)) ??
+          atributosApi;
 
         if (!linha) {
           const { data: novo, error } = await db

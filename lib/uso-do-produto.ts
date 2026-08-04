@@ -103,19 +103,73 @@ const VOLUME_DE_SALAO = [
   /\b[1-9][0-9]{3,}\s*ml\b/,
 ];
 
+/*
+  CONJUNTO DE PEÇAS DIFERENTES NÃO É REVENDA, e esta lista existe porque
+  a exclusão que já havia estava sendo anulada uma linha abaixo dela.
+
+  O padrão de `kit NN` tem um `(?!\s*(pcs|pc|pecas|pincei))` escrito com
+  todo cuidado para deixar "Kit 13 Pcs Pinceis" passar. Só que a regra
+  seguinte de `QUANTIDADE` casa com `NN pecas` sem olhar o contexto, e
+  remarcava o mesmo título. As duas se anulavam, e a segunda ganhava.
+
+  Medido em 04/08, à noite: NOVE kits de pincel de maquiagem estavam
+  marcados como profissional no catálogo, incluindo "Kit 13 Pçs Pincéis
+  de Maquiagem Com Bolsa de Veludo" — que é literalmente o título que a
+  migration 57 foi escrita para consertar, e que continuou quebrado.
+
+  Trinta pincéis DIFERENTES são um estojo de maquiagem, que é
+  produto-alvo do Radar Beauty. Trinta sprays IGUAIS são estoque. A
+  diferença está na palavra, não no número.
+
+  `pince` cobre pincel, pincéis e pinceis de uma vez, depois de o
+  acento cair em `normaliza`.
+*/
+const CONJUNTO_DE_PECAS_DIFERENTES = [
+  /\b(kit|conjunto|jogo|paleta)\b.{0,44}?\bpince/,
+  /\b(kit|conjunto|jogo)\s*[1-9][0-9]\s*(pcs|pc\b|pecas)\b/,
+];
+
 /**
  * O título indica produto que não é para uso próprio?
  *
  * Devolve `false` no caso duvidoso, e isso é deliberado: a regra existe
  * para tirar o que é claramente de revenda, não para adivinhar.
  */
-export function ehSuprimentoProfissional(titulo: string | null | undefined): boolean {
+export function ehSuprimentoProfissional(
+  titulo: string | null | undefined,
+  /**
+   * O volume grande conta como sinal? Só conta em beleza e perfume.
+   *
+   * ISTO SÓ EXISTIA NO SQL, e essa era metade do problema. A migration
+   * 56 desfez 741 marcações erradas porque "litro" tem dois significados
+   * opostos: shampoo de 1,5L é tamanho de salão, panela de 4,2L é
+   * panela. Mas a correção morava só na migration, e esta função, que é
+   * a regra VIVA usada pelos coletores, continuou marcando chaleira.
+   *
+   * Enquanto o único canal que exclui `USO` era o Beauty, isso não
+   * gerava post errado — panela não é do nicho dele. Passa a gerar no
+   * dia em que existir canal de casa, que nasceria filtrando panela
+   * grande sem ninguém entender por quê.
+   *
+   * O padrão é `true` para não mudar o comportamento de quem já chama
+   * sem o argumento. Quem sabe o nicho deve passar.
+   */
+  volumeConta: boolean = true,
+): boolean {
   if (!titulo) return false;
   const t = normaliza(titulo);
 
+  /*
+    O insumo de clínica vem primeiro e o conjunto de peças NÃO o
+    desfaz: "Kit Limpeza Extensão de Cílios com Pincel" tem pincel e
+    continua sendo insumo, porque `extensao de cilios` é o sinal forte.
+    O conjunto só neutraliza o sinal fraco, que é a contagem.
+  */
   if (INSUMO.some((m) => t.includes(m))) return true;
+  if (volumeConta && VOLUME_DE_SALAO.some((r) => r.test(t))) return true;
+
+  if (CONJUNTO_DE_PECAS_DIFERENTES.some((r) => r.test(t))) return false;
   if (QUANTIDADE.some((r) => r.test(t))) return true;
-  if (VOLUME_DE_SALAO.some((r) => r.test(t))) return true;
 
   return false;
 }
@@ -130,8 +184,10 @@ export function ehSuprimentoProfissional(titulo: string | null | undefined): boo
 export function atributosComUso(
   titulo: string | null | undefined,
   atuais: Record<string, string> | null | undefined,
+  /** Repassado a `ehSuprimentoProfissional`. Quem sabe o nicho, passa. */
+  volumeConta: boolean = true,
 ): Record<string, string> | null {
   if (atuais && typeof atuais.USO === "string" && atuais.USO.trim() !== "") return null;
-  if (!ehSuprimentoProfissional(titulo)) return null;
+  if (!ehSuprimentoProfissional(titulo, volumeConta)) return null;
   return { ...(atuais ?? {}), USO: USO_PROFISSIONAL };
 }
