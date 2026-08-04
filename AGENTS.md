@@ -22,9 +22,10 @@ Contexto completo de negócio, divisão de receita e fluxo do dinheiro: `docs/ne
 
 - **Banco e auth:** Supabase (Postgres). Coletores em Edge Functions.
 - **Painel:** Next.js (App Router) + TypeScript.
-- **Hospedagem do painel:** Cloudflare Workers, com o adaptador OpenNext (`@opennextjs/cloudflare`). **Não Cloudflare Pages** — a integração nativa não roda Next.js em modo servidor e o `next-on-pages` foi descontinuado (D-016). **Não Vercel Hobby** — o plano gratuito da Vercel não permite uso comercial, e este projeto gera receita.
+- **Hospedagem do painel:** **a Vercel, hoje e de fato** — o painel responde em `radar-ofertas.vercel.app` com `server: Vercel`, e `@opennextjs/cloudflare` não está no `package.json`. Cloudflare Workers com OpenNext continua sendo o **destino decidido**, e a linha abaixo é o porquê; enquanto a mudança não acontece, esta seção descrevia uma intenção como se fosse o estado, e isso confundiu mais de um agente. **Não Cloudflare Pages** — a integração nativa não roda Next.js em modo servidor e o `next-on-pages` foi descontinuado (D-016). **Não Vercel Hobby** — o plano gratuito da Vercel não permite uso comercial, e este projeto gera receita.
 - **Agendamento:** GitHub Actions, não `pg_cron` (D-015). Mantém o projeto gratuito do Supabase acordado e falha de forma visível.
-  **Uma exceção, aberta em 03/08 e só uma:** o `pg_cron` dispara o `publica.yml` de 5 em 5 minutos, porque o agendamento do GitHub entrega cerca de uma execução a cada oito (D-052). Ele é **gatilho, não agendador** — não coleta, não publica, não expurga; manda o Actions rodar, e o trabalho e o log continuam lá. Detalhe e diagnóstico em `docs/cron-externo.md`.
+  **Duas exceções, abertas em 03/08 e 04/08:** o `pg_cron` dispara também a `rotina-diaria.yml`, às 21h de São Paulo (migration 50).
+ o `pg_cron` dispara o `publica.yml` de 5 em 5 minutos, porque o agendamento do GitHub entrega cerca de uma execução a cada oito (D-052). Ele é **gatilho, não agendador** — não coleta, não publica, não expurga; manda o Actions rodar, e o trabalho e o log continuam lá. Detalhe e diagnóstico em `docs/cron-externo.md`.
 - **Redirecionador de links:** Supabase Edge Function, domínio próprio.
 - **Telegram:** Bot API oficial.
 - **WhatsApp:** link de compartilhamento oficial (`wa.me`), envio manual por humano.
@@ -144,7 +145,7 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 ## 9. Estado atual
 
 > **Chegou agora? Leia `docs/onde-paramos.md` primeiro.** Ele tem o
-> estado de 01/08, o que está quebrado, as decisões em aberto e os
+> estado de 04/08, o que está quebrado, as decisões em aberto e os
 > erros que já foram cometidos para não se repetirem.
 >
 > **E leia isto:** o dono autorizou explicitamente mudar as regras deste
@@ -153,7 +154,37 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 > Continuam intocáveis sem conversa apenas as que protegem a conta ou o
 > dinheiro: 3.1, 3.2, 3.3, 3.4 e 3.10.
 
-Atualizado em 01/08/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+Atualizado em 04/08/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+
+### 04/08/2026: revisão, e o que ela consertou
+
+Dia de conferir. **O registro completo, com o método de cada achado,
+está em `docs/revisao-04-08.md`** — e ele abre com as quatro afirmações
+minhas que não sobreviveram ao teste, de propósito.
+
+**Um item de segurança continua ABERTO e é do dono:** o backup semanal
+sobe um `pg_dump --schema=public` como artefato do Actions num
+repositório público, e `credencial_rotativa` mora no `public`. Apagar os
+dois artefatos e rotacionar as credenciais. Fechar o repositório não é
+opção (1.063 min de Actions num dia contra 2.000/mês do plano privado).
+O conserto estrutural está em `docs/plano-vault.md`.
+
+**Consertado no publicador, tudo medido em produção:** publicação que
+falhava voltava para sempre (fila presa 71 → 13), o rodapé culpava a
+sessão da Central estando ela sadia, sessão do ML caída calava Amazon e
+Shopee junto, a troca de prateleira pulava as comportas de confiança, e
+nada era escapado antes de ir com `parse_mode: HTML`.
+
+**A Open API da Shopee entrou** (D-061): link curto no ar, âncora
+"Compre aqui" desfeita. **Ela não tem cupom** — isso fecha a pergunta
+que voltava desde 01/08.
+
+**O "de" passou a ser sempre do vendedor** (D-062). A nossa série virou
+o lastro, que é onde ela vale: `⚡ Baixou 25% desde a leitura de ontem`.
+
+**Diagnosticado e não consertado:** por que o canal de perfume masculino
+quase não publica (D-063). Não é o filtro, é o catálogo — 81 produtos no
+nicho e dois termos de busca em 109.
 
 ### 01/08/2026, à noite: de um canal para sete
 
@@ -215,7 +246,7 @@ Não existe API oficial de afiliados: 15 rotas varridas, todas 404. O caminho é
 2. **Domínio sem mapeamento dá nicho nulo, e nicho nulo não publica.** É deliberado. A fila de trabalho é a view `dominio_sem_mapeamento`, e o coletor lista os novos ao fim de cada rodada.
 3. **Não adivinhe nome de domínio do ML.** `MLB-PET_TOYS` e `MLB-COOKWARE` não existem; são `MLB-DOG_TOY_BONES` e `MLB-KITCHEN_POTS`. Pergunte a `products/{id}`.
 
-**O maior desperdício do sistema hoje não é código:** só existe um canal, e ele é de pet. Numa rodada, 43 ofertas viraram 1 publicação e **24 foram reprovadas por `nenhum_canal_do_nicho`**. O radar acha oferta de casa, eletrônico e suplemento, e não há onde publicar.
+**O maior desperdício do sistema em 01/08 era não ter onde publicar:** só existia um canal, de pet. **Isso mudou na noite de 01/08**, com sete canais no ar. Numa rodada, 43 ofertas viraram 1 publicação e **24 foram reprovadas por `nenhum_canal_do_nicho`**. O radar acha oferta de casa, eletrônico e suplemento, e não há onde publicar.
 
 **Fase 0 em andamento** (contas de afiliado e prova de subid: trabalho manual do dono), com a base da Fase 1 construída em paralelo. As duas não conflitam — o resultado da Fase 0 decide a granularidade do subid, que só aparece na Fase 2.
 
@@ -261,7 +292,7 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 
 | O quê | Estado em 31/07 | Falta |
 |---|---|---|
-| **Supabase nuvem** | ✅ `radar-ofertas`, São Paulo, ref `fcdkczueohekmgaaacdr`, 15 migrations aplicadas | nada |
+| **Supabase nuvem** | ✅ `radar-ofertas`, São Paulo, ref `fcdkczueohekmgaaacdr`, 57 migrations aplicadas | nada |
 | **Mercado Livre — afiliado** | ✅ aprovado, `fega6031503`. **Etiquetas resolvidas em 01/08** | falta gerar um link com cada etiqueta, para extrair o número de rastreamento |
 | **Amazon — associado** | ✅ ativo, `radar4yu-20`, fiscal enviado | **prazo: 3 vendas até 27/01/2027** ou a conta é revogada |
 | **Shopee — afiliado** | ✅ aprovado em 03/08, ID `18378371108`, dados bancários e fiscais enviados | nada |
@@ -269,7 +300,7 @@ Detalhe, passo a passo e armadilhas de cada uma em `docs/credenciais.md`.
 | **Shopee — Open API** | ✅ **aprovada em 03/08**, no mesmo dia do chamado | a credencial aparece na página *Abrir API* em até 5 dias. Conferir e colar `SHOPEE_APP_ID` e `SHOPEE_APP_SECRET` no `.env` |
 | **Shopee — link de afiliado** | ✅ **não depende da API**, testado em 03/08 | só implementar o gerador. Formato e teste na D-057 |
 | **Mercado Livre — API de itens** | ✅ **no ar**, aplicação `Radar de Ofertas 4YU`, Client ID `7618355784652588` | nada. `ML_CLIENT_ID` e `ML_CLIENT_SECRET` existem no `.env` e nos secrets do GitHub; o refresh token vive em `credencial_rotativa` e **não** em variável de ambiente, porque ele é trocado a cada renovação |
-| **Canais** | ✅ `t.me/radarpet` (público) e grupo de WhatsApp | audiência |
+| **Canais** | ✅ **sete** no Telegram: Pet, Tech, Geek, Kids, Beauty, Perfumes (masc) e Fitness | audiência |
 
 **Duas correções que a prática impôs à pesquisa**, e que valem para quem for planejar prazo:
 
@@ -290,7 +321,7 @@ A parte que continua valendo, e que fez a troca caber numa sessão: **a tela nun
 
 ### Pronto e verificado
 
-**Banco** — 15 migrations em `supabase/migrations/`, **todas aplicadas no local** (as 12 primeiras reescritas do zero em 27/07, exceção deliberada, com o banco vazio). `operacao_id` em toda tabela, papel como lista, nicho como entidade, limiar herdando por nicho, contador de reprovação por comporta e registro de execução das rotinas.
+**Banco** — 57 migrations em `supabase/migrations/`, **todas aplicadas no local** (as 12 primeiras reescritas do zero em 27/07, exceção deliberada, com o banco vazio). `operacao_id` em toda tabela, papel como lista, nicho como entidade, limiar herdando por nicho, contador de reprovação por comporta e registro de execução das rotinas.
 
 **Motor de curadoria** — `avalia_anuncios` é *a regra*, numa implementação só. 13 cenários verificados. 3.000 anúncios com 600 mil pontos em 1,4 s. Nenhuma tela recalcula regra.
 
@@ -372,7 +403,7 @@ Depois disso, um bloco que não é tela:
 
 ### Pendências desta sessão — leia antes de tocar em qualquer coisa
 
-**São 35 migrations, todas aplicadas na nuvem.** As de 01/08 foram conferidas contra o banco com dado real. As quatro da tarde (32 a 35) entraram por `supabase db push` pelo **session pooler**, porque o Docker não sobe nesta máquina e o push remoto não precisa dele:
+**São 57 migrations, todas aplicadas na nuvem** (conferido pelo ledger em 04/08). As de 01/08 foram conferidas contra o banco com dado real. As quatro da tarde (32 a 35) entraram por `supabase db push` pelo **session pooler**, pelo session pooler, porque na época o Docker não subia nesta máquina (**voltou a subir em 04/08**) e o push remoto não precisa dele:
 
 ```
 npx supabase db push --db-url "postgresql://postgres.<ref>:<senha>@aws-0-sa-east-1.pooler.supabase.com:5432/postgres"

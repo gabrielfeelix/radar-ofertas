@@ -2285,3 +2285,160 @@ o que eles já publicaram, sem correr o risco de nenhum dos dois.
 
 **Mudaria se:** aparecer um segundo relato de canal de Telegram banido,
 ou um dos nossos cair. Aí deixa de ser anedota e vira padrão a estudar.
+
+---
+
+## D-061 · A Open API da Shopee entra, e o que ela resolve não é só o link
+
+**04/08/2026.** A credencial saiu (aprovada em 03/08, `SHOPEE_APP_ID` e
+`SHOPEE_APP_SECRET` no ambiente) e o schema foi lido por introspecção,
+em vez de por documentação. O que existe de verdade:
+
+| Consulta | Serve para | Estado |
+|---|---|---|
+| `generateShortLink` | link curto, com subid | **em uso** desde 04/08 |
+| `generateBatchShortLink` | vários de uma vez | não usado |
+| `productOfferV2` | catálogo paginado e **um item específico** | não usado |
+| `shopOfferV2` / `shopeeOfferV2` | campanhas de comissão por loja e categoria | não usado |
+| `conversionReport` | **relatório de comissão, com `orderId` e `checkoutId`** | não usado |
+| `validatedReport` | comissões validadas | não usado |
+| `listItemFeeds` / `getItemFeedData` | o feed de produto pela API | não usado |
+
+**O que ela NÃO tem: cupom.** Não existe consulta de cupom no schema. O
+`shopeeOfferV2` são campanhas de comissão por categoria ("New BAU Comm
+- Health", 3%), que é outra coisa e não vira post de cupom. Isso fecha
+uma pergunta que voltava desde 01/08: **cupom da Shopee continua vindo
+da colheita dos canais** (D-039), e não há via oficial esperando.
+
+**O que vale mais que o link, e ainda não foi feito:** `conversionReport`
+devolve o relatório de comissão com identificador de pedido. É por ali
+que a **Fase 0 fecha do lado da Shopee**, sem depender do relatório do
+Mercado Livre e sem esperar ninguém.
+
+**A assinatura é o único lugar onde dá para errar calado:**
+
+```
+Authorization: SHA256 Credential={appId}, Timestamp={ts}, Signature={sig}
+sig = sha256(appId + timestamp + payloadExato + appSecret)
+```
+
+`payloadExato` é o corpo JSON **como ele é enviado**, byte a byte.
+Serializar duas vezes quebra a assinatura, e a resposta é `Invalid
+Signature`, que não distingue credencial errada de payload remontado.
+Por isso `lib/shopee-api.ts` serializa uma vez e usa a mesma string
+para assinar e para enviar.
+
+**Conferido, não lido:** o link curto foi gerado e **resolvido**, e o
+destino final chega com `utm_content=radarteste----` e
+`utm_source=an_18378371108`. O subid e o afiliado sobrevivem ao
+encurtamento.
+
+**A queda para o `an_redir` fica.** API de terceiro sai do ar, e canal
+mudo por causa disso seria trocar um problema de estética por um de
+receita: o `an_redir` é feio e paga comissão igual.
+
+---
+
+## D-062 · O "de" é sempre do vendedor, e a nossa série vira o lastro
+
+**04/08/2026, decisão do dono.**
+
+O leitor lê "De R$ 100 por R$ 60" como o preço de tabela **da loja**.
+Até aqui, numa oferta de gatilho `queda`, ele recebia nesse lugar a
+**nossa leitura anterior** — duas coisas diferentes vestidas igual.
+
+Palavras dele: *"o DE tem que vir do vendedor. Nossa base de histórico
+serve pra avisar se é histórico ou não a promoção, pra gente ver se é
+promo de verdade ou se não é. Serve pra num futuro site a gente colocar
+um histórico de preços."*
+
+**O tamanho do problema, medido antes de mexer:** das 1.291 publicações
+enviadas, **1.222 são do gatilho `declarado`** e já usavam o "de" da
+loja. Só as **69 de `queda`** estavam trocadas, e em 56 delas a loja
+declarava um "de" que nós ignorávamos. O gatilho `serie` nunca disparou.
+
+**E a série não se perde: ela muda de lugar.** Perder a queda seria
+jogar fora o único dado que nenhum concorrente tem — quem repassa oferta
+alheia só sabe o que a loja disse, nós **medimos**. O lugar disso é o
+lastro, que é a linha de confiança:
+
+```
+De R$ 100,00 por R$ 60,00 (−40%)     ← a loja
+⚡ Baixou 25% desde a leitura de ontem.  ← nós
+```
+
+Os dois percentuais são coisas diferentes e ambas verdadeiras: 40% é
+contra o preço de tabela, 25% é o que caiu desde que olhamos. Somados,
+dizem mais do que qualquer um sozinho.
+
+**A frase antiga era redundante e imprecisa.** *"Caiu nas últimas horas:
+vimos o preço mudar"* diz duas vezes a mesma coisa — se caiu, é óbvio
+que vimos. E `preco_ponto` tem `unique (anuncio_id, dia_local)`, **um
+ponto por dia**: a queda é sempre de um dia para o outro, nunca "nas
+últimas horas".
+
+**Dois casos ficam com o nosso número**, e é o lado certo de errar:
+quando a loja não declara nada (13 dos 69), e quando o que ela declara
+daria desconto acima do teto de 70% — o `original_price` do ML é
+frequentemente inflado, e o teto já existia para o gatilho `declarado`.
+
+**A regra 3.4 continua por cima:** queda não afirma mínimo histórico,
+por mais fundo que seja o desconto. `pode_afirmar_minimo` segue falso.
+
+**Mudaria se:** aparecer marketplace que não declare "de" em quantidade
+relevante. Hoje a Shopee declara em 97% dos anúncios e o ML em 57%; a
+Amazon em nenhum, e ela não gera oferta por queda.
+
+---
+
+## D-063 · Por que o canal de perfume masculino quase não publica
+
+**04/08/2026.** Medido a pedido do dono, e o gargalo não é onde parecia.
+
+**Não é o filtro. É o catálogo.** `perfume` é o 4º menor nicho do
+sistema: **81 produtos**, contra 3.206 de casa e 2.392 de eletrônico. E
+dos 109 termos de busca que a descoberta varre, **dois** são de perfume.
+Pet e casa têm 44. O canal masculino é alimentado por **um** termo.
+
+O funil inteiro:
+
+| Degrau | Quantos |
+|---|---|
+| produtos no nicho `perfume` | 81 |
+| ├─ da Shopee | 33 → **todos invisíveis ao canal** |
+| │  └─ e 12 desses nem são perfume | ver abaixo |
+| └─ do Mercado Livre | 30, com 27 tendo `GENDER` |
+| `GENDER = Masculino` | **17** |
+| ofertas rejeitadas por `vendedor_desconhecido` | 11 (todas Shopee, **já resolvido**) |
+| ofertas rejeitadas por `filtro_de_atributo` | 4 |
+| **publicadas no canal, desde sempre** | **9** |
+
+**Três causas, e a maior é invisível no log:**
+
+1. **`scripts/coleta-shopee.mjs` nunca grava `produto.atributos`** — não
+   menciona a palavra uma vez. O filtro do canal é `exige_atributo:
+   true`, então produto sem `GENDER` é barrado por regra. Resultado: 33
+   perfumes da Shopee, **zero** com `GENDER`, nenhum deles publicável.
+
+2. **`SHOPEE-100708` está classificado errado.** A migration 44 o mapeou
+   como `perfume`, mas os produtos são "Umidificador Difusor de Ar",
+   "Kit Refis de Lavanda Bom Ar", "Sachês Perfumados". É aromatizador de
+   ambiente, e o lugar dele é `casa`. São 12 dos 33. O ID fica entre
+   eletrônico (100703-706) e casa (100709-712) na sequência, o que
+   reforça. A `SHOPEE-100661`, essa sim, é perfume de pessoa.
+
+3. **`vendedor_desconhecido` já está resolvido**, e as 11 rejeições são
+   anteriores ao conserto de 03/08: dos 7.461 anúncios da Shopee
+   atualizados depois dele, 5.494 já têm reputação.
+
+**O que fazer, em ordem de retorno, e nada disto foi feito ainda:**
+
+1. **Mais termos de busca de perfume.** É dado, não código, e é o único
+   que mexe no topo do funil.
+2. **Derivar `GENDER` do título na Shopee.** Dos 21 perfumes reais dela,
+   5 dizem só "masculino", 8 só "feminino", 8 não dizem. **Com cautela:**
+   a `onde-paramos` registra um perfume feminino que saiu no canal
+   masculino. A regra tem que ser conservadora — só atribui quando o
+   título diz um e **não** diz o outro; ambíguo fica nulo e não publica.
+   Errar aqui é pior que não publicar.
+3. **Corrigir `SHOPEE-100708` para `casa`.**

@@ -24,6 +24,8 @@ O que fazer:
 4. Esperar o relatório e conferir se o subid aparece, íntegro, ligado ao pedido.
 5. Anotar em `docs/decisoes.md` o resultado por marketplace: suporta subid, tamanho máximo, formato aceito, em quantos dias apareceu no relatório.
 
+**A Shopee ganhou um caminho próprio em 04/08, e ele não depende de esperar relatório de ninguém.** A Open API tem `conversionReport` e `validatedReport`, que devolvem a comissão com `orderId` e `checkoutId` (D-061). Com o link curto já carregando o subid (conferido: `utm_content=radarteste----`), o ciclo fecha consultando a própria API em vez de abrir painel. Falta uma compra real de outra pessoa, que é o passo 3 acima.
+
 **Concluída quando:** existe pelo menos um marketplace com subid comprovadamente rastreável de ponta a ponta.
 
 **Se falhar em todos:** pare e reavalie o modelo com o usuário. Não construa o sistema.

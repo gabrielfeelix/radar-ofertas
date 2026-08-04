@@ -11,7 +11,7 @@ que separa achado de palpite é o método, não o tom.
 | Etiqueta | Quer dizer |
 |---|---|
 | **produção** | medido no log do Actions ou lido do banco da nuvem, com o número transcrito |
-| **banco local** | reproduzido contra Postgres real, com as 56 migrations aplicadas |
+| **banco local** | reproduzido contra Postgres real, com as migrations aplicadas do zero |
 | **local** | reproduzido nesta máquina, sem banco |
 | **leitura** | certo pela estrutura, sem execução que comprove |
 | **em aberto** | levantado e não provado. Tem o teste que decide |
@@ -414,7 +414,7 @@ investiguei.
 | `AGENTS.md` §2 | stack é Cloudflare Workers + OpenNext, "não Vercel" | está na **Vercel** — `curl` devolve `server: Vercel`, `x-vercel-id: gru1`. `@opennextjs/cloudflare` não está no `package.json` |
 | `AGENTS.md` §2 | pg_cron é exceção "e só uma" | são **duas** desde 04/08 (migration 50) |
 | `AGENTS.md` §9 | "só existe um canal, e ele é de pet" | **sete**, e o mesmo arquivo diz isso 60 linhas acima |
-| `AGENTS.md` §9 | 15 migrations / 35 migrations | **56** |
+| `AGENTS.md` §9 | 15 migrations / 35 migrations | **57** — corrigido em 04/08 |
 | `AGENTS.md` §9 | "Atualizado em 01/08" e "`onde-paramos` tem o estado de 01/08" | tem seção de 03/08; o `onde-paramos` começa em 02/08 |
 | `AGENTS.md` §4 | Fase 0 / base da Fase 1 | publica sozinho em sete canais próprios, que é a Fase 2 |
 | `backup-semanal.yml` | "artefato do repositório, que é privado" | público desde 01/08. É o S-01 |

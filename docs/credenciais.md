@@ -154,6 +154,18 @@ as rotinas automáticas rodarem sozinhas de madrugada.
 
 ## 3. Credencial da Shopee (Open API de afiliado)
 
+> **✅ EM USO desde 04/08/2026.** As chaves estão no `.env` e em
+> `supabase/functions/.env`. **Ainda não estão nos secrets do Supabase**
+> (`npx supabase secrets set --env-file supabase/functions/.env`), que é
+> de onde a Edge Function implantada leria — mas hoje quem usa a API é o
+> publicador, que roda no Actions e lê do ambiente.
+>
+> Conferido contra a API real, não lido em documentação (D-061):
+> `generateShortLink` devolve `s.shopee.com.br/...` e o subid sobrevive;
+> `productOfferV2` devolve preço, desconto, vendas, nota e comissão de um
+> item; **não existe consulta de cupom**.
+
+
 > **Estado em 03/08/2026:** cadastro de afiliado **✅ APROVADO**, com dados
 > bancários e fiscais enviados. **ID de afiliado: `18378371108`** — já no `.env`
 > como `AFILIADO_SHOPEE`. Não é o código de indicação, que é outro número.

@@ -1,3 +1,65 @@
+# Onde paramos — 04/08/2026
+
+## O dia da revisão, e do que ela virou
+
+Dia de conferir em vez de construir, e boa parte do que eu afirmei de
+manhã não sobreviveu ao teste da tarde. O registro inteiro, com **como
+cada achado foi conferido**, está em `docs/revisao-04-08.md` — leia
+aquele arquivo antes de reabrir qualquer um destes assuntos.
+
+**Um achado de segurança, e ele é o único item aberto que urge.** O
+backup semanal sobe um `pg_dump --schema=public` como artefato do
+Actions, e o repositório é público: qualquer conta logada do GitHub
+baixa. `credencial_rotativa` mora no schema `public`, então o dump leva
+o cookie da Central e o refresh token do ML. **Dois artefatos estão lá
+agora.** Fechar o repositório não é opção — medido: 1.063 minutos de
+Actions num dia, contra 2.000 por mês que o plano Free dá a repositório
+privado, o que daria uns US$ 180/mês. O conserto é o segredo sair do
+`public`, e o plano está escrito em `docs/plano-vault.md`.
+
+**Cinco defeitos consertados no publicador**, todos medidos em produção
+antes e depois:
+
+| O quê | Efeito medido |
+|---|---|
+| Publicação que falhava voltava para sempre | fila presa: 71 → 13 |
+| O log culpava a sessão da Central, que estava sadia | agora conta por causa |
+| Sessão do ML caída calava Amazon e Shopee junto | A/B contra o banco |
+| A troca de prateleira pulava as comportas | A/B: publicava avaliação 2.0 |
+| Escape de HTML no que vai ao Telegram | 46 casos de teste |
+
+**A Open API da Shopee entrou** (D-061). Link curto no ar, e a âncora
+"Compre aqui" foi desfeita. O que ela tem e o que não tem está na
+decisão — e o que ela **não** tem é cupom, o que fecha uma pergunta que
+voltava desde 01/08.
+
+**O "de" passou a ser sempre do vendedor** (D-062), e a nossa série
+virou o lastro, que é onde ela vale.
+
+## O que está aberto, em ordem
+
+1. **Apagar os dois artefatos do backup e rotacionar as credenciais.**
+   Só o dono faz. Nada do que foi consertado hoje desfaz o que já foi
+   exposto.
+2. **O plano do Vault** (`docs/plano-vault.md`), fase 1 em diante.
+3. **O canal de perfume masculino** (D-063): mais termos de busca,
+   `GENDER` pelo título da Shopee, e `SHOPEE-100708` para `casa`.
+   Diagnosticado e **não** consertado.
+4. **Trocar a coleta da Shopee do CSV para a API.** Hoje só o link usa a
+   Open API; o catálogo ainda vem do feed do dia anterior.
+5. **`conversionReport`**, que é como a Fase 0 fecha do lado da Shopee.
+
+## O que eu afirmei hoje e estava errado
+
+Está detalhado na revisão, mas o resumo importa porque é o padrão a
+evitar: afirmei que o backup era baixável **sem autenticação** (é
+preciso conta), que o `&` cru no link podia estar **calando** Shopee e
+Amazon (não estava: 212 posts saíram assim e foram aceitos), e
+exagerei o tamanho da fila presa. Nos três casos a correção veio de
+medir, não de pensar melhor.
+
+---
+
 # Onde paramos — 02/08/2026
 
 ## 02/08: a Amazon entrou, e a primeira compra real aconteceu
