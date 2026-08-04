@@ -497,6 +497,7 @@ sozinho ou com um passo manual é o teste 1.
 | `docs/plano-automacao.md` | O plano de dez frentes que saiu da pesquisa, com o banco medido em vez de suposto. Diz o que foi executado, o que ficou de fora e por quê |
 | `docs/otimizacao.md` | Antes de mexer em coleta, colheita ou classificação de nicho. O diagnóstico da primeira madrugada automática, o que a pesquisa achou e o que cada frente virou |
 | `docs/onde-paramos.md` | **Primeiro de todos.** Estado de 01/08, o que está quebrado, o que está em aberto e os erros já cometidos |
+| `docs/revisao-04-08.md` | Revisão de 04/08: um achado de segurança, oito de código e a lista do que a documentação diz e não é mais verdade. Cada item traz **como foi conferido** — produção, local, leitura ou em aberto |
 | `referencia-claude-deisgn/` | O protótipo, com as quatorze telas desenhadas. Abra antes de mexer em interface |
 
 ### Como rodar
