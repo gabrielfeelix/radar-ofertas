@@ -104,6 +104,44 @@ export type DadosDaMensagem = {
   freteGratis?: boolean | null;
 };
 
+/**
+ * Escapa o que vira `parse_mode: "HTML"` no Telegram.
+ *
+ * A regra da API é literal: *"All `<`, `>` and `&` symbols that are not
+ * a part of a tag or an HTML entity must be replaced with the
+ * corresponding HTML entities"*, e as únicas entidades nomeadas aceitas
+ * são `&lt;`, `&gt;`, `&amp;` e `&quot;`.
+ *
+ * ISTO VALE SÓ PARA VALOR VINDO DE DADO, e a distinção é o coração
+ * disto. O corpo do modelo é escrito pelo dono e **contém HTML de
+ * propósito** desde a migration 49: `<a href="{link}">`, `<b>`, `<s>`.
+ * Escapar o corpo inteiro transformaria a mensagem publicada num
+ * amontoado de `&lt;a href=...&gt;` à vista de todo mundo.
+ *
+ * Então a fronteira é: título de produto, nome de vendedor, nome de
+ * loja, nota do curador e o link — que vêm de marketplace ou de banco e
+ * ninguém revisou — são escapados. O texto que o dono digitou em
+ * Ajustes passa inteiro.
+ *
+ * O CASO QUE MAIS IMPORTA É O LINK, e ele é o mais recente. Desde a
+ * migration 49 o link vai dentro de `href="..."`, e o da Shopee e o da
+ * Amazon carregam `&` entre os parâmetros:
+ *
+ *   an_redir?origin_link=...&affiliate_id=18378371108&sub_id=xxxx----
+ *
+ * Um `&` cru dentro de atributo está fora da especificação. O link do
+ * Mercado Livre é `meli.la/...` e não tem `&`, e é por isso que nada
+ * quebrou até hoje: em 04/08 as 11 execuções publicaram só Mercado
+ * Livre. O primeiro post de Shopee depois da migration 49 é que decide,
+ * e escapar custa nada.
+ */
+export function escapaHtml(texto: string): string {
+  return texto
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
 /** As variáveis que o corpo aceita, para a tela listar sem inventar. */
 export const VARIAVEIS = [
   { chave: "produto", explica: "o título do produto" },
@@ -219,8 +257,10 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
   // A linha inteira some quando não há nota. Deixar o prefixo sozinho
   // seria pior que não ter: um emoji solto numa mensagem por dia é
   // detalhe, em trinta por dia é sujeira.
+  // O prefixo é do modelo e passa inteiro; a nota é texto guardado no
+  // produto e vai escapada.
   const nota = dados.notaDoCurador?.trim()
-    ? `${modelo.notaPrefixo ?? "💬"} ${dados.notaDoCurador.trim()}`
+    ? `${modelo.notaPrefixo ?? "💬"} ${escapaHtml(dados.notaDoCurador.trim())}`
     : "";
 
   /*
@@ -244,15 +284,48 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
     o respiro entre blocos é o que faz a mensagem ser lida na rolagem.
   */
   const texto = preenche(modelo.corpo, {
+    // `frete`, `nota` e `lastro` já vêm montados do modelo, que é texto
+    // do dono. O que é dado de fora vai escapado (ver `escapaHtml`).
     frete,
     nota,
-    produto: dados.produto,
+    lastro,
+    produto: escapaHtml(dados.produto),
     preco: reais(dados.precoCentavos),
     preco_antes: reais(dados.precoAntesCentavos),
     desconto: String(dados.descontoPct),
-    loja: dados.loja,
-    vendedor: dados.vendedor,
-    lastro,
+    loja: escapaHtml(dados.loja),
+    vendedor: escapaHtml(dados.vendedor),
+    /*
+      O LINK NÃO É ESCAPADO, e isto é decisão medida, não esquecimento.
+
+      Pela especificação ele deveria ser: o link da Shopee e o da Amazon
+      levam `&` entre os parâmetros, e vão dentro de `href="..."` desde a
+      migration 49.
+
+      MAS A PRODUÇÃO JÁ RESPONDEU. Em 04/08, 212 publicações de Shopee
+      saíram desde aquela migration, todas com `&` cru dentro do href, e
+      **todas foram aceitas pelo Telegram** — estão em `publicacao` com
+      estado `enviada`, que só acontece quando a API devolve ok. O `&`
+      cru funciona: é fato, com 212 casos.
+
+      O que NÃO está provado é o contrário — que o Telegram decodifica
+      `&amp;` de volta para `&` dentro do atributo. A especificação diz
+      que `&amp;` é uma das quatro entidades aceitas, o que sugere que
+      sim, mas sugerir não basta aqui: se ele passar a entidade literal
+      para a URL, o destino recebe `&amp;affiliate_id=...`, lê o
+      parâmetro como `amp;affiliate_id` e **a comissão não é atribuída**.
+      O post continuaria bonito e não pagaria nada, que é o pior modo de
+      falha que este projeto tem.
+
+      Então o campo que carrega o dinheiro fica como está, no
+      comportamento que 212 posts comprovam. Trocar isso exige um teste
+      com o bot de verdade, mandando as duas formas para um canal de
+      rascunho e comparando a URL que chega. Enquanto esse teste não
+      existir, mexer aqui é apostar.
+
+      O resto da mensagem é escapado normalmente: lá o `<` de um título
+      quebraria de fato, e o risco é só de texto.
+    */
     link: dados.link,
   });
 
@@ -310,10 +383,12 @@ export function montaMensagemDeCupom(corpoCupom: string, dados: DadosDoCupom): s
   ].filter(Boolean);
 
   const texto = preenche(corpoCupom, {
-    codigo: dados.codigo,
-    loja: dados.loja,
+    // Código e loja vêm do texto colhido de canal alheio, que é a
+    // entrada menos confiável do sistema inteiro.
+    codigo: escapaHtml(dados.codigo),
+    loja: escapaHtml(dados.loja),
     percentual: String(dados.percentual),
-    onde: dados.onde?.trim() ? ` em ${dados.onde.trim()}` : "",
+    onde: dados.onde?.trim() ? ` em ${escapaHtml(dados.onde.trim())}` : "",
     condicoes: condicoes.length > 0 ? `${condicoes.join(", ")}.` : "",
     validade: formataDia(dados.validade),
   });

@@ -343,6 +343,19 @@ export async function marcaEnviada(
   origem: OrigemDoEnvio,
   mensagem?: string,
   enviadaPor?: string,
+  /**
+   * O id que o Telegram devolve, quando o envio passou por aqui.
+   *
+   * É o que permite apagar ou editar o post depois (migration 44). O
+   * laço automático já guardava; a tela recebia o número em
+   * `ResultadoDoEnvio.messageId` e jogava fora, então post saído pelo
+   * botão não tinha como ser removido. Foi descoberto do jeito caro:
+   * um perfume feminino no canal masculino, sem como tirar.
+   *
+   * Fica opcional porque "já enviei por fora" não tem id nenhum para
+   * dar, e isso é verdade, não omissão.
+   */
+  telegramMessageId?: number | null,
 ): Promise<void> {
   const db = supabaseServidor();
 
@@ -375,6 +388,7 @@ export async function marcaEnviada(
       enviada_em: new Date().toISOString(),
       enviada_por: enviadaPor ?? null,
       ...(mensagem ? { mensagem } : {}),
+      ...(telegramMessageId != null ? { telegram_message_id: telegramMessageId } : {}),
       cancelada_em: null,
     })
     .eq("id", id);

@@ -118,7 +118,9 @@ export async function publicaLoteTelegram(form: FormData): Promise<void> {
     // canal mudo, que é o pior desfecho possível.
     if (!envio.ok) continue;
 
-    await marcaEnviada(publicacao.id, "fluxo", texto, usuario?.id);
+    // O `messageId` é guardado aqui pelo mesmo motivo do laço
+    // automático: sem ele não há como apagar o post depois.
+    await marcaEnviada(publicacao.id, "fluxo", texto, usuario?.id, envio.messageId);
   }
 
   revalidatePath("/publicar");

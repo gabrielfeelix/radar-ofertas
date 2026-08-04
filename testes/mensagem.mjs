@@ -331,6 +331,152 @@ confere(
   !cupomSeco.includes("\n\n\n"),
 );
 
+// =============================================================
+// Escape de HTML — a mensagem sai com `parse_mode: "HTML"`
+//
+// A API do Telegram exige que `<`, `>` e `&` que não sejam tag ou
+// entidade virem `&lt;`, `&gt;` e `&amp;`. Duas entradas quebram essa
+// regra sozinhas e nenhuma delas é rara:
+//
+//   1. título de marketplace com "&" ("Shampoo & Condicionador")
+//   2. o link da Shopee e o da Amazon, que desde a migration 49 vão
+//      dentro de href="..." e separam parâmetros com "&"
+//
+// O que NÃO pode acontecer é o oposto: escapar o corpo do modelo, que
+// tem HTML de propósito. Os dois lados estão testados aqui.
+// =============================================================
+
+console.log("\nescape de HTML para o Telegram\n");
+
+// O corpo real depois da migration 49, com a âncora que o dono edita.
+const MODELO_HTML = {
+  corpo: [
+    "#publi · {loja}",
+    "",
+    "🔥 <b>{produto}</b>",
+    "",
+    "De <s>{preco_antes}</s> por {preco} (−{desconto}%)",
+    "{lastro}",
+    "",
+    "{vendedor}",
+    "{nota}",
+    "",
+    '🛒 <a href="{link}">Compre aqui</a>',
+  ].join("\n"),
+  lastroCom: "Menor preço em {janela} dias.",
+  lastroSem: "Menor preço que observamos desde {desde}.",
+  lastroQueda: "⚡ Caiu nas últimas horas: vimos o preço mudar.",
+  lastroDeclarado: "",
+  notaPrefixo: "💬",
+};
+
+const LINK_SHOPEE =
+  "https://s.shopee.com.br/an_redir?origin_link=https%3A%2F%2Fshopee.com.br%2Fp%2F1" +
+  "&affiliate_id=18378371108&sub_id=a1b2c3d4----";
+
+const comEntradaSuja = montaMensagem(MODELO_HTML, {
+  produto: "Kit Shampoo & Condicionador Cães <Filhotes> 2x500ml",
+  precoCentavos: 3990,
+  precoAntesCentavos: 7990,
+  descontoPct: 50,
+  loja: "Shopee",
+  vendedor: "Casa & Cia",
+  janelaDias: 30,
+  observadoDesde: "2026-07-20",
+  podeAfirmarMinimo: false,
+  gatilho: "declarado",
+  notaDoCurador: "rende 2x mais que o <comum>",
+  link: LINK_SHOPEE,
+});
+
+/*
+  A conferência é feita sobre o texto SEM as tags que o modelo pôs.
+  Procurar "<" no texto inteiro acusaria o próprio `<b>`, que é legítimo
+  e tem que continuar lá.
+*/
+const semTagsDoModelo = comEntradaSuja.replace(
+  /<\/?(a|b|i|u|s|code|pre|blockquote)\b[^>]*>/g,
+  "",
+);
+
+confere(
+  "o `&` do título vira entidade",
+  comEntradaSuja.includes("Shampoo &amp; Condicionador"),
+);
+confere(
+  "o `<` do título vira entidade",
+  comEntradaSuja.includes("&lt;Filhotes&gt;"),
+);
+confere("o `&` do vendedor vira entidade", comEntradaSuja.includes("Casa &amp; Cia"));
+confere("o `<` da nota do curador vira entidade", comEntradaSuja.includes("&lt;comum&gt;"));
+confere(
+  "não sobra `<` cru fora das tags do modelo",
+  !/</.test(semTagsDoModelo),
+);
+/*
+  O LINK FICA CRU, DE PROPÓSITO, e este teste existe para ninguém
+  "consertar" isso sem medir antes.
+
+  Em 04/08, 212 publicações de Shopee saíram com `&` cru dentro do href
+  e todas foram aceitas pelo Telegram. Escapar seria seguir a
+  especificação, mas ninguém provou que ele decodifica `&amp;` de volta
+  dentro do atributo — e se não decodificar, o destino lê
+  `amp;affiliate_id` e a comissão não é atribuída. Post bonito, zero
+  real.
+
+  Trocar isto exige mandar as duas formas para um canal de rascunho com
+  o bot de verdade e comparar a URL que chega.
+*/
+const href = comEntradaSuja.match(/href="([^"]*)"/)?.[1] ?? "";
+confere("o href existe", href.length > 0);
+confere("o link atravessa exatamente como entrou", href === LINK_SHOPEE);
+confere("o `&` do link continua cru", href.includes("&affiliate_id="));
+
+// O outro lado da regra: o modelo é do dono e o HTML dele fica.
+confere("a tag <b> do modelo sobrevive", comEntradaSuja.includes("<b>"));
+confere("a tag <s> do modelo sobrevive", comEntradaSuja.includes("<s>"));
+confere(
+  "a âncora do modelo sobrevive inteira",
+  /<a href="[^"]+">Compre aqui<\/a>/.test(comEntradaSuja),
+);
+
+// Mercado Livre é o caminho que roda hoje, e não pode mudar de forma.
+const comLinkDoML = montaMensagem(MODELO_HTML, {
+  produto: "Tapete Higiênico 80x60",
+  precoCentavos: 8990,
+  precoAntesCentavos: 14990,
+  descontoPct: 40,
+  loja: "Mercado Livre",
+  vendedor: "PetShop Oficial",
+  janelaDias: 30,
+  observadoDesde: "2026-06-14",
+  podeAfirmarMinimo: true,
+  link: "https://meli.la/1QPWrnS",
+});
+
+confere(
+  "link do ML atravessa sem mudar (não tem `&` para escapar)",
+  comLinkDoML.includes('href="https://meli.la/1QPWrnS"'),
+);
+
+// E o post de cupom, que lê texto de canal alheio.
+const cupomSujo = montaMensagemDeCupom(MODELO_CUPOM, {
+  codigo: "FULL<31>08",
+  loja: "Casa & Cia",
+  percentual: 25,
+  minimoCentavos: 5000,
+  tetoCentavos: 2000,
+  onde: "Casa & Construção",
+  validade: "2026-08-01",
+});
+
+confere("cupom: código escapado", cupomSujo.includes("FULL&lt;31&gt;08"));
+confere("cupom: loja escapada", cupomSujo.includes("Casa &amp; Cia"));
+confere(
+  "cupom: nenhum `&` solto",
+  !/&(?!(amp|lt|gt|quot);)/.test(cupomSujo),
+);
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
