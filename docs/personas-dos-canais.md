@@ -29,7 +29,14 @@ um é título real, com o preço com que saiu.
 Eles pesam mais que qualquer erro de curadoria individual, porque nenhum
 acerto de produto sobrevive a eles.
 
-### G-01 · O volume é o problema número um, e não é perto
+### G-01 · O volume, a madrugada, e a configuração que mente
+
+> **Revisto em 04/08.** A versão original desta seção dizia que o volume era
+> o problema número um. A leitura de quatro concorrentes
+> (`docs/concorrentes-lidos.md`) derrubou isso: eles postam a cada 4 ou 5
+> minutos e o alcance entre eles varia dez vezes, então cadência não é a
+> variável. O que sobra desta seção é a madrugada e a contradição entre a
+> coluna `horarios_permitidos` e o que o publicador faz.
 
 Radar Tech e Radar Kids publicaram **155 e 156 vezes em 04/08**. Isso é uma
 mensagem a cada nove minutos, das sete da manhã à meia-noite, em dois grupos
@@ -500,9 +507,10 @@ O template atual:
 
 Ordenado por dano evitado, não por esforço.
 
-1. **Derrubar o teto de 150 e fazer o publicador respeitar
-   `horarios_permitidos`.** Nenhum outro conserto importa se a pessoa
-   silenciou o grupo. (G-01)
+1. **Fazer configuração e comportamento concordarem sobre horário.** A
+   coluna `horarios_permitidos` diz `[7, 12, 20]` e o publicador não a lê.
+   Qual número é o certo é outra conversa, e ela precisa de clique medido.
+   (G-01)
 2. **Achar a origem dos instrumentos musicais no Geek.** Um terço de um
    canal inteiro, num roteamento só. (Geek)
 3. **Escrever nota do curador nos produtos que forem publicar hoje**, mesmo
