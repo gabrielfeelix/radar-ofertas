@@ -159,16 +159,27 @@ parâmetro de `expira_ofertas`. **Não invente um segundo limiar aqui.**
 então dá para auditar, mas análise que compare publicação com oferta lê
 o preço velho. Coluna nova pede migration, e migration pede o dono.
 
-### 2.2 `global_item_attributes` como fonte de atributo
+### 2.2 `global_item_attributes` — FECHADO em 04/08, e recusado (D-068)
 
-O feed da API tem esse campo; o CSV não. Se ele trouxer gênero, ele é
-**melhor que a heurística de título** que a D-063 precisou inventar.
+**Não faça.** A premissa deste item era que o atributo da loja vence a
+leitura de título. **Medido nas 10 mil linhas do feed, é o contrário:**
 
-**Confira primeiro se ele traz `GENDER`.** Se trouxer, a leitura de
-título (`lib/genero-pelo-titulo.ts`) vira rede de segurança em vez de
-fonte — e a ordem de precedência tem que ser: atributo da loja > título.
-O módulo já não sobrescreve atributo existente, então a mudança é de
-quem escreve primeiro.
+```
+o título resolve ............ 1.091
+  e o atributo está calado ..   888  (81%)
+  concordam .................   159
+  DISCORDAM .................    44   ← e o título ganha nas 44
+```
+
+Nas 44, o atributo diz `Unisex` para título explícito ("Camiseta de
+Compressão **Masculina**", "Tênis **Feminino**"). O vendedor preenche o
+campo por obrigação e escolhe a opção que dá menos trabalho.
+
+E ele só existe no `feed_brasil`, que é o feed **sem `shop_rating`** —
+descartado pela D-066, porque item sem reputação é reprovado depois de
+qualquer jeito.
+
+Número, prova e o que mudaria a decisão: **D-068**.
 
 ### 2.3 `conversionReport` — é isto que fecha a Fase 0
 
