@@ -213,8 +213,37 @@ const CANAIS = [
 ];
 
 /** Espelha o Radar Pet, que é o único canal com operação medida. */
-const TETO = 50;
-const HORARIOS = [7, 12, 20];
+/*
+ * O TETO E OS HORÁRIOS SÓ VALEM PARA CANAL NOVO, e isso mudou em
+ * 04/08 depois de eu quebrar a produção com este arquivo.
+ *
+ * O QUE ACONTECEU: rodei o script para cadastrar o Radar Casa e ele
+ * reescreveu os campos de TODOS os canais, como sempre fez. Só que os
+ * números aqui eram os de 01/08, e a operação tinha andado:
+ *
+ *   teto      300 → 50    (subiu para 150 na migration 54 e depois 300)
+ *   horários  24h → 7,12,20
+ *
+ * Seis canais passaram a poder publicar só três horas por dia. Nada
+ * foi perdido porque a rodada seguinte não chegou a acontecer, mas foi
+ * sorte, não desenho.
+ *
+ * É O MESMO DEFEITO TRÊS VEZES NO MESMO DIA: declaração antiga
+ * atropelando ajuste posterior. Antes foi a migration 66 apagando as
+ * correções da 56 e da 57, depois foi o `games` do Radar Tech que
+ * sumiria desta lista, e agora o teto.
+ *
+ * A REGRA QUE SAI DISSO: este arquivo é dono da IDENTIDADE e do
+ * ROTEAMENTO do canal — nome, chat, etiqueta, nichos e filtros. Ele
+ * NÃO é dono do ajuste operacional, que é medido em produção e mora no
+ * banco. Teto e horário entram só no `insert`, para o canal novo
+ * nascer com um padrão razoável, e nunca no `update`.
+ *
+ * Os valores abaixo são os que os sete canais usam hoje, para o
+ * próximo canal nascer igual aos irmãos em vez de mais apertado.
+ */
+const TETO = 300;
+const HORARIOS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23];
 
 async function main() {
   const { data: operacao } = await db.from("operacao").select("id").limit(1).single();
@@ -248,9 +277,15 @@ async function main() {
       plataforma: "telegram",
       telegram_chat_id: canal.chat,
       etiqueta_afiliado: canal.etiqueta,
+      ativo: true,
+    };
+
+    // Só no nascimento. Ver o comentário de `TETO`: reescrever isso num
+    // canal que já existe apaga ajuste medido em produção.
+    const camposDeNascimento = {
+      ...campos,
       posts_por_dia_max: TETO,
       horarios_permitidos: HORARIOS,
-      ativo: true,
     };
 
     if (SECO) {
@@ -269,7 +304,11 @@ async function main() {
     if (canalId) {
       await db.from("canal").update(campos).eq("id", canalId);
     } else {
-      const { data: criado, error } = await db.from("canal").insert(campos).select("id").single();
+      const { data: criado, error } = await db
+        .from("canal")
+        .insert(camposDeNascimento)
+        .select("id")
+        .single();
       if (error) {
         console.error(`✗ ${canal.nome}: ${error.message}`);
         process.exitCode = 1;
