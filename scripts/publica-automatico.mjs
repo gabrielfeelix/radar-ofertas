@@ -1247,11 +1247,51 @@ async function melhorPrateleira(db, oferta) {
     );
   }
 
-  const { data: pendentes } = await db
-    .from("publicacao")
-    .select(`id, subid, canal_id, link_afiliado, oferta:oferta_id ( ${SELECAO} )`)
-    .eq("estado", "pendente")
-    .order("criado_em");
+  /*
+    POR CANAL, E COM TETO, e antes era uma consulta só para todos.
+
+    ISTO ESTAVA MATANDO METADE DOS CANAIS, e em silêncio. A consulta
+    pedia todas as publicações pendentes de uma vez, ordenadas por data
+    de criação, e o PostgREST corta em 1.000 linhas sem avisar que
+    cortou. Com 4.005 pendentes, o publicador só enxergava as 1.000 mais
+    ANTIGAS — e nelas apareciam só quatro dos oito canais.
+
+    Medido em 04/08, à noite, quando o Radar Casa nasceu e não publicava:
+    a primeira publicação dele estava na posição 3.997 da fila, e a
+    milésima era de três horas antes. Ele nunca era considerado. O mesmo
+    valia para Pet, Geek e Perfumes, que passavam rodadas mudos enquanto
+    Beauty, Kids, Tech e Fitness levavam tudo.
+
+    O sintoma é cruel: canal mudo com fila cheia parece falta de oferta
+    ou ritmo apertado, que foram as duas primeiras coisas que eu fui
+    conferir. É o mesmo defeito que o `coleta-mercado-livre.mjs` já
+    documenta, e lá também só apareceu quando a base passou de mil.
+
+    Consultar POR CANAL resolve os dois lados: cada um recebe a própria
+    fatia, e o teto por canal impede que a consulta cresça junto com o
+    represamento. Cem é folga larga — numa rodada o canal mais ativo
+    publicou 60, e a intercalação por variedade só precisa de material
+    suficiente para alternar.
+  */
+  const PENDENTES_POR_CANAL = Number(process.env.PENDENTES_POR_CANAL ?? 100);
+
+  const pendentesDoCanal = new Map();
+  for (const canal of doTelegram) {
+    const { data, error } = await db
+      .from("publicacao")
+      .select(`id, subid, canal_id, link_afiliado, oferta:oferta_id ( ${SELECAO} )`)
+      .eq("estado", "pendente")
+      .eq("canal_id", canal.id)
+      .order("criado_em")
+      .limit(PENDENTES_POR_CANAL);
+
+    if (error) {
+      console.log(`  ✗ fila de ${canal.nome}: ${error.message}`);
+      pendentesDoCanal.set(canal.id, []);
+      continue;
+    }
+    pendentesDoCanal.set(canal.id, data ?? []);
+  }
 
   const filaDoCanal = new Map();
 
@@ -1277,7 +1317,7 @@ async function melhorPrateleira(db, oferta) {
 
     // As ofertas do canal, intercaladas para não sair oito parecidas em
     // sequência (o mesmo motivo de `lib/variedade.ts`).
-    const minhas = (pendentes ?? []).filter((p) => p.canal_id === canal.id && p.oferta?.anuncio);
+    const minhas = (pendentesDoCanal.get(canal.id) ?? []).filter((p) => p.oferta?.anuncio);
     const emOrdem = intercalaPorVariedade(
       minhas.map((p) => ({
         grupo: p.oferta?.anuncio?.produto?.nicho_id ?? null,
