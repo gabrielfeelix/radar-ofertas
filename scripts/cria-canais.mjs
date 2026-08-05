@@ -36,6 +36,21 @@
  *
  *   curl -s "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getUpdates"
  *
+ * COMO CONFERIR A ETIQUETA ANTES DE CADASTRAR O CANAL, e vale fazer
+ * sempre: gere um link de teste com ela pelo `geraLinks`. Foi assim que
+ * o Radar Casa pegou a pendência no minuto zero, em 04/08:
+ *
+ *   radarpet   → https://meli.la/29ZfrSB
+ *   radarcasa  → Tag is not associated with this affiliate
+ *
+ * O dono criou a etiqueta na Central na mesma hora e o teste passou a
+ * devolver link. Sem essa conferência o canal teria nascido publicando
+ * só Shopee, e o silêncio do Mercado Livre pareceria falta de oferta.
+ *
+ * NÃO reaproveite uma etiqueta de outro canal para "destravar": a
+ * atribuição é POR ETIQUETA (D-035), e casa vendendo como `radarpet`
+ * estraga o único número que a Fase 0 existe para obter.
+ *
  * A ETIQUETA PRECISA EXISTIR NA CENTRAL DE AFILIADOS. Inventar uma
  * devolve `Tag is not associated with this affiliate` (código 109) e o
  * canal fica mudo sem link. É ela que atribui a comissão ao canal
@@ -94,7 +109,21 @@ const CANAIS = [
     nome: "Radar Tech",
     chat: "@radartech1",
     etiqueta: "radartech",
-    nichos: ["eletronico"],
+    /*
+      `games` entrou pela migration 56, em 03/08, e ESTAVA FALTANDO
+      AQUI. A lista deste arquivo é reescrita por inteiro a cada
+      execução, então rodar o script teria apagado o `games` do Tech e
+      desfeito aquela migration — sem erro, sem aviso, e só apareceria
+      no dia em que um jogo deixasse de sair no canal.
+
+      Achado em 04/08 ao cadastrar o Radar Casa: o ensaio dizia
+      `Radar Tech → eletronico` e o banco dizia `eletronico, games`.
+
+      A lição é do arquivo inteiro: quando a declaração reescreve em vez
+      de conciliar, migration que mexe no mesmo dado TEM que voltar para
+      cá no mesmo dia, senão a próxima execução desfaz.
+    */
+    nichos: ["eletronico", "games"],
   },
   {
     nome: "Radar Geek",
@@ -153,6 +182,33 @@ const CANAIS = [
       */
       { atributo: "GENDER", valores: ["Masculino"], modo: "inclui", exige: true, nicho: "perfume" },
     ],
+  },
+  {
+    nome: "Radar Casa",
+    chat: "@radarcasa_promo",
+    etiqueta: "radarcasa",
+    /*
+      Aberto pelo dono em 04/08, à noite, e ele fecha a maior lacuna
+      que restava: `casa` era o segundo nicho com mais oferta perdida
+      por não ter onde publicar, atrás só de eletrônico.
+
+      O catálogo já está lá: 2.347 anúncios, e 87% deles são da Shopee
+      (2.050 contra 289 do Mercado Livre e 8 da Amazon).
+
+      A etiqueta `radarcasa` não existia quando o canal foi cadastrado,
+      e o dono a criou na Central no mesmo minuto. Conferida com um
+      anúncio de casa de verdade, e o produto do teste diz muito sobre
+      por que este canal precisava existir: "Mangueira De Jardim 10m",
+      que é literalmente o item que o comentário do Radar Geek cita como
+      o que ia parar no Radar Pet por falta de canal de casa.
+
+      NÃO LEVA `ferramenta` NEM `mercado`, e os dois são decisão e não
+      esquecimento. Material de construção fica dentro de `casa` por
+      decisão do dono em 04/08, então `ferramenta` não é o que sobrou
+      dele. E "Cozinha" no nome do grupo é panela e organizador, que é
+      `casa`; `mercado` é comida, que é outro canal quando existir.
+    */
+    nichos: ["casa"],
   },
 ];
 
