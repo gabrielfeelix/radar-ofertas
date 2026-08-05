@@ -420,7 +420,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: canais } = await db
     .from("canal")
     .select(
-      "id, nome, plataforma, telegram_chat_id, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
+      "id, nome, plataforma, telegram_chat_id, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
     )
     .eq("ativo", true);
 
@@ -1437,6 +1437,71 @@ async function melhorPrateleira(db, oferta) {
   for (const canal of canais ?? []) {
     const saiu = enviadasHoje[canal.id] ?? 0;
     console.log(`  ${canal.nome}: ${saiu}/${canal.posts_por_dia_max ?? "sem teto"} hoje`);
+  }
+
+  /*
+    A AUDIÊNCIA, LIDA DO TELEGRAM EM VEZ DE DIGITADA À MÃO.
+
+    `canal.membros_estimados` existe desde 27/07 e é preenchida pelo
+    formulário de canal do painel. Ninguém preencheu: em 04/08 estava
+    nula em seis dos sete canais e zero no sétimo, e as telas `/canais`
+    mostravam "0 pessoas" para grupos que tinham gente dentro.
+
+    O bot é administrador dos sete e `getChatMemberCount` responde na
+    hora, então o número certo estava a uma chamada de distância o tempo
+    todo.
+
+    POR QUE AQUI, no fim da rodada: o publicador já fala com a Bot API a
+    cada 5 minutos e já tem a lista de canais na mão. Rotina nova para
+    isso seria mais uma coisa para o agendador não disparar (D-052).
+
+    ISTO NÃO DECIDE NADA, e é bom que não decida: conferido em 04/08,
+    `membros_estimados` só é exibida em `/canais` e `/canais/[id]`. Não
+    entra em ritmo, teto nem curadoria. Se a leitura falhar, o valor
+    velho fica e nada mais é afetado — por isso o erro só é anotado.
+
+    O NÚMERO É PEQUENO E ISSO É O PONTO. São 36 pessoas nos sete grupos,
+    e quase todas são família do dono. É exatamente o estado que precisa
+    estar gravado ANTES de qualquer divulgação, senão não há como saber
+    o que ela comprou (D-056).
+  */
+  for (const canal of doTelegram) {
+    if (!canal.telegram_chat_id) continue;
+
+    try {
+      const r = await fetch(
+        `${TELEGRAM}/bot${process.env.TELEGRAM_BOT_TOKEN}/getChatMemberCount` +
+          `?chat_id=${encodeURIComponent(canal.telegram_chat_id)}`,
+        { signal: AbortSignal.timeout(15_000) },
+      ).then((x) => x.json());
+
+      if (!r?.ok || typeof r.result !== "number") {
+        console.log(`  ✗ audiência ${canal.nome}: ${r?.description ?? "resposta sem número"}`);
+        continue;
+      }
+
+      // Grava só quando muda, que é a lição da D-037: escrever o mesmo
+      // valor de 5 em 5 minutos é 99% de escrita desperdiçada.
+      if (r.result === canal.membros_estimados) continue;
+
+      const { error } = await db
+        .from("canal")
+        .update({ membros_estimados: r.result, atualizado_em: new Date().toISOString() })
+        .eq("id", canal.id);
+
+      if (error) {
+        console.log(`  ✗ audiência ${canal.nome}: ${error.message}`);
+        continue;
+      }
+
+      const antes = canal.membros_estimados;
+      console.log(
+        `  audiência ${canal.nome}: ${antes ?? "nunca lida"} → ${r.result}` +
+          (typeof antes === "number" ? ` (${r.result > antes ? "+" : ""}${r.result - antes})` : ""),
+      );
+    } catch (e) {
+      console.log(`  ✗ audiência ${canal.nome}: ${e.message}`);
+    }
   }
 
   /*
