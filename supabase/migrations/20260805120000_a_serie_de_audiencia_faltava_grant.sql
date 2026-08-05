@@ -1,0 +1,31 @@
+-- =============================================================
+-- 70 · A serie de audiencia faltava `grant`
+--
+-- DEFEITO MEU NA MIGRATION 69, e ele so apareceu porque o codigo foi
+-- testado contra Postgres de verdade antes de subir.
+--
+-- A 69 criou `canal_audiencia`, ligou RLS e escreveu a policy de
+-- leitura, mas nao deu `grant` nenhum. O `insert` da propria migration
+-- funcionou e escondeu o problema: migration roda como `postgres`, que
+-- e dono da tabela. O publicador roda como `service_role` e levava
+--
+--   permission denied for table canal_audiencia
+--
+-- A ARMADILHA E O `grant ... on ALL TABLES IN SCHEMA public` da
+-- migration 11. Ele parece uma regra permanente e nao e: vale para as
+-- tabelas que existiam NAQUELE momento. Toda tabela criada depois
+-- precisa do proprio `grant`, e e por isso que as tabelas de 01/08
+-- (`cupom_prefixo`, `cupom_publicado`) trazem as duas linhas cada uma.
+-- Eu li a migration 11 e li errado.
+--
+-- O ESTRAGO SERIA MUDO, que e a parte que interessa. A gravacao da
+-- serie vem DEPOIS do update de `canal.membros_estimados`, entao o
+-- painel continuaria mostrando o numero certo e so uma linha de log
+-- diria que a memoria nao foi escrita. A serie ficaria com as sete
+-- linhas de partida e mais nada, para sempre, e a gente so descobriria
+-- ao tentar comparar antes e depois de uma divulgacao — que e
+-- exatamente o dia em que nao daria mais para consertar o passado.
+-- =============================================================
+
+grant select on public.canal_audiencia to authenticated;
+grant all    on public.canal_audiencia to service_role;

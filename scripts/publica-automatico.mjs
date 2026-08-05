@@ -420,7 +420,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: canais } = await db
     .from("canal")
     .select(
-      "id, nome, plataforma, telegram_chat_id, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
+      "id, operacao_id, nome, plataforma, telegram_chat_id, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
     )
     .eq("ativo", true);
 
@@ -1484,6 +1484,8 @@ async function melhorPrateleira(db, oferta) {
       // valor de 5 em 5 minutos é 99% de escrita desperdiçada.
       if (r.result === canal.membros_estimados) continue;
 
+      const antes = canal.membros_estimados;
+
       const { error } = await db
         .from("canal")
         .update({ membros_estimados: r.result, atualizado_em: new Date().toISOString() })
@@ -1494,7 +1496,26 @@ async function melhorPrateleira(db, oferta) {
         continue;
       }
 
-      const antes = canal.membros_estimados;
+      /*
+        A MEMÓRIA, e ela é o motivo de tudo isto existir.
+
+        `canal.membros_estimados` responde "quantos são agora", que é o
+        que as telas mostram. Esta linha responde "quantos eram quando",
+        que é o que permite dizer o que uma divulgação comprou (D-056).
+
+        Vem DEPOIS do update de propósito: se a série falhar, o número
+        na tela já está certo. Ao contrário, um erro aqui deixaria o
+        painel desatualizado por causa da memória, que é secundária.
+      */
+      const { error: erroSerie } = await db.from("canal_audiencia").insert({
+        operacao_id: canal.operacao_id,
+        canal_id: canal.id,
+        membros: r.result,
+        membros_antes: antes ?? null,
+      });
+
+      if (erroSerie) console.log(`  ✗ série de audiência ${canal.nome}: ${erroSerie.message}`);
+
       console.log(
         `  audiência ${canal.nome}: ${antes ?? "nunca lida"} → ${r.result}` +
           (typeof antes === "number" ? ` (${r.result > antes ? "+" : ""}${r.result - antes})` : ""),
