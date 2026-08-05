@@ -2805,3 +2805,257 @@ precedência tem que ser decidida pelo número, não por parecer.
 **O canal de perfume masculino continua dependendo do título**, e o que
 o destrava é catálogo, não atributo: a D-066 levou a entrada diária dele
 de 9 para 121 itens.
+
+---
+
+## D-069 · A divulgação começa pelo Beauty, e o primeiro dinheiro vai para post pago no Telegram
+**Data:** 2026-08-05
+
+Primeira decisão de **distribuição** do projeto. Todas as anteriores
+eram de sistema, e o sistema deixou de ser o gargalo em 03/08 (D-056).
+
+O dono tem R$200 disponíveis no quinto dia útil (07/08) e já está
+fazendo a parte dele fora do repositório: trocou títulos e descrições
+dos grupos, criou links de convite, divulga para amigos e vai colar
+cartaz em ponto de ônibus. **Nada disso estava escrito em lugar nenhum**,
+e por isso três sessões seguidas de agente disseram "o gargalo é
+audiência e ninguém está atacando". O registro é parte da decisão.
+
+### Qual canal empurrar: Beauty
+
+Oito canais, e a pergunta era qual divulgar. A resposta não é escolher
+entre oito: é **empurrar um por vez**. Canal parado não custa nada, o
+sistema enche os oito sozinho, e o que é escasso é a atenção do dono e
+os R$200. Os outros sete seguem publicando e engordando catálogo.
+
+Medido no banco de produção em 05/08:
+
+| Canal | Posts | Ticket mediano | Mix de loja | Comissão estimada/venda |
+|---|---|---|---|---|
+| **Beauty** | 326 | R$75 | 58% Shopee | **~R$15** |
+| Tech | 478 | R$109 | 80% ML | ~R$11 |
+| Fitness | 156 | R$73 | 58% Shopee | ~R$10 |
+| Kids | 477 | R$66 | 55% ML | ~R$7 |
+| Pet | 190 | R$65 | 58% Shopee | ~R$7 |
+
+Beauty ganha por quatro motivos somados:
+
+1. **Comissão.** Beleza na Shopee paga até 30%, a maior faixa de
+   qualquer categoria em qualquer programa, e 58% dos posts do Beauty
+   são Shopee. Eletrônico na Shopee paga 1 a 4%: dez vezes menos na
+   mesma venda.
+2. **É consumível.** Shampoo se recompra em 45 dias, fone em três anos.
+   O inscrito de beleza tem valor recorrente.
+3. **Ticket de impulso.** R$75 de mediana se compra sem pesquisar. O
+   Tech tem mediana de R$109 mas média de R$393, então boa parte do
+   canal é item caro, com fase de pesquisa que estoura a janela de
+   cookie.
+4. **Não tem dominante.** No Tech competiríamos com o BenchPromos, 116
+   mil inscritos publicando especificação técnica em cada post
+   (`docs/concorrentes-lidos.md`). Em beleza não existe esse canal.
+
+### Onde vão os R$200: post pago em canal de Telegram, não Meta Ads
+
+O dono cogitou tráfego pago. **O número que decide: o Telegram tem 63%
+de penetração no Brasil** (`docs/mercado.md` §5). Mais de um terço de
+quem clica num anúncio do Instagram não tem o aplicativo instalado e
+não pode converter, mas o clique é pago igual. Some o atrito do pulo de
+plataforma (feed → navegador → "abrir no Telegram?" → talvez instalar),
+e é o funil de maior perda disponível.
+
+Post pago em canal de Telegram que já existe resolve os dois: a pessoa
+já tem o app e já provou que gosta de canal de oferta. Confirma a D-056,
+que já tinha decidido isso em 03/08 e não tinha sido executada.
+
+**Expectativa declarada antes de gastar, para não confundir decepção com
+fracasso:** 50 a 150 inscritos. Abaixo de 50, errou o canal ou a arte.
+Acima de 150, achou uma fonte e repete.
+
+### Os oito grupos ficam separados. Não há canal guarda-chuva
+
+Duas ideias de juntar foram levantadas e **as duas foram recusadas**.
+
+**Pasta compartilhável do Telegram** (um link que faz a pessoa entrar
+nos oito de uma vez). Existe e funciona. Recusada por duas razões: quem
+entra nos oito recebe 8 × 300 posts por dia e silencia ou sai no
+primeiro dia, e perde-se o sinal que mais importa agora, que é **qual
+nicho a pessoa escolheu**.
+
+**Canal vitrine** (um nono canal na frente, com os oito links fixados e
+teto de 5 posts por dia só das ofertas de nota alta). Proposto por mim
+como substituto da LP, e **recusado pelo dono**. Fica registrado porque
+a ideia vai voltar: ela resolvia o QR do cartaz sem construir página
+nenhuma, mas custava mais um canal para alimentar.
+
+E fica registrado o mal-entendido que a conversa desfez, porque ele é
+natural: **não dá para "jogar os grupos dentro" de um canal.** Canal do
+Telegram não é pasta. Os oito existem separados, sempre; o que se pode
+criar é mais um na frente, com links para eles.
+
+### Um Instagram, não oito, e ele se chama `@radar4yu`
+
+Oito contas é oito vezes o trabalho de conteúdo com zero seguidor em
+cada uma. Uma conta, bio apontando para a LP com os oito botões.
+
+**O nome não é escolha estética, e a pesquisa de 05/08 fechou a
+questão: "Radar de Ofertas" está lotado no Instagram.** Dez perfis com
+o nome, e `@radardeofertas.br` tem **27 mil seguidores**. Entrar como o
+décimo primeiro significa parecer cópia de um perfil maior, sumir na
+busca, e mandar quem escaneia o cartaz para o concorrente por engano.
+
+`radar4yu` não apareceu em nenhuma busca, e resolve três coisas de uma
+vez:
+
+1. **Já é a etiqueta da Amazon** (`radar4yu-20`).
+2. **Liga o produto à empresa**, que é o que a seção de marca do
+   `AGENTS.md` já tinha anotado como possibilidade de guarda-chuva.
+3. **Vai ter que casar com o domínio do redirecionador na Fase 2.**
+   Escolher outro nome agora obriga a trocar tudo depois.
+
+Alternativa considerada e preterida: `@radardepreco`, que diz melhor o
+diferencial (acompanhar preço, não repassar oferta) mas quebra a
+coerência com a Amazon e com a Fase 2.
+
+**A disponibilidade não foi conferida** — o Instagram exige login e
+nenhum agente consegue ver de fora. Conferir no aplicativo antes de
+decidir, e pegar TikTok e domínio junto.
+
+E o conteúdo dela **não** é achadinho, que é o que todo mundo posta: é a
+série de preço, que é a única coisa que concorrente nenhum tem. *"Esse
+hidratante tá R$29 hoje. Acompanhamos desde 12/07 e o menor que vimos
+foi R$27,90. Não é promoção, é o preço normal com nome de promoção."*
+Denunciar desconto falso presta serviço a quem nem compra, e é
+literalmente a razão de existir do projeto.
+
+### A LP não recebe tráfego pago
+
+Cada salto perde 30 a 50% das pessoas, e num teste de R$200 isso é
+metade do orçamento. Anúncio e post pago vão **direto** para o link de
+convite do canal.
+
+A LP existe para os dois lugares onde não cabem oito links: o QR do
+cartaz e a bio do Instagram. É uma página estática com oito botões, e
+leva o pixel do Meta desde o primeiro dia, porque cartaz e Instagram
+alimentam esse público de graça.
+
+### Link de convite por origem, e ele é atribuição de graça
+
+O Telegram conta quantas pessoas entraram por cada link de convite e
+mostra no painel de administrador. Um link por origem dá atribuição de
+divulgação **sem redirecionador, sem domínio e sem Fase 2**.
+
+Criados em 05/08 por `scripts/cria-links-de-convite.mjs`: 48 links, seis
+origens (`lp`, `instagram`, `cartaz-terminal`, `cartaz-centro`,
+`amigos`, `post-pago-1`) nos oito canais. Guardados em
+`.links-de-convite.json`, fora do Git.
+
+**O Bot API não devolve quantos entraram** por um link, e não há método
+para listar os que existem. A contagem se lê no aplicativo; a memória do
+que foi criado é o arquivo local. Vira tabela no banco quando a Fase 2
+trouxer o clique e a origem precisar casar com venda.
+
+### O que ficou conferido no caminho
+
+**As oito etiquetas de afiliado estão certas** (`radarbeauty`,
+`radartech`, `radarpet`…). A pendência de 01/08, em que o Beauty estava
+com `radargeral`, foi fechada. Qualquer venda vai dizer de qual canal
+veio, o que é pré-requisito para gastar dinheiro em divulgação.
+
+### O que NÃO foi decidido
+
+**O teto de 300 posts por dia fica.** Foi questionado por mim duas vezes
+(volume é o motivo de saída número um segundo `docs/pesquisa/sintese.md`,
+e o Esser Moda faz dez vezes o alcance do Em Análise no mesmo ritmo), e
+o dono manteve com o argumento de que canal de Telegram do ramo posta
+mais que isso. Fica registrado como decisão dele, com a medida que
+resolve: quando os primeiros cem inscritos entrarem pelo post pago,
+`canal_audiencia` mostra se eles ficam ou saem. Aí é dado, não opinião.
+
+**Mudaria se:** o post pago vier acima de R$4 por inscrito e a
+divulgação cruzada gratuita vier abaixo disso; ou se o Beauty converter
+pior que outro canal depois de ter audiência comparável.
+
+---
+
+## D-070 · Alcance se mede antes de comprar post, e inscrito é a métrica errada
+**Data:** 2026-08-05
+
+Consequência prática da D-069, e ela salvou dinheiro antes de gastar.
+
+**O mercado cobra post pago por INSCRITO.** Inscrito é a métrica errada,
+e a prova estava no próprio repositório desde 04/08: o BenchPromos tem
+116 mil inscritos e o Esser Moda tem 1.800, e o de 1.800 entrega mais
+gente por post.
+
+`scripts/mede-canal-alheio.mjs` lê a página pública `t.me/s/<canal>`,
+que mostra views por post, e devolve **views medianas ÷ inscritos**. Não
+precisa de bot, de login nem de permissão: é a mesma leitura que
+`descobre-fontes.mjs` já faz para colher oferta.
+
+### O que a medição achou nos 21 canais que o sistema já colhe
+
+| Canal | Inscritos | Views/post | Alcance |
+|---|---|---|---|
+| **@promoemcasa** | 6.190 | **1.505** | **24,3%** |
+| @nerdcupons | 39.800 | 8.115 | 20,4% |
+| @ModaEsser | 1.810 | 208 | 11,5% |
+| @cuponsoferta | 14.000 | 680 | 4,9% |
+| @promotop | 114.000 | 4.270 | 3,8% |
+| @BenchPromos | 116.000 | 3.585 | 3,1% |
+| @nerdofertas | 125.000 | 3.045 | 2,4% |
+| @cjpromos | 43.700 | 476 | 1,1% |
+| @pechinchou | 70.400 | 644 | 0,9% |
+| @promoloucas | 4.760 | 21 | 0,4% |
+| @emanalise | 1.160 | 5 | 0,4% |
+| @OfertasDoDia | 2.270 | 5 | 0,2% |
+
+**O @pechinchou é a armadilha inteira num caso só:** 70.400 inscritos e
+644 views. Cobrando por inscrito, ele é caro; entregando por view, ele é
+um dos piores da lista.
+
+**Recomendado para os R$200: `@promoemcasa`.** Seis mil inscritos é a
+faixa de preço certa, e 24,3% de alcance significa cerca de **1.500
+pessoas de verdade vendo o post**. Os de 100 mil entregam mais em
+absoluto e cobram muito acima do orçamento.
+
+**Ressalva registrada:** nenhum canal de beleza brasileiro com página
+pública foi encontrado para medir. O post de um canal de beleza vai
+sair, portanto, dentro de canal generalista de oferta. A aposta é que
+público de canal de oferta converte para outro canal de oferta, e ela
+**não está validada** — é o que o teste de sexta descobre.
+
+### A correção que a medição impôs à leitura de 04/08
+
+`docs/concorrentes-lidos.md` publicou que o BenchPromos tem **0,3%** de
+alcance. **Tem 3,1%**, dez vezes mais. O Esser Moda saiu de 7% para
+11,5%.
+
+A causa é a que aquele mesmo arquivo já avisava, em texto, ao lado do
+número: **view acumula com o tempo**, e a amostra tinha posts de minutos
+atrás. O script corrige usando a **mediana dos posts mais antigos** da
+página em vez da média de todos.
+
+**A conclusão daquela seção não muda, fica mais forte:** o Esser Moda
+faz mais de vinte vezes o alcance do Em Análise no mesmo ritmo, e foco
+continua sendo a variável, não cadência.
+
+**A lição de método vale mais que os números**, e é a terceira vez que
+este projeto a aprende: *a ressalva honesta escrita ao lado do número
+não impede ninguém de citar o número.* Ela só parou de enganar quando
+virou código.
+
+### Como usar
+
+```
+node scripts/mede-canal-alheio.mjs promoemcasa nerdcupons
+node scripts/mede-canal-alheio.mjs --arquivo=candidatos.txt
+```
+
+Faixas: abaixo de 1% não pague, 1 a 3% é o normal do ramo, acima de 5%
+é onde o dinheiro rende. Canal com menos de 500 inscritos é recusado de
+propósito, porque 2 views para 1 inscrito dá "200% de alcance" e mente
+com confiança.
+
+**Mudaria se:** o Telegram tirar a contagem de views da página pública,
+ou passar a exigir login nela. Aí a medição volta a depender de pedir
+print ao dono do canal, que é fonte interessada.

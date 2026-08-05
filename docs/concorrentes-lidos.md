@@ -33,6 +33,28 @@ horas; a do Esser Moda tem mais de três. Os números baixos estão
 subestimados. Mesmo assim o post do Em Análise das 15h55, com duas horas de
 vida, tem **11 views para 1.160 inscritos**.
 
+> **Medido de novo em 05/08, e a ressalva acima estava certa: o
+> BenchPromos não tem 0,3% de alcance, tem 3,1%.** Dez vezes mais.
+>
+> `scripts/mede-canal-alheio.mjs` lê a mesma página `t.me/s/` e usa a
+> **mediana dos posts mais antigos** da amostra em vez de todos, que é
+> onde a view já amadureceu. Com esse ajuste:
+>
+> | Canal | Antes (04/08) | Medido (05/08) |
+> |---|---|---|
+> | BenchPromos | 0,3% | **3,09%** |
+> | Esser Moda | 7% | **11,49%** |
+> | Em Análise | 0,6% | **0,43%** |
+>
+> **A conclusão da seção não muda, ela fica mais forte:** o Esser Moda
+> continua fazendo mais de vinte vezes o alcance do Em Análise no mesmo
+> ritmo, e foco continua sendo a variável. O que muda é o que se pode
+> chamar de ruim: **0,3% era artefato de medição, 0,43% é o número.**
+>
+> A lição de método é a de sempre neste projeto: a ressalva honesta
+> escrita ao lado do número não impede ninguém de citar o número. Ela
+> precisou virar código para parar de enganar.
+
 E os três postam no mesmo ritmo: **um post a cada 4 a 5 minutos**. O
 BenchPromos publicou 20 posts em 13 minutos (17h12 às 17h25).
 

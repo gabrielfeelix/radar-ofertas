@@ -154,7 +154,57 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 > Continuam intocáveis sem conversa apenas as que protegem a conta ou o
 > dinheiro: 3.1, 3.2, 3.3, 3.4 e 3.10.
 
-Atualizado em 04/08/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+Atualizado em 05/08/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+
+### 05/08/2026: a primeira decisão de divulgação (D-069)
+
+**Antes de dizer de novo que "o gargalo é audiência e ninguém está
+atacando", leia a D-069.** Três sessões seguidas disseram isso porque o
+trabalho de divulgação do dono acontece fora do repositório e não estava
+escrito em lugar nenhum. Ele trocou títulos e descrições dos grupos,
+divulga para amigos, vai colar cartaz em ponto de ônibus, e tem R$200
+para gastar em 07/08.
+
+O que ficou decidido: **empurrar o Beauty primeiro** (maior comissão por
+venda, ~R$15 contra ~R$7 do Pet, porque beleza na Shopee paga até 30%),
+**post pago em canal de Telegram e não Meta Ads** (63% de penetração do
+Telegram no Brasil significa pagar por clique de quem não tem o app),
+**um Instagram e não oito**, e **a LP não recebe tráfego pago** — ela
+serve ao QR do cartaz e à bio, que é onde não cabem oito links.
+
+**Os oito canais não são um problema a resolver.** Canal parado não
+custa nada e o sistema enche os oito sozinho. O que é escasso é a
+atenção do dono. Empurra-se um por vez.
+
+**48 links de convite por origem foram criados** em 05/08
+(`scripts/cria-links-de-convite.mjs`), seis origens por canal. O
+Telegram conta quem entrou por cada um e mostra no aplicativo: é
+atribuição de divulgação sem redirecionador e sem Fase 2. Os links vivem
+em `.links-de-convite.json`, fora do Git, que é a memória do script — o
+Bot API não lista links existentes, então **sem esse arquivo ele cria
+tudo duplicado**.
+
+**Os oito grupos ficam separados, e isso foi decidido, não esquecido.**
+Pasta compartilhável e canal guarda-chuva foram propostos e recusados
+(D-069). E não confunda: **canal do Telegram não é pasta, não dá para
+"jogar os grupos dentro" de um.**
+
+**O Instagram é um só e se chama `@radar4yu`** (D-069). "Radar de
+Ofertas" tem dez perfis no Instagram, um deles com 27 mil seguidores;
+entrar ali é virar cópia. `radar4yu` já é a etiqueta da Amazon e é o
+nome que o domínio do redirecionador da Fase 2 vai ter que casar.
+
+**Antes de comprar post pago, meça (D-070).** `scripts/mede-canal-alheio.mjs`
+lê `t.me/s/<canal>` e devolve views ÷ inscritos. O mercado cobra por
+inscrito e inscrito é a métrica errada: o `@pechinchou` tem 70 mil
+inscritos e 644 views por post. O recomendado para os R$200 é o
+`@promoemcasa`, com 6.190 inscritos e 24% de alcance.
+
+**E a medição corrigiu um número que este repositório publicou:** o
+BenchPromos não tem 0,3% de alcance, tem 3,1%. View acumula com o tempo,
+`docs/concorrentes-lidos.md` avisava disso em texto ao lado do número, e
+o número errado foi citado assim mesmo. A ressalva só parou de enganar
+quando virou código.
 
 ### 04/08/2026: revisão, e o que ela consertou
 

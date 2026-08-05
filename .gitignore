@@ -69,3 +69,10 @@ relatorios/
 .telas/
 .vercel
 .env*
+
+# mockups do brainstorm
+.superpowers/
+
+# Os links de convite por origem. Não são segredo, mas são a memória
+# do cria-links-de-convite.mjs: sem eles ele cria tudo de novo.
+.links-de-convite.json
