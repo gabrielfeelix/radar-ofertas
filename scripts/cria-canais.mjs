@@ -249,6 +249,8 @@ async function main() {
   const { data: operacao } = await db.from("operacao").select("id").limit(1).single();
   const { data: nichos } = await db.from("nicho").select("id, slug");
   const idDoNicho = new Map((nichos ?? []).map((n) => [n.slug, n.id]));
+  // O caminho de volta, para o ensaio poder dizer o nicho pelo nome.
+  const idParaSlug = new Map((nichos ?? []).map((n) => [n.id, n.slug]));
 
   for (const canal of CANAIS) {
     // Nicho que não existe é erro de digitação, e ele precisa doer
@@ -265,9 +267,18 @@ async function main() {
     // id muda quando o grupo vira supergrupo, e o script criaria um
     // segundo canal com o mesmo nome em vez de corrigir o primeiro.
     // Foi o que quase aconteceu em 01/08, ao abrir os grupos ao público.
+    /*
+      Traz TODOS os campos que o script escreve, e mais os nichos. Antes
+      trazia só `id, nome, telegram_chat_id`, e por isso o ensaio não
+      tinha como dizer que teto e horários mudariam: ele não sabia o que
+      estava lá.
+    */
     const { data: existente } = await db
       .from("canal")
-      .select("id, nome, telegram_chat_id")
+      .select(
+        "id, nome, plataforma, telegram_chat_id, etiqueta_afiliado, ativo, " +
+          "posts_por_dia_max, horarios_permitidos, canal_nicho ( nicho_id )",
+      )
       .eq("nome", canal.nome)
       .maybeSingle();
 
@@ -291,11 +302,54 @@ async function main() {
     if (SECO) {
       const acao = existente ? "atualizaria" : "criaria";
       const f = (canal.filtros ?? []).map((x) => `${x.atributo} ${x.modo} ${x.valores}`);
-      const mudouChat = existente && existente.telegram_chat_id !== canal.chat;
       console.log(
         `  ${acao.padEnd(10)} ${canal.nome.padEnd(24)} ${canal.chat.padEnd(16)} ${canal.etiqueta.padEnd(14)} ` +
-          `${canal.nichos.join("+")}${f.length ? ` · ${f}` : ""}${mudouChat ? `  (chat era ${existente.telegram_chat_id})` : ""}`,
+          `${canal.nichos.join("+")}${f.length ? ` · ${f}` : ""}`,
       );
+
+      /*
+        O ENSAIO DIZ O QUE MUDA, e não o que ele pretende. Esta parte
+        nasceu de um estrago em 04/08 e é a lição toda.
+
+        A versão anterior imprimia o estado desejado — nome, chat,
+        etiqueta, nichos — e ficava calada sobre teto e horários, que
+        ela também reescrevia. Rodei confiando nela e seis canais foram
+        de 300 posts e 24 horas para 50 posts e três horas.
+
+        E RODAR NO BANCO LOCAL NÃO TERIA PEGO, o que é o mais
+        importante daqui: o local está vazio, então o script criaria
+        oito canais novos e tudo pareceria certo. O defeito só existe
+        contra um banco onde o valor JÁ ERA outro. Ensaio que compara
+        com o que está lá pega; ambiente limpo não pega.
+
+        Por isso a comparação é campo a campo contra a linha real, e
+        `nichos` entra junto: foi assim que o `games` sumido do Radar
+        Tech apareceu, e ele é do mesmo tipo.
+      */
+      if (existente) {
+        const mudancas = [];
+
+        for (const [campo, novo] of Object.entries(campos)) {
+          if (campo === "operacao_id") continue;
+          const velho = existente[campo];
+          if (JSON.stringify(velho) !== JSON.stringify(novo)) {
+            mudancas.push(`${campo}: ${JSON.stringify(velho)} → ${JSON.stringify(novo)}`);
+          }
+        }
+
+        const nichosAgora = (existente.canal_nicho ?? [])
+          .map((cn) => idParaSlug.get(cn.nicho_id))
+          .filter(Boolean)
+          .sort();
+        const nichosNovos = [...canal.nichos].sort();
+        if (JSON.stringify(nichosAgora) !== JSON.stringify(nichosNovos)) {
+          mudancas.push(`nichos: ${nichosAgora.join("+") || "nenhum"} → ${nichosNovos.join("+")}`);
+        }
+
+        for (const m of mudancas) console.log(`               ⚠ ${m}`);
+        if (mudancas.length === 0) console.log(`               (nada muda)`);
+      }
+
       continue;
     }
 
