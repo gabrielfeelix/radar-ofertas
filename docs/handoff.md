@@ -112,6 +112,22 @@ comporta do backup não podia ser rodada localmente. A saída não foi
 "confiar na documentação", foi pôr o controle positivo dentro dela e
 disparar o workflow à mão.
 
+**NUNCA cite migration por número. Cite pelo nome do arquivo.** Em
+04/08 dois agentes trabalharam em paralelo e os dois numeraram contando
+os arquivos na hora de escrever. O resultado é que **"migration 64"
+aparece em comentário significando três coisas diferentes**:
+
+```
+o que eu chamei de 64   →  20260805040000_selo_do_vendedor_e_cupom_no_post
+o que o outro chamou    →  20260805060000_o_beauty_para_de_receber_aplique
+a contagem de verdade   →  20260805030000_a_folga_na_funcao_nao_funciona
+```
+
+O número só existe na cabeça de quem escreveu; o carimbo de data no nome
+do arquivo é único e não muda. Comentário antigo que diga "migration 55"
+provavelmente está certo, porque foi escrito quando havia um agente só.
+Comentário de 04/08 em diante, confira o nome antes de acreditar.
+
 **Migration que casa por emoji não se aplica.** Case sempre por
 variável (`{link}`, `{frete}`), nunca por enfeite que o painel edita.
 
