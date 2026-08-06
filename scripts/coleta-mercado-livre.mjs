@@ -111,6 +111,14 @@ const BUSCAS = [
   // Pet
   "racao cachorro", "racao gato", "tapete higienico", "antipulgas", "coleira cachorro",
   "brinquedo pet", "cama pet", "comedouro", "areia gato", "shampoo cachorro",
+  /*
+    BRINQUEDO DE PET, pedido do dono em 06/08. `brinquedo pet` sozinho
+    ja existia e trazia pouco: medido em 05/08, o catalogo tinha 6
+    brinquedos contra 275 antipulgas. Os termos abaixo procuram o
+    brinquedo pelo NOME dele, que e como a loja o anuncia.
+  */
+  "mordedor cachorro", "bolinha para cachorro", "brinquedo gato",
+  "corda mordedor", "ratinho catnip", "varinha gato", "brinquedo interativo pet",
   "petisco cachorro", "casinha cachorro", "arranhador gato", "caixa transporte pet",
   // Casa e cozinha
   "air fryer", "panela antiaderente", "jogo de cama", "toalha banho", "organizador",
@@ -120,6 +128,17 @@ const BUSCAS = [
   "fone bluetooth", "smartwatch", "carregador rapido", "cabo usb c", "power bank",
   "caixa de som bluetooth", "mouse sem fio", "teclado", "webcam", "ssd",
   "cartao de memoria", "suporte celular", "smart tv", "roteador wifi", "pen drive",
+  /*
+    CELULAR E NOTEBOOK FALTAVAM, e sao o que o dono pediu para o Tech em
+    06/08: *"quero que entre mais celulares tipo iphone, notebook"*.
+
+    A lista de eletronico era toda de acessorio -- fone, cabo, suporte,
+    cartao. Ticket alto nao entrava por busca nenhuma, e o canal de Tech
+    virava canal de cabo USB.
+  */
+  "iphone", "celular samsung", "celular motorola", "celular xiaomi",
+  "notebook", "notebook gamer", "macbook", "tablet",
+  "monitor gamer", "placa de video", "memoria ram", "processador",
   /*
     Os cinco blocos abaixo entraram em 01/08, com os canais de Fitness,
     Tech, Geek, Kids, Beauty e Perfumes.
@@ -189,6 +208,16 @@ const BUSCAS = [
   "lego", "boneca", "quebra cabeca", "pelucia", "carrinho de brinquedo",
   "patinete infantil", "massinha de modelar", "brinquedo educativo", "pista hot wheels", "nerf",
   // Geek e games
+  /*
+    ANIME, MANGA E IMPRESSAO 3D, pedidos pelo dono em 06/08: *"action
+    figure de animes la no de geek, mangas, impressao 3d de anime"*.
+
+    O que havia era generico ("action figure", "miniatura colecionavel")
+    e trazia sobretudo brinquedo de tabuleiro. Anime nao aparecia por
+    nenhum termo.
+  */
+  "action figure anime", "figure anime", "manga", "manga one piece",
+  "estatua anime", "nendoroid", "impressao 3d anime", "chaveiro anime",
   "action figure", "jogo de tabuleiro", "card game", "funko pop", "miniatura colecionavel",
   "controle ps5", "controle xbox", "headset gamer", "cadeira gamer", "jogo ps5",
   "nintendo switch jogo", "mousepad gamer", "kit modelismo", "album de figurinhas", "cubo magico",
