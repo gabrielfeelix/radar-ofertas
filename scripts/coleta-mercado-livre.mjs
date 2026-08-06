@@ -156,6 +156,28 @@ const BUSCAS = [
   "body splash", "colonia masculina", "deo colonia feminino", "eau de parfum",
   "perfume natura", "perfume boticario", "perfume granado", "perfume amadeirado",
   "kit perfume", "perfume 100ml", "lattafa", "armaf",
+  /*
+    MARCA POR NOME, pedido do dono em 06/08: *"nao tem como preferirmos
+    perfumes de marcas boas ou perfumes arabes? tbm marcas br tipo
+    natura, granado"*.
+
+    O canal ficou 30 horas mudo em 05/08 e a causa foi catalogo
+    esgotado: dos 112 masculinos, 60 estavam no bloqueio de 30 dias e os
+    outros 52 nao eram oferta. Preferir marca boa na hora de publicar
+    (`lib/marca-de-perfume.ts`) so ordena o que ja entrou; quem decide o
+    que ENTRA e esta lista.
+
+    Medido em 06/08: dos 393 produtos do nicho, 317 sao de marca que
+    ninguem reconhece, e Amakha Paris aparece mais que todas as outras
+    juntas. Termo de marca e o jeito mais barato de mudar isso, porque
+    a busca do ML procura por texto.
+  */
+  "perfume azzaro", "perfume paco rabanne", "perfume carolina herrera",
+  "perfume hugo boss", "perfume calvin klein", "perfume antonio banderas",
+  "perfume ferrari", "perfume lacoste", "perfume versace",
+  "perfume malbec boticario", "natura essencial masculino", "natura homem",
+  "perfume eudora", "perfume avon", "colonia granado",
+  "maison alhambra", "al haramain", "rasasi", "swiss arabian", "afnan",
   // Beleza
   "protetor solar", "hidratante corporal", "serum facial",
   "shampoo", "condicionador", "base maquiagem", "batom", "esmalte",

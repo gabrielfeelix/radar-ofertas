@@ -126,7 +126,11 @@ a contagem de verdade   →  20260805030000_a_folga_na_funcao_nao_funciona
 O número só existe na cabeça de quem escreveu; o carimbo de data no nome
 do arquivo é único e não muda. Comentário antigo que diga "migration 55"
 provavelmente está certo, porque foi escrito quando havia um agente só.
-Comentário de 04/08 em diante, confira o nome antes de acreditar.
+Comentário de 04/08 em diante, confira antes de acreditar — e desconfie
+especialmente de qualquer número entre 62 e 70.
+
+**A tabela de conversão está em `docs/migrations.md`**, gerada da ordem
+real dos arquivos. Regenere quando acrescentar migration.
 
 **Migration que casa por emoji não se aplica.** Case sempre por
 variável (`{link}`, `{frete}`), nunca por enfeite que o painel edita.

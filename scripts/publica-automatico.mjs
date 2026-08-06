@@ -42,6 +42,7 @@ import {
   podePublicarAgora,
 } from "../lib/ritmo.ts";
 import { intercalaPorVariedade } from "../lib/variedade.ts";
+import { pesoDaMarca } from "../lib/marca-de-perfume.ts";
 import { canalAceitaAtributos } from "../lib/canal-aceita.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
@@ -1318,13 +1319,38 @@ async function melhorPrateleira(db, oferta) {
     // As ofertas do canal, intercaladas para não sair oito parecidas em
     // sequência (o mesmo motivo de `lib/variedade.ts`).
     const minhas = (pendentesDoCanal.get(canal.id) ?? []).filter((p) => p.oferta?.anuncio);
-    const emOrdem = intercalaPorVariedade(
-      minhas.map((p) => ({
-        grupo: p.oferta?.anuncio?.produto?.nicho_id ?? null,
-        precoCentavos: p.oferta?.preco_atual_centavos ?? 0,
-        pub: p,
-      })),
-    ).map((x) => ({ tipo: "oferta", pub: x.pub }));
+    /*
+      MARCA BOA VAI PARA A FRENTE, e não exclui ninguém.
+
+      Pedido do dono em 06/08, olhando o canal de perfume: *"quase não
+      tá vindo coisa boa, só tá vindo body splash e perfume duvidoso...
+      não tem como preferirmos perfumes de marcas boas ou perfumes
+      árabes?"*. E o catálogo dá razão: dos 393 produtos do nicho, 317
+      são de marca que ninguém reconhece, com Amakha Paris à frente.
+
+      **Ordena, não filtra**, e a distinção é dele: *"não tem problema a
+      vir body splash"*. O canal já ficou 30 horas mudo por falta de
+      catálogo, e excluir marca desconhecida o calaria de vez.
+
+      A intercalação por variedade continua valendo DENTRO de cada
+      grupo, senão trocaríamos "oito Amakha seguidas" por "oito Azzaro
+      seguidos" — que é o mesmo defeito que `lib/variedade.ts` existe
+      para impedir.
+    */
+    const comMarca = (p) => pesoDaMarca(p.oferta?.anuncio?.produto?.titulo_canonico) > 0;
+    const paraFila = (lista) =>
+      intercalaPorVariedade(
+        lista.map((p) => ({
+          grupo: p.oferta?.anuncio?.produto?.nicho_id ?? null,
+          precoCentavos: p.oferta?.preco_atual_centavos ?? 0,
+          pub: p,
+        })),
+      ).map((x) => ({ tipo: "oferta", pub: x.pub }));
+
+    const emOrdem = [
+      ...paraFila(minhas.filter(comMarca)),
+      ...paraFila(minhas.filter((p) => !comMarca(p))),
+    ];
 
     fila.push(...emOrdem);
     filaDoCanal.set(canal.id, fila);
