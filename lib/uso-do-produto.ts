@@ -53,6 +53,39 @@ const INSUMO = [
   "caixa c/",
   "extensao de cilios",
   "para extensao",
+  /*
+    INSUMO E MOBILIÁRIO DE SALÃO, acrescentados em 10/08 depois de
+    medir as 180 publicações de beleza que já saíram. O filtro pegava
+    5 delas; estas 12 escapavam e chegavam ao grupo:
+
+      Schwarzkopf Igora Royal 12% Água Oxigenada 40 Volumes
+      K.Pro New Oxi 6% Oxidante 20 Volumes 900ml
+      Guanidina Extra Conditioning Relaxer Alisa e Relaxa
+      Lavatório De Cabelo Portátil Cuba Móvel Salão + Ducha
+      4 Rodinhas Dompel P/ Carrinhos Auxiliares Salão
+      Carrinho Auxiliar organizador 4 gavetas salão de beleza
+
+    Oxidante e água oxigenada em volumes são quimica de coloração
+    profissional: quem compra é cabeleireiro, e quem recebe no grupo
+    não sabe o que fazer com aquilo. Lavatório e carrinho são móveis.
+
+    "henna ... designer de sobrancelha" entra pelo mesmo motivo, e
+    exige as duas partes: henna de uso próprio existe e continua
+    passando.
+  */
+  "agua oxigenada",
+  "oxidante",
+  "volumes",
+  "guanidina",
+  "relaxer",
+  "po descolorante",
+  "descolorante",
+  "lavatorio",
+  "carrinho auxiliar",
+  "carrinho organizador",
+  "salao de beleza",
+  "cuba movel",
+  "designer de sobrancelha",
 ];
 
 /*

@@ -129,6 +129,29 @@ confere("agulha barra mesmo com o volume desligado",
 confere("o argumento chega por atributosComUso",
   atributosComUso("Panela De Pressao Inducao Ecoglide 4,2l", null, false) === null);
 
+/*
+  INSUMO E MOBILIARIO DE SALAO, medidos em 10/08 nas 180 publicacoes de
+  beleza que ja tinham saido. O filtro pegava 5; estes chegavam ao grupo.
+*/
+console.log("\ninsumo e mobiliario de salao\n");
+confere("agua oxigenada 40 volumes barra", ehSuprimentoProfissional("Schwarzkopf Professional Igora Royal 12% - Agua Oxigenada 40 Volumes", true));
+confere("oxidante 20 volumes barra", ehSuprimentoProfissional("K.Pro New Oxi 6% - Oxidante 20 Volumes 900ml", true));
+confere("guanidina relaxer barra", ehSuprimentoProfissional("Guanidina Extra Conditioning Relaxer Alisa e Relaxa Salon Line", true));
+confere("lavatorio de salao barra", ehSuprimentoProfissional("Lavatorio De Cabelo Portatil Cuba Movel Salao Beleza + Ducha", true));
+confere("carrinho auxiliar barra", ehSuprimentoProfissional("Carrinho Auxiliar multiuso organizador 4 gavetas salao de beleza", true));
+confere("henna para designer de sobrancelha barra", ehSuprimentoProfissional("Henna Menela Castanho Escuro Padrao Profissional Para Designer De Sobrancelha", true));
+
+/*
+  E O QUE NAO PODE SER BARRADO. Esta metade importa mais: tirar oferta
+  boa em silencio e pior que deixar passar uma ruim, porque ninguem ve.
+*/
+console.log("\no que continua passando\n");
+confere("shampoo comum passa", !ehSuprimentoProfissional("Kit Brae Essential Shampoo e Mascara (2 produtos)", true));
+confere("shampoo de volume passa", !ehSuprimentoProfissional("Shampoo Volume Extra Cabelos Finos 300ml", true));
+confere("henna de uso proprio passa", !ehSuprimentoProfissional("Henna Sobrancelha Glance Castanho Medio 3,5g", true));
+confere("serum facial passa", !ehSuprimentoProfissional("Kit 4 Serum Facial Rosa Mosqueta 30ml", true));
+confere("batom passa", !ehSuprimentoProfissional("Batom Matte Vegano Dailus 11 Distraida Tom Nude", true));
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");

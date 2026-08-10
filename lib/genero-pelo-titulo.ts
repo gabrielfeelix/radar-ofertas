@@ -67,6 +67,26 @@ const MARCAS_MASCULINAS = [
   "for him",
   "men's",
   "homem",
+  /*
+    APARELHO DE BARBA, acrescentado em 10/08 depois de medir o que o
+    canal de beleza publicou: cinco barbeadores masculinos saíram para
+    um grupo de mulheres. Kemei, Philips OneBlade, "Multigroom para
+    Barba e Corpo".
+
+    Não é que mulher não use aparelho de barba: é que o produto é
+    vendido para homem, e num grupo chamado Radar Delas ele é o item
+    que faz alguém sair. A regra continua covarde — "Depiladora
+    Elétrica Feminina" diz `feminina` e continua feminino, e um
+    improvável "barbeador feminino" diria os dois e viraria nulo.
+  */
+  "barbeador",
+  "aparador de pelos",
+  "aparador de barba",
+  "oneblade",
+  "one blade",
+  "multigroom",
+  "para barba",
+  "de barba",
 ];
 
 const MARCAS_FEMININAS = [

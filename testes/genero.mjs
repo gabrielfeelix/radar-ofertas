@@ -87,6 +87,23 @@ confere("mantém os outros atributos",
 confere("título ambíguo não gera atributo",
   atributosComGenero("Kit Masculino e Feminino", null) === null);
 
+/*
+  APARELHO DE BARBA e MASCULINO, acrescentado em 10/08: cinco
+  barbeadores sairam para o grupo de mulheres antes desta regra.
+*/
+console.log("\naparelho de barba e produto de homem\n");
+confere("barbeador e masculino", generoPeloTitulo("Barbeador Kemei KM-TX1 prateado") === "Masculino");
+confere("oneblade e masculino", generoPeloTitulo("Barbeador e Aparador Eletrico Philips OneBlade 2 Pentes") === "Masculino");
+confere("aparador de pelos e masculino", generoPeloTitulo("Aparador de Pelos Super Groom 06 Mondial 6W") === "Masculino");
+confere("multigroom para barba e masculino", generoPeloTitulo("Barbeador Eletrico 5 em 1 Inova Multigroom, para Barba e Corpo") === "Masculino");
+
+// A metade que protege: depiladora FEMININA nao pode virar masculina.
+confere(
+  "depiladora feminina continua feminina",
+  generoPeloTitulo("Caneta Depiladora Eletrica Feminina Sobrancelha Facial") === "Feminino",
+);
+confere("batom nao vira masculino", generoPeloTitulo("Batom Matte Vegano Dailus Tom Nude") === null);
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
