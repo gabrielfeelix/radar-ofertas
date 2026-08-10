@@ -238,11 +238,11 @@
   .chat{
     flex:1;
     padding:14px 12px 18px;
-    display:flex;flex-direction:column;gap:10px;
     background:
       radial-gradient(circle at 20% 10%, rgba(196,139,146,.08), transparent 40%),
       var(--wa-papel);
   }
+  .rolo{display:flex;flex-direction:column;gap:10px}
   .dia{
     align-self:center;
     background:rgba(255,255,255,.85);
@@ -334,8 +334,37 @@
   .f3{top:12%;right:-8%;background:var(--ameixa);color:var(--porcelana);border-color:var(--ameixa)}
   @media(max-width:919px){
     .f1{display:none}
-    .f2{bottom:-14px;right:6px}
+    .f2{bottom:-14px;right:6px;font-size:11.5px;padding:8px 13px}
     .f3{display:none}
+  }
+
+  /* ---- hero compacta no celular: tudo numa tela so ---- */
+  @media(max-width:919px){
+    .hero{gap:34px;padding:36px 0 44px}
+    .marca-topo{margin-bottom:22px}
+    h1{font-size:clamp(32px,9vw,42px);margin-bottom:16px}
+    .sub{font-size:15px;margin-bottom:28px}
+    .prova-colagem{display:none}
+    .telefone{width:min(238px,68vw)}
+    .tela{min-height:0}
+    /* janela fixa: a conversa roda sozinha dentro dela, como um gif */
+    .chat{height:268px;overflow:hidden}
+    .js .rolo{animation:rolagem 9s ease-in-out 3.4s infinite}
+    /* o cabecalho compacta junto com o telefone */
+    .ilha{width:70px;height:19px;top:17px}
+    .status{padding:11px 18px 4px;font-size:10.5px}
+    .wa-topo{padding:6px 10px 10px;gap:8px}
+    .wa-topo .avatar{width:30px;height:30px;font-size:11px}
+    .wa-topo .nome{font-size:12.5px;white-space:nowrap}
+    .wa-topo .qtd{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:104px}
+    .wa-topo .icones{gap:10px}
+    .wa-topo .icones svg:first-child{display:none}
+    .msg{font-size:12px}
+  }
+  @keyframes rolagem{
+    0%,10%{transform:translateY(0)}
+    46%,62%{transform:translateY(-44%)}
+    94%,100%{transform:translateY(0)}
   }
   .js .flutua{animation:deriva 7s ease-in-out infinite alternate}
   .js .f2{animation-delay:1.6s}
@@ -563,7 +592,7 @@
     .js .revela,.js .anima-chat .dia,.js .anima-chat .msg,.js .anima-chat .reacao{
       opacity:1 !important;transform:none !important;animation:none !important;transition:none !important;
     }
-    .js .flutua,.js .trilho{animation:none !important}
+    .js .flutua,.js .trilho,.js .rolo{animation:none !important}
     .telefone{transform:rotate(-2.5deg) !important}
   }
 
@@ -648,6 +677,7 @@
             </div>
           </div>
           <div class="chat anima-chat" id="chat">
+            <div class="rolo">
             <div class="dia">hoje</div>
             <div class="msg m1">
               <div class="autor">Radar Delas 🌸</div>
@@ -667,6 +697,7 @@
               por <span class="forte">R$ 44,90</span> com frete grátis<br>
               🛒 <span class="link">meli.la/2RXrhpQ</span>
               <span class="hora">19:07</span>
+            </div>
             </div>
           </div>
         </div>
