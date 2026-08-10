@@ -80,6 +80,14 @@ const MARCAS_MASCULINAS = [
     improvável "barbeador feminino" diria os dois e viraria nulo.
   */
   "barbeador",
+  /*
+    "homme" e "clear men" entraram em 10/08 vendo a fila: "Body Splash
+    Bold Homme" e "Clear Men Shampoo Anticaspa" escapavam. A palavra
+    `men` sozinha NAO entra, e o motivo e curto: ela cabe dentro de
+    `women`.
+  */
+  "homme",
+  "clear men",
   "aparador de pelos",
   "aparador de barba",
   "oneblade",

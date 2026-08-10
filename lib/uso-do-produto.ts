@@ -86,6 +86,19 @@ const INSUMO = [
   "salao de beleza",
   "cuba movel",
   "designer de sobrancelha",
+  /*
+    Ferramenta de cortar cabelo de terceiro. Tesoura de cabeleireiro,
+    maquina de corte e lixadeira de unha "profissional" sao compra de
+    quem atende cliente. Vistos na fila em 10/08.
+  */
+  "cabeleireiro",
+  "maquina de cortar cabelo",
+  "maquina de corte",
+  "cortador de cabelo",
+  "lixadeira",
+  "maquina de acabamento",
+  "cola para cilios",
+  "cilios posticos",
 ];
 
 /*
