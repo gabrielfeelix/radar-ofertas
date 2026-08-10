@@ -10,6 +10,15 @@
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
+    // Um módulo de `lib/` pode importar outro escrevendo a extensão
+    // `.ts`. Existe por causa dos testes: eles são `.mjs` rodados por
+    // `node --experimental-strip-types`, e o Node exige a extensão no
+    // import. Sem isto, um `lib/` importado por teste não poderia
+    // importar outro `lib/`, e a alternativa seria duplicar a regra
+    // nos dois — que é como nascem duas verdades.
+    //
+    // Só vale com `noEmit`, que é o caso: quem compila é o Next.
+    "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
