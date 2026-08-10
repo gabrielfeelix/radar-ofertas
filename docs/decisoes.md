@@ -3143,3 +3143,87 @@ Serviço pago de "desbanimento" é golpe.
 
 **Mudaria se:** a Meta abrir API de grupo com teto real, aí o cliente
 não oficial sai e o oficial entra sem tocar no resto do laço.
+
+---
+
+## D-072 · O chip ganha registro, e o ritmo passa a valer por número
+
+**Data:** 2026-08-10
+
+Decorre da D-071 e de duas perguntas do dono no mesmo dia: *"tem que ser
+aleatório entre 4 à 10 min cada promo, NAO PODEMOS SER MENOS OU MAIS QUE
+ISSO"* e *"e se formos publicar em 8 grupos ao mesmo tempo usando o mesmo
+chip?"*.
+
+A segunda achou um defeito real, e é por ela que esta decisão existe.
+
+### O defeito: o intervalo protegia o canal, não o número
+
+O intervalo de 4 a 10 minutos era conferido contra
+`canal.ultima_publicacao_em`. Com oito grupos no mesmo chip, cada canal
+tem o próprio relógio, e todos podem estar liberados no mesmo instante.
+O laço publica um por vez, mas em sequência: canal A às 12:00:00, canal B
+às 12:00:06, canal C às 12:00:12.
+
+Do lado do WhatsApp, isso é um número mandando oito mensagens em menos de
+um minuto para oito grupos diferentes. É o padrão de disparo em massa,
+com cada canal individualmente tendo respeitado a regra.
+
+`podeChipFalarAgora` vale agora ao lado de `podePublicarAgora`: o canal
+tem ritmo por causa da audiência, o chip por causa do número.
+
+### A conta que decorre, e que muda o plano do dono
+
+Com o intervalo por chip, um número emite no máximo ~8,5 mensagens por
+hora. Seguro: o teto de número maduro é menos de 30/hora. Mas:
+
+| Janela de publicação | Capacidade do chip/dia | Por grupo, com 8 grupos |
+|---|---|---|
+| 5 horas (padrão de hoje) | ~42 | ~5/dia |
+| 12 horas (8h às 20h) | ~100 | ~12/dia |
+
+**Um chip não serve oito grupos a 30 posts/dia:** seriam 240 envios num
+número só, contra o teto de menos de 200/dia. Serve oito grupos a uns
+12/dia, ou são precisos mais chips. A decisão fica com o dono, e o
+desenho suporta as duas: teto e rampa são por `bot`.
+
+### O registro do chip
+
+Tabela `bot`, para as duas plataformas. `canal.whatsapp_instancia` era
+texto solto e virou `canal.bot_id`, com `on delete restrict` — apagar o
+bot que o Beauty usa vira erro na hora, e não canal mudo descoberto de
+madrugada.
+
+**O segredo não entra no banco.** `variavel_do_segredo` guarda o NOME da
+variável de ambiente. O motivo é a Fase 3: hoje só o dono entra no
+painel, e quando entrarem parceiros a RLS vira a única coisa entre eles e
+o chip do dono. Policy errada numa migration futura custaria a conta do
+WhatsApp; com o segredo fora, custa nada. Pela mesma razão a policy de
+`bot` é só de dono, diferente de `canal`, que o operador enxerga.
+
+### A rampa, que é do dono
+
+10 promos no dia 1, 15 no 2, 20 no 3, 25 no 4, 30 do 5º ao 14º, teto
+cheio do 15º. Ela **substitui** o `whatsapp_automatico = 0` como freio do
+aquecimento; o parâmetro sobrou como freio de mão, que mata o WhatsApp
+inteiro sem tocar no Telegram.
+
+A curva vive em `lib/aquecimento.ts` e não no banco. Em parâmetro, ela
+seria um botão que ninguém audita: mudaria em produção sem commit, sem
+teste e sem ninguém lembrar por quê. É política, não configuração.
+
+**O que ela não conta:** o que a pessoa manda do aparelho. Os 10 do dia 1
+são de promo, e sem conversa humana junto eles são o dia inteiro do chip.
+Aquecer é falar como gente, e isso é operação.
+
+### O estado da conexão nunca é gravado
+
+Estado gravado mente: diria "conectado" com o número já banido há seis
+horas, que é justamente o momento em que a tela precisa estar certa. A
+tela de bots lê ao vivo a cada carregamento, e distingue três casos, não
+dois — "não alcancei a Evolution" é a VPS, "instância fora" é o chip, e
+achatar os dois manda consertar a coisa errada às 22h de um sábado.
+
+**Mudaria se:** aparecer API oficial de grupo com teto real. Aí o teto
+por número deixa de ser a restrição, e a rampa inteira perde a razão de
+existir.
