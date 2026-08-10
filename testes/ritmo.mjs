@@ -7,7 +7,7 @@
  */
 import {
   RITMO_PADRAO, faixaDaHora, intervaloEmMinutos, podePublicarAgora, cabemAteMeiaNoite,
-  diaEmSaoPaulo, inicioDoDiaEmSaoPaulo, intervaloDoWhatsAppEmMinutos,
+  diaEmSaoPaulo, inicioDoDiaEmSaoPaulo, intervaloDoWhatsAppEmMinutos, podeChipFalarAgora,
 } from "../lib/ritmo.ts";
 
 let passou = 0, falhou = 0;
@@ -172,6 +172,67 @@ confere(
     intervaloPicoMin: 30,
   }).pode,
 );
+
+/*
+  O INTERVALO POR CHIP.
+
+  O caso é oito grupos no mesmo número, que foi a pergunta do dono em
+  10/08. Cada canal tem o próprio relógio, e sem esta trava os oito
+  saem em sequência, com segundos entre eles. Do lado do WhatsApp, é um
+  número mandando oito mensagens em 50 segundos para oito grupos: o
+  padrão de disparo em massa, com cada canal individualmente em ordem.
+*/
+console.log("\no intervalo por chip\n");
+
+const agoraChip = new Date("2026-08-01T14:00:00Z");
+const atras = (min) => new Date(agoraChip.getTime() - min * 60_000);
+
+confere("chip que nunca falou pode falar", podeChipFalarAgora(agoraChip, null, "bot-1").pode);
+confere("chip que falou há 2 min espera", !podeChipFalarAgora(agoraChip, atras(2), "bot-1").pode);
+confere("chip que falou há 11 min pode", podeChipFalarAgora(agoraChip, atras(11), "bot-1").pode);
+
+// A janela do chip é a mesma do canal: nunca abaixo de 4, nunca acima
+// de 10. Varre a janela inteira em vez de conferir um caso.
+let chipLiberouCedo = false;
+let chipSegurouDemais = false;
+for (let i = 0; i < 500; i++) {
+  const bot = `bot-${i}`;
+  if (podeChipFalarAgora(agoraChip, atras(3), bot).pode) chipLiberouCedo = true;
+  if (!podeChipFalarAgora(agoraChip, atras(11), bot).pode) chipSegurouDemais = true;
+}
+confere("com 3 min desde o último envio, nenhum chip libera", !chipLiberouCedo);
+confere("com 11 min desde o último envio, todo chip libera", !chipSegurouDemais);
+
+/*
+  Chips diferentes têm relógios independentes, e isso é intencional: o
+  teto é do NÚMERO, não da operação. Dois chips publicando ao mesmo
+  tempo é o que se compra ao comprar o segundo chip.
+*/
+confere(
+  "um chip esperando não segura o outro",
+  !podeChipFalarAgora(agoraChip, atras(2), "bot-1").pode &&
+    podeChipFalarAgora(agoraChip, null, "bot-2").pode,
+);
+
+// Estável entre chamadas, pelo mesmo motivo do sorteio por canal: o
+// laço do publicador pergunta de novo a cada volta enquanto dorme.
+confere(
+  "o sorteio do chip não muda entre chamadas",
+  podeChipFalarAgora(agoraChip, atras(5), "bot-1").faltamMinutos ===
+    podeChipFalarAgora(agoraChip, atras(5), "bot-1").faltamMinutos,
+);
+
+// E a semente do chip não colide com a do canal: mesmo id, sorteios
+// independentes. Sem o prefixo, um bot e um canal de mesmo id teriam
+// sempre o mesmo número, que é acaso de mentira.
+let colidiuSempre = true;
+for (let i = 0; i < 200; i++) {
+  const id = `id-${i}`;
+  const doCanal = podePublicarAgora(agoraChip, atras(5), RITMO_PADRAO, { canalId: id });
+  const doChip = podeChipFalarAgora(agoraChip, atras(5), id);
+  if (doCanal.faltamMinutos !== doChip.faltamMinutos) colidiuSempre = false;
+}
+confere("o sorteio do chip é independente do sorteio do canal", !colidiuSempre);
 
 console.log("\nquantos cabem\n");
 const cabem = cabemAteMeiaNoite(new Date("2026-08-01T11:00:00Z"), RITMO_PADRAO);

@@ -250,6 +250,50 @@ export function podePublicarAgora(
 }
 
 /**
+ * O CHIP pode falar agora?
+ *
+ * Vale AO LADO de `podePublicarAgora`, não no lugar dela. O canal tem
+ * ritmo por causa da audiência; o chip tem o dele por causa do número,
+ * e é o número que cai.
+ *
+ * O CASO QUE ISTO CONSERTA são oito grupos num chip só. O intervalo
+ * conferido apenas contra `canal.ultima_publicacao_em` dá a cada canal
+ * um relógio próprio, e todos podem estar liberados no mesmo instante.
+ * O laço publica um por vez, mas em sequência: canal A às 12:00:00,
+ * canal B às 12:00:06, canal C às 12:00:12. Do lado do WhatsApp, é um
+ * número mandando oito mensagens em menos de um minuto para oito
+ * grupos diferentes — o padrão de disparo em massa, com cada canal
+ * tendo respeitado a própria regra.
+ *
+ * A semente do sorteio é o bot e o instante do último envio dele, pela
+ * mesma razão do sorteio por canal: chamada de novo a cada volta do
+ * laço, uma semente nova faria o intervalo real virar o maior sorteio
+ * da espera, estourando os 10 minutos sem levantar erro.
+ */
+export function podeChipFalarAgora(
+  agora: Date,
+  ultimoEnvioDoChip: Date | null,
+  botId: string,
+): Veredito {
+  // Chip que ainda não falou hoje não espera: a regra é sobre a
+  // distância ENTRE envios, e aqui não existe o de trás.
+  if (!ultimoEnvioDoChip) return { pode: true };
+
+  const intervalo = intervaloDoWhatsAppEmMinutos(
+    `chip:${botId}|${ultimoEnvioDoChip.getTime()}`,
+  );
+  const passados = (agora.getTime() - ultimoEnvioDoChip.getTime()) / 60_000;
+  if (passados >= intervalo) return { pode: true };
+
+  const faltam = Math.ceil(intervalo - passados);
+  return {
+    pode: false,
+    motivo: `chip: sorteou ${intervalo} min entre envios, faltam ${faltam}`,
+    faltamMinutos: faltam,
+  };
+}
+
+/**
  * Quantos posts cabem no resto do dia, respeitando o intervalo.
  *
  * Serve à tela, não ao envio: é o número que responde "aprovei trinta,
