@@ -15,14 +15,20 @@
  *   2. reprova as que não passam nas comportas de confiança
  *   3. cria a publicação nos canais elegíveis, com subid
  *   4. monta a fila de envio: o cupom primeiro, depois as ofertas
- *   5. publica no Telegram DORMINDO entre os posts, no ritmo do canal
+ *   5. publica DORMINDO entre os posts, no ritmo do canal
  *
- * O WhatsApp NUNCA entra aqui. Regra 3.2: o sistema monta o texto e um
- * humano aperta enviar. Isso não é limitação técnica, é o que protege
- * o número do parceiro.
+ * **O WHATSAPP ENTRA AQUI DESDE 06/08** (D-071). Até então não entrava,
+ * e o motivo não era técnico: a regra 3.2 mandava o sistema montar o
+ * texto e um humano apertar enviar, para não arriscar o número. O dono
+ * assumiu o risco e a conta: *"n ligo de derrubar conta do numero, vou
+ * ir comprando varios"*. Não existe API oficial para grupo, então o
+ * caminho é a Evolution API na VPS, e o número cai um dia — o desenho
+ * é para isso custar um chip, não a operação (ver `lib/whatsapp.ts`).
  *
- * DUAS TRAVAS, porque publicação sem ninguém olhando precisa delas:
- * `publicacao_automatica = 0` é o freio de mão, e o intervalo do ritmo
+ * QUATRO TRAVAS, porque publicação sem ninguém olhando precisa delas:
+ * `publicacao_automatica = 0` é o freio de mão geral,
+ * `whatsapp_automatico = 0` é o freio só do WhatsApp,
+ * `whatsapp_envios_dia_max` é o teto POR CHIP, e o intervalo do ritmo
  * impede despejar a fila inteira de uma vez.
  */
 
@@ -34,6 +40,7 @@ import { classificaFalhaDeLink } from "../lib/falha-de-link.ts";
 import { geraLinkCurtoDaShopee, itemDaShopee } from "../lib/shopee-api.ts";
 import { revalidaPreco } from "../lib/revalida-preco.ts";
 import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
+import { paraWhatsApp } from "../lib/texto-whatsapp.ts";
 import {
   RITMO_PADRAO,
   diaEmSaoPaulo,
@@ -181,6 +188,67 @@ async function mandaAoTelegram(chatId, texto, foto) {
     return mandaAoTelegram(chatId, texto, null);
   }
   return d?.ok ? { ok: true, id: d.result.message_id } : { ok: false, motivo: d?.description };
+}
+
+/**
+ * O mesmo envio, no WhatsApp, pela Evolution API na VPS.
+ *
+ * A camada de rede é gêmea de `lib/whatsapp.ts` e vive aqui porque
+ * aquele arquivo é `server-only` e este script roda em node puro —
+ * o mesmo motivo de `mandaAoTelegram` existir ao lado de
+ * `lib/telegram.ts`. A conversão do texto, que é a parte com lógica,
+ * NÃO é duplicada: vem de `lib/texto-whatsapp.ts`, importado no topo.
+ */
+async function mandaAoWhatsApp(instancia, grupoJid, texto, foto) {
+  const base = (process.env.WHATSAPP_API_URL ?? "").replace(/\/+$/, "");
+  const chave = process.env.WHATSAPP_API_KEY;
+
+  if (!base || !chave) return { ok: false, motivo: "falta WHATSAPP_API_URL ou WHATSAPP_API_KEY" };
+  if (!instancia) return { ok: false, motivo: "canal sem instância de WhatsApp cadastrada" };
+  if (!grupoJid) return { ok: false, motivo: "canal sem grupo de WhatsApp cadastrado" };
+
+  const corpo = paraWhatsApp(texto);
+  const rota = foto ? "sendMedia" : "sendText";
+  const carga = foto
+    ? { number: grupoJid, mediatype: "image", media: foto, caption: corpo }
+    : { number: grupoJid, text: corpo, linkPreview: false };
+
+  try {
+    const r = await fetch(`${base}/message/${rota}/${encodeURIComponent(instancia)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: chave },
+      body: JSON.stringify(carga),
+      signal: AbortSignal.timeout(30000),
+    });
+    const d = await r.json().catch(() => null);
+
+    if (!r.ok) {
+      const motivo = String(d?.response?.message ?? d?.message ?? `HTTP ${r.status}`);
+      // Foto que a loja recusa servir não pode custar a publicação.
+      if (foto && /media|download|url|buffer/i.test(motivo)) {
+        return mandaAoWhatsApp(instancia, grupoJid, texto, null);
+      }
+      return { ok: false, motivo };
+    }
+
+    return { ok: true, id: d?.key?.id ?? null };
+  } catch (erro) {
+    return { ok: false, motivo: `não alcancei a Evolution API: ${erro.message}` };
+  }
+}
+
+/**
+ * Manda pelo canal que for, e devolve sempre a mesma forma.
+ *
+ * Existe para o laço não precisar saber de plataforma: ele decide QUE
+ * mensagem sai e QUANDO, e quem sabe COMO é esta função. Foi o que
+ * permitiu ligar o WhatsApp mexendo em um lugar só.
+ */
+async function manda(canal, texto, foto) {
+  if (canal.plataforma === "whatsapp") {
+    return mandaAoWhatsApp(canal.whatsapp_instancia, canal.whatsapp_grupo_id, texto, foto);
+  }
+  return mandaAoTelegram(canal.telegram_chat_id, texto, foto);
 }
 
 async function main() {
@@ -421,7 +489,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: canais } = await db
     .from("canal")
     .select(
-      "id, operacao_id, nome, plataforma, telegram_chat_id, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
+      "id, operacao_id, nome, plataforma, telegram_chat_id, whatsapp_grupo_id, whatsapp_instancia, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
     )
     .eq("ativo", true);
 
@@ -792,7 +860,56 @@ async function melhorPrateleira(db, oferta) {
   const limite = Date.now() + JANELA_MIN * 60_000;
   const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  const doTelegram = (canais ?? []).filter((c) => c.plataforma === "telegram");
+  /*
+    OS CANAIS QUE O LAÇO SERVE.
+
+    Era `plataforma === "telegram"` e nada mais, porque a regra 3.2
+    proibia o WhatsApp automático. Desde a D-071 (06/08) o WhatsApp
+    entra, com freio próprio: `whatsapp_automatico = 0` deixa os canais
+    de WhatsApp fora sem tirar o Telegram do ar, que é o que se quer
+    enquanto o número está em aquecimento.
+  */
+  const whatsappLigado = (par.whatsapp_automatico ?? 0) === 1;
+
+  const canaisAtivos = (canais ?? []).filter(
+    (c) => c.plataforma === "telegram" || (c.plataforma === "whatsapp" && whatsappLigado),
+  );
+
+  if (!whatsappLigado && (canais ?? []).some((c) => c.plataforma === "whatsapp")) {
+    console.log("whatsapp_automatico = 0 — canais de WhatsApp fora desta rodada.");
+  }
+
+  /*
+    O TETO POR CHIP, que é outra conta que o teto do canal.
+
+    `posts_por_dia_max` é o combinado com o parceiro, por canal. Este
+    aqui é o que protege o NÚMERO: um chip servindo sete canais a 30
+    posts/dia faria ~210 envios, acima do teto de número maduro que a
+    D-053 mediu (menos de 200/dia). Estourar isso não quebra combinado
+    nenhum, derruba a conta — e é por isso que a contagem é por
+    `whatsapp_instancia` e não por canal.
+  */
+  const TETO_POR_CHIP = par.whatsapp_envios_dia_max ?? 150;
+  const enviadasPorChip = new Map();
+
+  if (whatsappLigado) {
+    const doWhats = canaisAtivos.filter((c) => c.plataforma === "whatsapp");
+    for (const c of doWhats) {
+      const chip = c.whatsapp_instancia ?? "";
+      enviadasPorChip.set(chip, (enviadasPorChip.get(chip) ?? 0) + (enviadasHoje[c.id] ?? 0));
+    }
+  }
+
+  function chipNoTeto(canal) {
+    if (canal.plataforma !== "whatsapp") return false;
+    return (enviadasPorChip.get(canal.whatsapp_instancia ?? "") ?? 0) >= TETO_POR_CHIP;
+  }
+
+  function contaNoChip(canal) {
+    if (canal.plataforma !== "whatsapp") return;
+    const chip = canal.whatsapp_instancia ?? "";
+    enviadasPorChip.set(chip, (enviadasPorChip.get(chip) ?? 0) + 1);
+  }
 
   /* Envia uma oferta pendente. Devolve se saiu. */
   async function enviaOferta(pub, canal) {
@@ -809,6 +926,23 @@ async function melhorPrateleira(db, oferta) {
       console.log(`  ✗ ${canal.nome}: sem etiqueta de afiliado cadastrada, canal parado nesta rodada`);
       canaisTravados.add(canal.id);
       semLinkPorMotivo.canal_sem_etiqueta = (semLinkPorMotivo.canal_sem_etiqueta ?? 0) + 1;
+      return false;
+    }
+
+    /*
+      Canal de WhatsApp sem grupo ou sem chip cadastrado é o mesmo caso
+      da etiqueta: é do CANAL, não deste item, e tentar mandar daria uma
+      chamada de rede perdida por oferta da fila dele.
+
+      A migration que criou as colunas não pôs constraint de propósito —
+      os canais de WhatsApp nasceram na época em que a regra 3.2 proibia
+      publicar, então nenhum tem grupo. Quem cobra é isto aqui.
+    */
+    if (canal.plataforma === "whatsapp" && (!canal.whatsapp_grupo_id || !canal.whatsapp_instancia)) {
+      console.log(
+        `  ✗ ${canal.nome}: falta ${!canal.whatsapp_grupo_id ? "o grupo" : "a instância"} de WhatsApp, canal parado nesta rodada`,
+      );
+      canaisTravados.add(canal.id);
       return false;
     }
 
@@ -1134,7 +1268,7 @@ async function melhorPrateleira(db, oferta) {
       link: curto,
     });
 
-    const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, fotoValida(aPublicar));
+    const envio = await manda(canal, texto, fotoValida(aPublicar));
     if (!envio.ok) {
       console.log(`  ✗ ${canal.nome}: ${envio.motivo}`);
       return false;
@@ -1148,13 +1282,20 @@ async function melhorPrateleira(db, oferta) {
         (migration 44). O Telegram sempre devolveu esse id e nós sempre
         o descartávamos — até um perfume feminino sair no canal
         masculino e não haver como tirar.
+
+        O WhatsApp tem a coluna própria, e ela importa mais lá: o
+        Telegram deixa apagar do canal a qualquer momento, e o WhatsApp
+        só dentro da janela de "apagar para todos". Sem o id gravado no
+        instante do envio, a janela fecha antes de alguém achar o post.
       */
       .update({
         estado: "enviada",
         origem: "fluxo",
         enviada_em: quando,
         mensagem: texto,
-        telegram_message_id: envio.id ?? null,
+        ...(canal.plataforma === "whatsapp"
+          ? { whatsapp_message_id: envio.id ?? null }
+          : { telegram_message_id: envio.id ?? null }),
       })
       .eq("id", pub.id);
 
@@ -1183,7 +1324,7 @@ async function melhorPrateleira(db, oferta) {
       validade: diaEmSaoPaulo(new Date(cupom.vigente_ate)),
     });
 
-    const envio = await mandaAoTelegram(canal.telegram_chat_id, texto, null);
+    const envio = await manda(canal, texto, null);
     if (!envio.ok) {
       console.log(`  ✗ ${canal.nome}: cupom ${cupom.codigo}: ${envio.motivo}`);
       return false;
@@ -1277,7 +1418,7 @@ async function melhorPrateleira(db, oferta) {
   const PENDENTES_POR_CANAL = Number(process.env.PENDENTES_POR_CANAL ?? 100);
 
   const pendentesDoCanal = new Map();
-  for (const canal of doTelegram) {
+  for (const canal of canaisAtivos) {
     const { data, error } = await db
       .from("publicacao")
       .select(`id, subid, canal_id, link_afiliado, oferta:oferta_id ( ${SELECAO} )`)
@@ -1296,7 +1437,7 @@ async function melhorPrateleira(db, oferta) {
 
   const filaDoCanal = new Map();
 
-  for (const canal of doTelegram) {
+  for (const canal of canaisAtivos) {
     const fila = [];
 
     if (modelo.corpoCupom) {
@@ -1374,7 +1515,7 @@ async function melhorPrateleira(db, oferta) {
       .gte("enviada_em", desdeMeiaNoite)
       .order("enviada_em", { ascending: false });
 
-    for (const canal of doTelegram) {
+    for (const canal of canaisAtivos) {
       let contados = 0;
       for (const linha of (doDia ?? []).filter((l) => l.canal_id === canal.id)) {
         if (ramoSecundario.has(linha.oferta?.anuncio?.categoria_ramo ?? "")) break;
@@ -1396,7 +1537,7 @@ async function melhorPrateleira(db, oferta) {
   while (Date.now() < limite) {
     let melhor = null;
 
-    for (const canal of doTelegram) {
+    for (const canal of canaisAtivos) {
       const fila = filaDoCanal.get(canal.id);
       if (!fila || fila.length === 0) continue;
       // Erro de cadastro do canal já apareceu nesta rodada: o resto da
@@ -1408,6 +1549,19 @@ async function melhorPrateleira(db, oferta) {
       }
       if (noTetoDiario(canal)) {
         noTeto++;
+        filaDoCanal.set(canal.id, []);
+        continue;
+      }
+      /*
+        O chip estourou o dia. Sai da rodada como quem bateu no teto, e
+        o log diz QUAL chip — com vários números na operação, "o canal
+        parou" sem o nome do chip é diagnóstico impossível.
+      */
+      if (chipNoTeto(canal)) {
+        console.log(
+          `  ⏸ ${canal.nome}: chip ${canal.whatsapp_instancia ?? "(sem nome)"} bateu ${TETO_POR_CHIP} envios hoje`,
+        );
+        noTeto += fila.length;
         filaDoCanal.set(canal.id, []);
         continue;
       }
@@ -1482,6 +1636,9 @@ async function melhorPrateleira(db, oferta) {
       await db.from("canal").update({ ultima_publicacao_em: quando }).eq("id", canal.id);
       canal.ultima_publicacao_em = quando;
       enviadasHoje[canal.id] = (enviadasHoje[canal.id] ?? 0) + 1;
+      // E no chip, que é outra conta: vários canais podem compartilhar
+      // o mesmo número.
+      contaNoChip(canal);
 
       // O cupom não conta como primário: ele não é do ramo nenhum.
       if (item.tipo === "oferta") {
@@ -1531,8 +1688,15 @@ async function melhorPrateleira(db, oferta) {
     estar gravado ANTES de qualquer divulgação, senão não há como saber
     o que ela comprou (D-056).
   */
-  for (const canal of doTelegram) {
-    if (!canal.telegram_chat_id) continue;
+  /*
+    SÓ TELEGRAM, e continua assim depois da D-071. A Bot API tem
+    `getChatMemberCount`; a Evolution devolveria a lista inteira de
+    participantes do grupo, e guardar isso esbarra na regra 3.8 (não
+    existe cadastro de membro). Audiência de grupo de WhatsApp continua
+    digitada à mão em `/canais`.
+  */
+  for (const canal of canaisAtivos) {
+    if (canal.plataforma !== "telegram" || !canal.telegram_chat_id) continue;
 
     try {
       const r = await fetch(

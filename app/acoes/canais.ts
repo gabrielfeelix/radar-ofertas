@@ -48,6 +48,12 @@ export async function salvaCanal(
       ? chatBruto
       : `@${chatBruto}`;
 
+  // O grupo do WhatsApp e o chip que fala por ele (D-071). O JID vem
+  // do painel da Evolution; não tem formato para adivinhar, então vai
+  // como a pessoa colou, só sem espaço.
+  const whatsappGrupoId = String(form.get("whatsapp_grupo_id") ?? "").trim();
+  const whatsappInstancia = String(form.get("whatsapp_instancia") ?? "").trim();
+
   if (nome.length < 2) {
     return { ok: false, campo: "nome", mensagem: "Dê um nome ao canal." };
   }
@@ -118,6 +124,8 @@ export async function salvaCanal(
     nome,
     plataforma,
     telegramChatId,
+    whatsappGrupoId,
+    whatsappInstancia,
     nichos,
     tetoDiario,
     audiencia: Number.isFinite(audiencia) ? Math.max(0, audiencia) : 0,

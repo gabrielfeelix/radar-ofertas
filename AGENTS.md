@@ -28,7 +28,7 @@ Contexto completo de negócio, divisão de receita e fluxo do dinheiro: `docs/ne
  o `pg_cron` dispara o `publica.yml` de 5 em 5 minutos, porque o agendamento do GitHub entrega cerca de uma execução a cada oito (D-052). Ele é **gatilho, não agendador** — não coleta, não publica, não expurga; manda o Actions rodar, e o trabalho e o log continuam lá. Detalhe e diagnóstico em `docs/cron-externo.md`.
 - **Redirecionador de links:** Supabase Edge Function, domínio próprio.
 - **Telegram:** Bot API oficial.
-- **WhatsApp:** link de compartilhamento oficial (`wa.me`), envio manual por humano.
+- **WhatsApp:** Evolution API (camada REST sobre o Baileys) em VPS brasileira, chip dedicado e descartável (D-071). O `wa.me` continua como caminho manual de contingência.
 - **IA para mensagens:** fora do escopo inicial. Template resolve a maioria dos casos.
 
 Se você acha que outra tecnologia é melhor, escreva a sugestão em `docs/decisoes.md` como proposta e **pergunte antes de trocar**. Não troque por conta própria.
@@ -39,9 +39,20 @@ Se você acha que outra tecnologia é melhor, escreva a sugestão em `docs/decis
 
 **3.1 Nenhum segredo entra no Git.** Chaves do Supabase, tokens de bot e IDs de afiliado ficam em variáveis de ambiente. `.env` está no `.gitignore` e continua lá. Se precisar de uma variável nova, adicione ao `.env.example` com valor falso, nunca o real. Antes de qualquer commit, confira que nenhum segredo entrou.
 
-**3.2 Nunca automatize o envio no WhatsApp.** Nada de biblioteca não oficial, leitura de QR Code ou simulação de WhatsApp Web. O WhatsApp é sempre: gerar o texto, abrir `wa.me` com a mensagem pronta, humano aperta enviar. **Telegram sim, pode postar sozinho** pela API oficial.
+**3.2 O WhatsApp publica sozinho, e o chip é descartável.** Desde 06/08 o sistema posta em grupo de WhatsApp pela Evolution API rodando na VPS (D-071). Não existe caminho oficial: a Groups API tem teto de 8 participantes, Canal não tem API de publicação, e broadcast é mensagem individual com opt-in. O que existe é cliente não oficial, que o WhatsApp detecta pelo protocolo, não só pelo comportamento. **Este número vai cair, e o desenho é para isso custar um chip, não a operação.**
 
-> A regra foi rediscutida do zero em 03/08 a pedido do dono, e **continua valendo por conta, não por herança** (D-053). Não existe via oficial: a Groups API tem teto de **8 participantes**, Canal não tem API de publicação, e broadcast é mensagem individual com opt-in. O mercado usa Baileys e derivados, que caem em 2 a 8 semanas. Automatizar custaria ~R$30/mês de chip mais VPS **no Brasil** (o país do IP tem que bater com o do número) para servir um grupo que ainda não tem audiência. Se for revisitar, leia a D-053 inteira antes: ela tem os números de aquecimento, os limiares de detecção, e a regra de que **o número do bot nunca pode ser o único admin do grupo** — porque quando cai, cai a conta, não o grupo.
+O que não se negocia, porque é o que separa perder um chip de perder a audiência:
+
+- **O número do bot nunca é o único admin do grupo.** Um segundo número, do dono, fica de titular e nunca roda bot. Quando a conta cai, o WhatsApp passa o admin para outro membro e o grupo sobrevive; sendo o bot o único lá dentro, morre o grupo junto.
+- **Nunca o número pessoal nem o de trabalho.** Banimento permanente é perda de identidade, não de ferramenta.
+- **O IP da VPS é brasileiro.** O país do IP tem que bater com o do número.
+- **Um chip por instância, com teto próprio.** `whatsapp_envios_dia_max` conta por `canal.whatsapp_instancia` e não por canal, porque é o número que cai. Teto de número maduro: menos de 200 envios/dia, menos de 30 por hora.
+- **Ritmo com folga sorteada.** Intervalo fixo é assinatura de robô documentada (`lib/ritmo.ts`).
+- **Número novo aquece antes de publicar.** 20 a 50 mensagens/dia nos 3 primeiros dias, 100 a 200/dia entre o 8º e o 14º, volume de operação a partir do 15º. `whatsapp_automatico = 0` até lá.
+
+O caminho manual continua existindo, e não é resto: `BotaoWhatsApp` abre o `wa.me` com a mensagem pronta, e é a operação enquanto o chip novo aquece.
+
+> A regra era o contrário até 06/08: proibia automatizar em qualquer forma. Ela foi rediscutida do zero em 03/08 (D-053) e mantida **por conta, não por princípio** — R$30/mês de chip mais VPS não se pagavam num grupo sem audiência. O dono derrubou a conta: *"n ligo de derrubar conta do numero, vou ir comprando varios"*, *"vou pagar 30/mes chip e etc n ligo nao"*. A D-053 continua valendo como pesquisa: os números de aquecimento, os limiares de detecção e o que cai quando cai saíram todos dela.
 
 **3.3 Preço da Amazon não vira histórico — e imagem é ainda mais restrita.** A política de associados permite guardar preço em cache por no máximo 24 horas. Portanto: não construa série histórica de preço da Amazon, não exiba comparação histórica de Amazon, e descarte pontos de preço da Amazon com mais de 24 horas. Histórico de preço é construído em cima de **Mercado Livre e Shopee**. A Amazon entra como fonte de oferta pontual.
 
@@ -273,7 +284,7 @@ na D-043 — não é para rediscutir, é para medir na primeira semana.
 
 **Leia a D-040 antes de mexer em `/publicar`.** O link da tela era montado à mão, e por cima disso o registro de envio falhava calado por causa de uma constraint `not valid` — que **não é constraint desligada**. Nove publicações foram ao canal duas ou três vezes.
 
-**O WhatsApp não mudou e não vai mudar:** regra 3.2, envio manual. O laço automático nunca o toca.
+**O WhatsApp entrou no laço automático em 06/08** (D-071). Ele passa pelas mesmas comportas, pelo mesmo ritmo e pelo mesmo teto de canal que o Telegram, e ganha um teto a mais, por chip.
 
 **Depois da primeira madrugada automática, cinco frentes de conserto.** Saíram três posts e dois eram de outro nicho. O diagnóstico, a pesquisa e o que cada frente virou estão em **`docs/otimizacao.md`** — leia antes de mexer em coleta, colheita ou classificação. O resumo:
 
@@ -324,7 +335,7 @@ Dia de investigação, não de construção. Duas correções de código e quatr
 
 **2. O canal ficava mudo por horas, e não era o ritmo (D-052).** O ritmo já é de 5 minutos e funciona: 24 posts numa rodada, 180 esperando quando a janela fechou. **O agendador do GitHub é que não dispara** — pediu de hora em hora e entregou às 03:45, 07:23 e 11:21. Agora são **três caminhos para a mesma tarefa**, e a trava do banco impede post duplicado: cron externo chamando a API (`docs/cron-externo.md`), o agendamento do GitHub, e a reserva de hora em hora dentro da coleta. Leia a D-052 antes de mexer nisso: a primeira tentativa piorou, porque cron novo pode simplesmente não ligar.
 
-**3. WhatsApp automatizado: pesquisado a fundo e engavetado por conta (D-053).** A regra 3.2 foi rediscutida a pedido do dono e **continua valendo**, agora com lastro. A D-053 tem tudo que uma revisita futura precisa: os números de aquecimento, os limiares de detecção, o custo real, e a descoberta que muda o medo — **quando cai, cai a conta do número, não o chip e não o grupo**.
+**3. WhatsApp automatizado: pesquisado a fundo, engavetado em 03/08 e ligado em 06/08 (D-053, depois D-071).** A regra 3.2 foi invertida a pedido do dono, que assumiu o custo dos chips e o risco de banimento. A pesquisa da D-053 continua valendo inteira e virou a lista de travas da 3.2: aquecimento, limiares de detecção, teto por número, e a descoberta que muda o medo — **quando cai, cai a conta do número, não o chip e não o grupo**.
 
 **4. Onde o sistema vai morar (D-055 e D-059), com roteiro pronto em `docs/migracao-para-vps.md`.** A Vercel não pode hospedar o publicador, e não é questão de plano: função dela morre em minutos e o nosso publicador vive 50. Oracle Cloud (grátis, São Paulo) ou Hetzner (~R$27) são as saídas, e uma máquina fecharia três pendências de uma vez. **Espera de propósito** até saber se a D-052 resolveu sozinha.
 
@@ -537,7 +548,7 @@ colhido é trabalho de regex, não de credencial.
 
 **3. Configurar o bot do Telegram.** Criar no `@BotFather`, adicionar
 como administrador do canal, e o sistema publica por `sendMessage`. A
-regra 3.2 autoriza — Telegram pode postar sozinho pela API oficial. Meia
+regra 3.2 autoriza — as duas plataformas postam sozinhas desde 06/08. Meia
 hora de trabalho, e **deixou de depender do redirecionador** desde que a
 etiqueta provou carregar a atribuição. O que decide se ele publica
 sozinho ou com um passo manual é o teste 1.

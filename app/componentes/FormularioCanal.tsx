@@ -68,7 +68,17 @@ export function FormularioCanal({
   const [plataforma, setPlataforma] = useState<string>(canal?.plataforma ?? "whatsapp");
 
   const dono = 100 - audiencia - operacao;
-  const erroDe = (campo: "nome" | "nichos" | "split" | "teto" | "horarios" | "telegram") =>
+  const erroDe = (
+    campo:
+      | "nome"
+      | "nichos"
+      | "split"
+      | "teto"
+      | "horarios"
+      | "telegram"
+      | "whatsapp_grupo"
+      | "whatsapp_instancia",
+  ) =>
     resultado?.ok === false && resultado.campo === campo ? resultado.mensagem : null;
 
   return (
@@ -94,15 +104,17 @@ export function FormularioCanal({
           qual o banco recusava a linha — e o erro chegava como "não
           consegui salvar", que não diz o que fazer.
 
-          O WhatsApp continua manual, e isso NÃO vai mudar: é a regra
-          3.2, e é o que protege o número do parceiro.
+          E o WhatsApp deixou de ser manual em 06/08 (D-071). A regra
+          3.2 proibia automatizar para proteger o número; o dono assumiu
+          o risco e a conta dos chips. Agora ele também pede cadastro:
+          o grupo e QUAL chip fala por ele.
         */}
         <Campo
           rotulo="Plataforma"
           dica={
             plataforma === "telegram"
               ? "O bot publica sozinho, pela API oficial. Ele precisa ser administrador do canal, com “Publicar mensagens” ligado."
-              : "O envio é sempre na mão: o painel monta a mensagem e abre o WhatsApp com ela pronta."
+              : "O bot publica sozinho pela Evolution API. O número do bot NUNCA pode ser o único admin do grupo: quando ele cair, é o outro admin que segura a audiência."
           }
         >
           <select
@@ -131,6 +143,38 @@ export function FormularioCanal({
             className={classeDeCampo}
           />
         </Campo>
+      )}
+
+      {plataforma === "whatsapp" && (
+        <>
+          <Campo
+            rotulo="Grupo no WhatsApp"
+            dica="O JID do grupo, copiado do painel da Evolution. Termina em @g.us."
+            erro={erroDe("whatsapp_grupo")}
+          >
+            <input
+              name="whatsapp_grupo_id"
+              type="text"
+              defaultValue={canal?.whatsappGrupoId ?? ""}
+              placeholder="120363000000000000@g.us"
+              className={classeDeCampo}
+            />
+          </Campo>
+
+          <Campo
+            rotulo="Chip que publica aqui"
+            dica="O nome da instância na Evolution, que é o mesmo que dizer qual número fala. O teto de envios do dia é contado por chip, somando todos os canais dele: é o chip que cai, não o canal."
+            erro={erroDe("whatsapp_instancia")}
+          >
+            <input
+              name="whatsapp_instancia"
+              type="text"
+              defaultValue={canal?.whatsappInstancia ?? ""}
+              placeholder="chip-01"
+              className={classeDeCampo}
+            />
+          </Campo>
+        </>
       )}
 
       <Campo

@@ -3059,3 +3059,87 @@ com confiança.
 **Mudaria se:** o Telegram tirar a contagem de views da página pública,
 ou passar a exigir login nela. Aí a medição volta a depender de pedir
 print ao dono do canal, que é fonte interessada.
+
+---
+
+## D-071 · O WhatsApp passa a publicar sozinho, e o chip vira descartável
+
+**Data:** 2026-08-06
+
+**Revoga a D-053 e inverte a regra 3.2.** A decisão é do dono, e é dele
+a conta e o risco:
+
+> *"n ligo de derrubar conta do numero, vou ir comprando varios"*
+> *"e sim vou pagar 30/mes chip e etc n ligo nao, é dentro"*
+
+### O que mudou, e o que não mudou
+
+**A pesquisa não mudou. A conta mudou.** A D-053 tinha refeito a
+pergunta do zero, a pedido do dono, e concluído que o caminho oficial
+não existe: Groups API com teto de 8 participantes, Canal sem API de
+publicação, broadcast individual com opt-in. Isso continua verdadeiro.
+Ela engavetou o assunto **por conta**, não por princípio: R$30/mês de
+chip mais VPS brasileira mais 14 dias de aquecimento, para servir um
+grupo que ainda não tem audiência.
+
+O dono derrubou exatamente essa premissa. Com a conta aceita, o que
+sobra da D-053 não é a proibição, é o manual de sobrevivência — e ele
+virou a lista de travas da regra 3.2 reescrita.
+
+### O que foi construído
+
+- `lib/whatsapp.ts` — envio pela Evolution API, camada REST sobre o
+  Baileys, rodando na VPS. Espelha `lib/telegram.ts`, inclusive na queda
+  para texto quando a foto não serve.
+- `lib/texto-whatsapp.ts` — a tradução do HTML do Telegram para as
+  marcações do WhatsApp, sozinha e testada (`testes/whatsapp.mjs`).
+  **É a parte que pode custar dinheiro em silêncio:** `escapaHtml` troca
+  `&` por `&amp;`, e link de afiliado com `&amp;` no meio abre o produto
+  sem o subid. Publica, parece que funcionou, e entrega a audiência de
+  graça — a D-034 outra vez, por outra porta.
+- `scripts/publica-automatico.mjs` — o laço deixou de filtrar
+  `plataforma === "telegram"`. Quem sabe COMO mandar é uma função só
+  (`manda`); o laço continua sabendo só O QUE e QUANDO.
+- Migration: `canal.whatsapp_grupo_id`, `canal.whatsapp_instancia`,
+  `publicacao.whatsapp_message_id`, e os parâmetros
+  `whatsapp_automatico` e `whatsapp_envios_dia_max`.
+- Painel: os campos de grupo e chip no formulário de canal, e o botão de
+  lote deixou de ser "Publicar no Telegram".
+
+### As três decisões de desenho que não são óbvias
+
+**1. O teto de envios é por CHIP, não por canal.** `posts_por_dia_max` é
+o combinado com o parceiro; estourá-lo quebra uma promessa. O teto do
+chip é outra coisa: estourá-lo derruba a conta. Sete canais a 30
+posts/dia num número só dariam ~210 envios, acima do teto de número
+maduro que a D-053 mediu. Por isso a contagem é por
+`canal.whatsapp_instancia`, e vários canais no mesmo chip somam.
+
+**2. `whatsapp_automatico` nasce em 0.** No dia desta migration não
+existe chip, não existe VPS e não existem os 14 dias de aquecimento.
+Ligar antes é exatamente o que a pesquisa mediu derrubando conta em 2 a
+8 semanas. E o freio é separado do `publicacao_automatica`: desligar o
+WhatsApp não pode calar o Telegram, que é o que paga hoje.
+
+**3. O `BotaoWhatsApp` continua vivo, e não é resto.** Quando o chip
+cair, o número novo leva de 7 a 14 dias para aquecer. O caminho manual é
+a operação nesse período. Apagá-lo transformaria uma queda esperada em
+canal mudo por duas semanas.
+
+### O que a Evolution NÃO faz, e por que a audiência continua na mão
+
+A leitura automática de audiência (`getChatMemberCount`) continua só no
+Telegram. A Evolution devolveria a lista de participantes do grupo, e
+guardar isso esbarra na regra 3.8: não existe cadastro de membro neste
+projeto. Audiência de grupo de WhatsApp continua digitada em `/canais`.
+
+### O que esperar, para ninguém se assustar depois
+
+O banimento não chega escrito. Ele aparece como a instância caindo e não
+voltando pelo QR Code — por isso `traduz()` diz isso com todas as
+letras em vez de repetir o erro cru da API. A linha da operadora
+continua funcionando; o que morre é a conta do WhatsApp daquele número.
+Serviço pago de "desbanimento" é golpe.
+
+**Mudaria se:** a Meta abrir API de grupo com teto real, aí o cliente
+não oficial sai e o oficial entra sem tocar no resto do laço.

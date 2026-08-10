@@ -6,7 +6,7 @@ import {
   desfazCancelamentoDaPublicacao,
   desfazEnvioDaPublicacao,
   devolveOfertaParaAprovacao,
-  publicaLoteTelegram,
+  publicaLote,
   registraEnvioAutoDeclarado,
 } from "@/app/acoes/publicacao";
 import { Botao, BotaoDePlataforma } from "@/app/componentes/Botao";
@@ -74,7 +74,7 @@ export default async function Publicar() {
         subtitulo={
           pendentes.length === 0
             ? "Nada esperando envio."
-            : "O WhatsApp abre com a mensagem pronta — você aperta enviar. O Telegram sai sozinho."
+            : "As duas plataformas saem sozinhas. O botão do WhatsApp continua ali para quando o chip cair."
         }
         /*
           O quanto falta sai do topo e vira coluna, colada no rolar.
@@ -256,8 +256,8 @@ function ProgressoDoDia({
       </dl>
 
       <p className="border-t border-borda-sutil pt-3 text-sm leading-longo text-texto-fraco">
-        O WhatsApp abre com a mensagem pronta e você aperta enviar. O Telegram sai em lote, num
-        toque por canal.
+        Os dois saem em lote, num toque por canal. No WhatsApp o robô fala pelo chip cadastrado no
+        canal; se ele estiver fora, use o botão de abrir o aplicativo.
       </p>
     </Cartao>
   );
@@ -343,18 +343,19 @@ function GrupoDoCanal({
       )}
 
       {/*
-        Telegram em lote: o robô publica sozinho pela API oficial, e um
-        bloco resolve o canal inteiro num toque. Não fere a regra do
-        WhatsApp — ela restringe só o WhatsApp.
+        Publicação em lote: o robô resolve o canal inteiro num toque.
+
+        Era só Telegram, porque a regra 3.2 proibia o WhatsApp
+        automático. Desde a D-071 vale para os dois.
       */}
-      {canal.plataforma === "telegram" && itens.length > 1 && vagas > 0 && (
+      {itens.length > 1 && vagas > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-borda-sutil px-5 py-4">
           <p className="text-sm text-texto-fraco">
             O robô posta sozinho. Nenhum toque por item.
           </p>
-          <form action={publicaLoteTelegram}>
+          <form action={publicaLote}>
             <input type="hidden" name="canal_id" value={canal.id} />
-            <BotaoDePlataforma type="submit" plataforma="telegram">
+            <BotaoDePlataforma type="submit" plataforma={canal.plataforma}>
               <span className="size-2 rounded-circulo bg-white/85" aria-hidden />
               Publicar as {cabemHoje}
             </BotaoDePlataforma>
@@ -414,17 +415,24 @@ function CartaoDeEnvio({
       </pre>
 
       {cabeHoje ? (
-        publicacao.canal.plataforma === "whatsapp" ? (
-          <BotaoWhatsApp publicacaoId={publicacao.id} mensagem={texto} />
-        ) : (
-          <form action={publicaLoteTelegram}>
+        <div className="flex flex-wrap items-center gap-3">
+          <form action={publicaLote}>
             <input type="hidden" name="canal_id" value={publicacao.canal.id} />
-            <BotaoDePlataforma type="submit" plataforma="telegram">
+            <BotaoDePlataforma type="submit" plataforma={publicacao.canal.plataforma}>
               <span className="size-2 rounded-circulo bg-white/85" aria-hidden />
-              Publicar no Telegram
+              Publicar no {publicacao.canal.plataforma === "whatsapp" ? "WhatsApp" : "Telegram"}
             </BotaoDePlataforma>
           </form>
-        )
+
+          {/*
+            O caminho manual sobrevive à D-071, e não é resto: quando o
+            chip cai, ele é a operação. O número novo leva 14 dias para
+            aquecer, e o canal não pode ficar mudo esse tempo todo.
+          */}
+          {publicacao.canal.plataforma === "whatsapp" && (
+            <BotaoWhatsApp publicacaoId={publicacao.id} mensagem={texto} />
+          )}
+        </div>
       ) : (
         <p className="rounded-md border border-borda bg-superficie-alt px-4 py-3 text-sm text-texto-fraco">
           Fica para amanhã: o teto do canal já foi usado hoje.

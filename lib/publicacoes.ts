@@ -338,6 +338,32 @@ export async function vagasDoCanal(canalId: string): Promise<number> {
  * muda, e o que foi ao grupo é o que precisa ser auditável — inclusive
  * para provar a identificação publicitária da regra 3.10.
  */
+/**
+ * Em qual coluna o id do post vai, conforme a plataforma do canal.
+ *
+ * Devolve objeto vazio quando não há id — que é o caso honesto do "já
+ * enviei por fora": não existe id para dar.
+ */
+async function colunaDoMessageId(
+  publicacaoId: string,
+  messageId?: number | string | null,
+): Promise<Record<string, number | string>> {
+  if (messageId == null || messageId === "") return {};
+
+  const db = supabaseServidor();
+  const { data } = await db
+    .from("publicacao")
+    .select("canal:canal_id ( plataforma )")
+    .eq("id", publicacaoId)
+    .maybeSingle();
+
+  const plataforma = (data as { canal?: { plataforma?: string } } | null)?.canal?.plataforma;
+
+  return plataforma === "whatsapp"
+    ? { whatsapp_message_id: String(messageId) }
+    : { telegram_message_id: Number(messageId) };
+}
+
 export async function marcaEnviada(
   id: string,
   origem: OrigemDoEnvio,
@@ -355,7 +381,14 @@ export async function marcaEnviada(
    * Fica opcional porque "já enviei por fora" não tem id nenhum para
    * dar, e isso é verdade, não omissão.
    */
-  telegramMessageId?: number | null,
+  /**
+   * O id do post na plataforma. Número no Telegram, texto no WhatsApp
+   * (D-071) — e por isso ele **não escolhe a coluna sozinho**: quem
+   * decide é a plataforma do canal, lida aqui dentro. Deixar quem chama
+   * escolher já foi tentado no laço automático e é onde o id acaba na
+   * coluna errada quando alguém acrescenta uma terceira plataforma.
+   */
+  messageId?: number | string | null,
 ): Promise<void> {
   const db = supabaseServidor();
 
@@ -388,7 +421,7 @@ export async function marcaEnviada(
       enviada_em: new Date().toISOString(),
       enviada_por: enviadaPor ?? null,
       ...(mensagem ? { mensagem } : {}),
-      ...(telegramMessageId != null ? { telegram_message_id: telegramMessageId } : {}),
+      ...(await colunaDoMessageId(id, messageId)),
       cancelada_em: null,
     })
     .eq("id", id);

@@ -11,8 +11,13 @@ import { BotaoDePlataforma } from "@/app/componentes/Botao";
  * O botão faz duas coisas num toque: abre o WhatsApp com a mensagem
  * pronta e registra que a publicação saiu pelo fluxo. **Ele não
  * envia nada** — quem aperta enviar é a pessoa, do outro lado, no
- * aplicativo. Automatizar isso derruba o número, que é o ativo do
- * parceiro (regra 3.2 do AGENTS.md).
+ * aplicativo.
+ *
+ * ISTO NÃO É RESTO DA REGRA VELHA. Desde a D-071 o sistema publica
+ * sozinho no WhatsApp, e este botão continua existindo porque o chip
+ * cai — é a premissa da D-071, não o imprevisto. Número novo leva de 7
+ * a 14 dias para aquecer, e este é o caminho que mantém o grupo vivo
+ * nesse período.
  *
  * Registrar antes de saber se a pessoa realmente apertou enviar é
  * deliberado: o caminho de volta é o desfazer, que custa zero no

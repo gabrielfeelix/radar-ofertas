@@ -3,12 +3,12 @@ import "server-only";
 /**
  * Publicação no Telegram, pela Bot API oficial.
  *
- * **Esta é a única superfície que o sistema publica sozinho**, e isso
- * é regra dura: a 3.2 do `AGENTS.md` proíbe automatizar o WhatsApp em
- * qualquer forma — nada de biblioteca não oficial, QR Code ou
- * WhatsApp Web simulado —, porque isso derruba o número, que é o ativo
- * do parceiro. O Telegram tem API oficial para postar, e por isso
- * pode.
+ * Era a única superfície que o sistema publicava sozinho, porque a
+ * regra 3.2 proibia automatizar o WhatsApp. **Mudou em 06/08**
+ * (D-071): o WhatsApp publica por `lib/whatsapp.ts`, pela Evolution
+ * API na VPS. A diferença que sobra é de natureza, e é grande — aqui a
+ * API é oficial e o bot não cai por usá-la; lá o cliente é não oficial
+ * e o número é descartável por desenho.
  *
  * O QUE VAI PARA O CANAL É O QUE FICA GRAVADO. A mensagem enviada é
  * guardada em `publicacao.mensagem` como saiu, e não remontada depois:

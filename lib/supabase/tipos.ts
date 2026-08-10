@@ -210,6 +210,16 @@ export type CanalLinha = {
   plataforma: string;
   /** Obrigatório quando a plataforma é telegram (constraint do banco). */
   telegram_chat_id: string | null;
+  /**
+   * O grupo e o chip do WhatsApp (D-071).
+   *
+   * Sem constraint, ao contrário do Telegram: os canais de WhatsApp
+   * nasceram na época em que a regra 3.2 proibia publicar, então nenhum
+   * tem grupo, e a constraint recusaria a migration inteira. Quem cobra
+   * é o publicador, no log da rodada.
+   */
+  whatsapp_grupo_id: string | null;
+  whatsapp_instancia: string | null;
   membros_estimados: number | null;
   /** O orçamento do dia. É o que vira "vagas hoje" na aprovação. */
   posts_por_dia_max: number;
@@ -286,6 +296,13 @@ export type PublicacaoLinha = {
    * feminino no canal masculino em 01/08.
    */
   telegram_message_id: number | null;
+  /**
+   * O mesmo, no WhatsApp, e lá vale mais: o Telegram deixa apagar do
+   * canal quando quiser, o WhatsApp só dentro da janela de "apagar para
+   * todos". Sem o id gravado no envio, a janela fecha antes de alguém
+   * achar o post errado.
+   */
+  whatsapp_message_id: string | null;
   criado_em: string;
   atualizado_em: string;
 };

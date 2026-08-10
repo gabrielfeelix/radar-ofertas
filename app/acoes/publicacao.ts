@@ -16,18 +16,20 @@ import { montaMensagem } from "@/lib/mensagem";
 import { modeloGlobal } from "@/lib/modelo";
 import { usuarioAtual } from "@/lib/sessao";
 import { publicaComFoto } from "@/lib/telegram";
+import { publicaNoWhatsApp } from "@/lib/whatsapp";
 
 /**
  * Ações da fila de publicação.
  *
- * A regra 3.2 do AGENTS.md atravessa este arquivo inteiro: **nada
- * aqui envia no WhatsApp**. O sistema monta o texto e abre o
- * aplicativo; um humano aperta enviar. O que estas ações fazem é
- * registrar que o envio aconteceu.
+ * A regra 3.2 do AGENTS.md atravessava este arquivo inteiro: nada
+ * aqui enviava no WhatsApp, o sistema montava o texto e um humano
+ * apertava enviar. **Mudou em 06/08** (D-071): a ação de lote publica
+ * nas duas plataformas, o Telegram pela API oficial e o WhatsApp pela
+ * Evolution API na VPS.
  *
- * No Telegram é diferente — a API oficial permite postar sozinho, e
- * desde 01/08 a ação de lote **publica de verdade**, pelo bot
- * `@radar4yu_bot`.
+ * O `BotaoWhatsApp` continua existindo e continua abrindo o `wa.me`.
+ * Ele não é resto: é o caminho de quando o chip cai, e cair é
+ * esperado. Enquanto o número novo aquece, a operação não para.
  *
  * A regra que sustenta isso: envio que falha **não é marcado como
  * enviado**. A publicação fica na fila com o motivo à vista. Marcar
@@ -58,13 +60,13 @@ export async function registraEnvio(form: FormData): Promise<void> {
 }
 
 /**
- * Publica no Telegram em lote.
+ * Publica em lote, na plataforma que o canal for.
  *
- * Um bloco "12 no Telegram — publicar todas" é um toque, e tira 12
- * itens do caminho do polegar. Não fere a regra do WhatsApp: ela
- * restringe só o WhatsApp, e o Telegram tem API oficial para isso.
+ * Um bloco "12 no canal, publicar todas" é um toque, e tira 12 itens
+ * do caminho do polegar. Chamava-se `publicaLoteTelegram` e só servia
+ * o Telegram, porque a regra 3.2 proibia o resto (D-071).
  */
-export async function publicaLoteTelegram(form: FormData): Promise<void> {
+export async function publicaLote(form: FormData): Promise<void> {
   const canalAlvo = String(form.get("canal_id") ?? "");
   const usuario = await usuarioAtual();
   const modelo = await modeloGlobal();
@@ -74,7 +76,6 @@ export async function publicaLoteTelegram(form: FormData): Promise<void> {
   // botão que existe para poupar toque ser justamente o que estoura o
   // combinado com o parceiro.
   for (const publicacao of await publicacoesDaFila()) {
-    if (publicacao.canal.plataforma !== "telegram") continue;
     if (canalAlvo !== "" && publicacao.canal.id !== canalAlvo) continue;
     if (publicacao.enviadaEm || publicacao.cancelada) continue;
     if (publicacao.precoAgoraCentavos !== publicacao.precoNaFilaCentavos) continue;
@@ -107,19 +108,33 @@ export async function publicaLoteTelegram(form: FormData): Promise<void> {
       link: publicacao.link.url,
     });
 
-    const envio = await publicaComFoto(
-      publicacao.canal.telegramChatId ?? "",
-      texto,
-      publicacao.imagemUrl,
-    );
+    const envio =
+      publicacao.canal.plataforma === "whatsapp"
+        ? await publicaNoWhatsApp(
+            publicacao.canal.whatsappInstancia ?? "",
+            publicacao.canal.whatsappGrupoId ?? "",
+            texto,
+            publicacao.imagemUrl,
+          )
+        : await publicaComFoto(
+            publicacao.canal.telegramChatId ?? "",
+            texto,
+            publicacao.imagemUrl,
+          );
 
     // Falhou: NÃO marca como enviada. A publicação fica na fila com o
     // motivo à vista. Marcar assim mesmo esvaziaria a tela deixando o
     // canal mudo, que é o pior desfecho possível.
     if (!envio.ok) continue;
 
-    // O `messageId` é guardado aqui pelo mesmo motivo do laço
-    // automático: sem ele não há como apagar o post depois.
+    /*
+      O `messageId` é guardado aqui pelo mesmo motivo do laço
+      automático: sem ele não há como apagar o post depois.
+
+      O do WhatsApp é `text` e o do Telegram é `number`, e eles moram em
+      colunas diferentes — `marcaEnviada` decide pela plataforma do
+      canal, não por quem chamou.
+    */
     await marcaEnviada(publicacao.id, "fluxo", texto, usuario?.id, envio.messageId);
   }
 

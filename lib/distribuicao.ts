@@ -56,6 +56,16 @@ export type Canal = {
   horarios: string;
   /** `@canal` ou o id numérico. É para onde o bot publica. */
   telegramChatId: string | null;
+  /** O JID do grupo (`...@g.us`). O equivalente do `telegramChatId` (D-071). */
+  whatsappGrupoId: string | null;
+  /**
+   * Qual chip serve este canal.
+   *
+   * Existe separado do grupo porque o teto de envios por dia é contado
+   * POR NÚMERO e não por canal: dois canais no mesmo chip somam, e é a
+   * soma que derruba a conta.
+   */
+  whatsappInstancia: string | null;
   ativo: boolean;
   ultimaPublicacaoEm: string | null;
 };
@@ -90,6 +100,8 @@ type LinhaDeCanal = {
   horarios_permitidos: number[] | null;
   ativo: boolean;
   telegram_chat_id: string | null;
+  whatsapp_grupo_id: string | null;
+  whatsapp_instancia: string | null;
   ultima_publicacao_em: string | null;
   parceiro: { nome: string } | null;
   canal_nicho: { nicho: { slug: string } | null }[] | null;
@@ -99,7 +111,7 @@ type LinhaDeCanal = {
 const SELECAO = `
   id, nome, plataforma, posts_por_dia_max, membros_estimados,
   split_audiencia_pct, split_operacao_pct, horarios_permitidos,
-  ativo, telegram_chat_id, ultima_publicacao_em,
+  ativo, telegram_chat_id, whatsapp_grupo_id, whatsapp_instancia, ultima_publicacao_em,
   parceiro:parceiro_id ( nome ),
   canal_nicho ( nicho:nicho_id ( slug ) ),
   canal_atributo ( atributo, valores, modo )
@@ -130,6 +142,8 @@ function montaCanal(linha: LinhaDeCanal, publicadasHoje: number): Canal {
       .map((h) => `${String(h).padStart(2, "0")}:00`)
       .join(", "),
     telegramChatId: linha.telegram_chat_id,
+    whatsappGrupoId: linha.whatsapp_grupo_id,
+    whatsappInstancia: linha.whatsapp_instancia,
     ativo: linha.ativo,
     ultimaPublicacaoEm: linha.ultima_publicacao_em,
   };
@@ -189,6 +203,14 @@ export type DadosDoCanal = {
    * como "não consegui salvar no banco", sem dizer o que faltava.
    */
   telegramChatId?: string | null;
+  /**
+   * O grupo e o chip do WhatsApp. Opcionais no banco de propósito: os
+   * canais de WhatsApp nasceram na época em que a regra 3.2 proibia
+   * publicar, então nenhum tem grupo, e uma constraint recusaria a
+   * migration. Quem cobra é o publicador, no log da rodada.
+   */
+  whatsappGrupoId?: string | null;
+  whatsappInstancia?: string | null;
   nichos: string[];
   tetoDiario: number;
   audiencia: number;
@@ -215,6 +237,8 @@ export async function criaCanal(dados: DadosDoCanal): Promise<string | null> {
       nome: dados.nome,
       plataforma: dados.plataforma,
       telegram_chat_id: dados.telegramChatId || null,
+      whatsapp_grupo_id: dados.whatsappGrupoId || null,
+      whatsapp_instancia: dados.whatsappInstancia || null,
       posts_por_dia_max: dados.tetoDiario,
       membros_estimados: dados.audiencia,
       split_audiencia_pct: dados.splitAudienciaPct,
@@ -239,6 +263,8 @@ export async function atualizaCanal(id: string, dados: DadosDoCanal): Promise<vo
       nome: dados.nome,
       plataforma: dados.plataforma,
       telegram_chat_id: dados.telegramChatId || null,
+      whatsapp_grupo_id: dados.whatsappGrupoId || null,
+      whatsapp_instancia: dados.whatsappInstancia || null,
       posts_por_dia_max: dados.tetoDiario,
       membros_estimados: dados.audiencia,
       split_audiencia_pct: dados.splitAudienciaPct,
