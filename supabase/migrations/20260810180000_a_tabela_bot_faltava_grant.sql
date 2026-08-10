@@ -1,0 +1,35 @@
+-- =============================================================
+-- A tabela `bot` faltava grant
+-- =============================================================
+--
+-- (Carimbo `20260810180000`. Conserta a `20260810150000`, que não
+-- pode ser alterada: ela já foi aplicada na nuvem.)
+--
+-- O DEFEITO: `create table` não dá privilégio a ninguém. A RLS estava
+-- ligada e as policies certas, mas RLS **filtra linha** — quem decide
+-- se o papel pode encostar na tabela é o `grant`, e ele não existia.
+--
+-- Conferido no banco depois de aplicar a 150000:
+--
+--   canal  -> authenticated: SELECT | service_role: SELECT,INSERT,UPDATE,DELETE
+--   bot    -> service_role: TRUNCATE,REFERENCES,TRIGGER    (e nada mais)
+--
+-- Ou seja: o publicador, que roda com `service_role`, receberia
+-- *"permission denied for table bot"* na primeira rodada com WhatsApp
+-- ligado. E o erro não apareceria em teste nenhum — os testes são de
+-- função pura e não tocam no banco.
+--
+-- É a mesma armadilha da migration que deu grant à série de audiência
+-- em 05/08: RLS ligada dá a sensação de que o acesso está resolvido.
+--
+-- Os privilégios abaixo copiam os de `canal`, de propósito:
+--
+--   * `service_role` escreve, porque é com ele que o painel e o
+--     publicador falam (`lib/supabase/servidor.ts` usa a chave de
+--     serviço, e as policies de dono continuam valendo para quem
+--     entrar pelo navegador).
+--   * `authenticated` só lê. Escrita de bot passa por server action,
+--     nunca direto do navegador.
+
+grant select, insert, update, delete on public.bot to service_role;
+grant select on public.bot to authenticated;
