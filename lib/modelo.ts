@@ -9,9 +9,15 @@ import type { ModeloMensagemLinha } from "@/lib/supabase/tipos";
  *
  * A reserva existe porque a fila de publicação não pode ficar sem
  * mensagem quando o banco não responde: o operador está em pé, de
- * manhã, e uma tela vazia com "erro" não diz o que fazer. O texto de
- * reserva é o mesmo que a migration insere, para que os dois não
- * divirjam em silêncio.
+ * manhã, e uma tela vazia com "erro" não diz o que fazer.
+ *
+ * ELA TEM QUE ACOMPANHAR AS MIGRATIONS, e não acompanhou. A versão
+ * anterior deste comentário afirmava que o texto daqui era "o mesmo que
+ * a migration insere, para que os dois não divirjam em silêncio" — e as
+ * migrations 39, 41 e 43 mudaram o banco sem que ninguém tocasse aqui.
+ * Foi desta cópia velha que o `lastro_declarado` com preço repetido
+ * voltou para o modelo do Radar Delas em 10/08, três meses de decisão
+ * depois. **Mexeu no texto no banco, mexa aqui.**
  */
 const RESERVA: ModeloDeMensagem = {
   corpo: [
@@ -28,10 +34,26 @@ const RESERVA: ModeloDeMensagem = {
     "👉 {link}",
   ].join("\n"),
   lastroCom: "Menor preço em {janela} dias.",
-  lastroQueda: "Caiu de {antes} para {agora} hoje.",
-  // Atribui à loja de propósito: o "de" é alegação dela, não medição
-  // nossa, e assumi-lo seria a regra 3.4 violada.
-  lastroDeclarado: "A loja marcou de {antes} por {agora}.",
+  /*
+    NENHUMA LINHA DE LASTRO REPETE {antes} NEM {agora}, e isto já custou
+    três rodadas.
+
+    O corpo mostra "De {preco_antes} por {preco}" logo acima; uma linha
+    de lastro que recita os mesmos dois valores é ruído, e o dono
+    reclamou dela em 01/08, em 03/08 e de novo em 10/08. As migrations
+    39, 43 e 62 são as três respostas, e a 62 pôs constraint no banco.
+
+    O que sobrou aqui é o que MEDIMOS: {queda} é a diferença entre duas
+    leituras nossas, e {janela} e {desde} são a idade da nossa série.
+    Nenhum canal que repassa oferta alheia consegue dizer isso, e é a
+    única parte que vale linha própria.
+
+    `lastroDeclarado` fica VAZIO porque o dono decidiu assim em 03/08
+    (*"não precisa dizer isso"*). Vazio some sem deixar buraco:
+    `montaMensagem` colapsa as quebras que sobram.
+  */
+  lastroQueda: "Baixou {queda}% desde a leitura de ontem.",
+  lastroDeclarado: "",
   linhaFrete: "🚚 Frete grátis",
   lastroSem: "Menor preço que observamos desde {desde}.",
 };
