@@ -347,8 +347,10 @@
     .prova-colagem{display:none}
     .telefone{width:min(238px,68vw)}
     .tela{min-height:0}
-    /* janela fixa: a conversa roda sozinha dentro dela, como um gif */
-    .chat{height:268px;overflow:hidden}
+    /* janela fixa: a conversa roda sozinha dentro dela, como um gif.
+       flex:none e obrigatorio: com flex:1 a janela estica ate o
+       conteudo inteiro e o telefone vira uma salsicha. */
+    .chat{flex:none;height:272px;overflow:hidden}
     .js .rolo{animation:rolagem 9s ease-in-out 3.4s infinite}
     /* o cabecalho compacta junto com o telefone */
     .ilha{width:70px;height:19px;top:17px}
