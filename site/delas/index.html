@@ -142,21 +142,43 @@
     display:block;margin-top:14px;
     font-size:13px;color:var(--salvia);letter-spacing:.04em;
   }
-  .prova-mini{
-    display:flex;align-items:center;gap:10px;
-    margin-top:30px;
+  /* a prova visual: mini colagem de achados, com a tag por cima */
+  .prova-colagem{margin-top:32px}
+  .prova-colagem .fila{display:flex;align-items:flex-end}
+  .minifotos{display:flex}
+  .minifotos figure{
+    width:78px;aspect-ratio:1;
+    border-radius:20px;overflow:hidden;
+    border:3px solid var(--branco);
+    box-shadow:0 10px 24px rgba(110,68,80,.20);
+    margin-left:-16px;
+    background:var(--rose-po);
+  }
+  .minifotos figure img{width:100%;height:100%;object-fit:cover;display:block}
+  .minifotos figure:nth-child(1){margin-left:0;transform:rotate(-6deg)}
+  .minifotos figure:nth-child(2){transform:rotate(2deg) translateY(-8px);z-index:1}
+  .minifotos figure:nth-child(3){transform:rotate(6deg)}
+  .tag-off{
+    background:var(--ameixa);color:var(--porcelana);
+    font-size:12.5px;font-weight:600;
+    padding:8px 15px;border-radius:999px;
+    box-shadow:0 8px 20px rgba(110,68,80,.28);
+    transform:rotate(3deg) translate(-10px,-4px);
+    white-space:nowrap;
+  }
+  .prova-colagem p{
+    margin-top:14px;
     font-size:13.5px;color:var(--salvia);
   }
-  .prova-mini .rostos{display:flex}
-  .prova-mini .rostos span{
-    width:30px;height:30px;border-radius:50%;
-    border:2px solid var(--porcelana);
-    background:var(--rose-po);
-    display:grid;place-items:center;
-    font-size:12px;
-    margin-left:-8px;
+  /* no desktop o telefone ja carrega o visual: a colagem encolhe para bolinhas */
+  @media(min-width:920px){
+    .prova-colagem{display:flex;align-items:center;gap:12px}
+    .prova-colagem .fila{align-items:center}
+    .minifotos figure{width:36px;border-radius:50%;border-width:2px;margin-left:-10px;box-shadow:0 4px 12px rgba(110,68,80,.16)}
+    .minifotos figure:nth-child(n){transform:none}
+    .tag-off{display:none}
+    .prova-colagem p{margin-top:0}
   }
-  .prova-mini .rostos span:first-child{margin-left:0}
 
   /* --------- o telefone --------- */
   .palco{
@@ -587,9 +609,16 @@
       </a>
       <span class="cta-micro">abre direto no aplicativo · grátis · sai quando quiser</span>
 
-      <div class="prova-mini">
-        <div class="rostos"><span>💄</span><span>🌸</span><span>✨</span></div>
-        até 70% off em achados conferidos, todo dia
+      <div class="prova-colagem">
+        <div class="fila">
+          <div class="minifotos">
+            <figure><img src="https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=240&q=70" alt="" loading="lazy"></figure>
+            <figure><img src="https://images.unsplash.com/photo-1541643600914-78b084683601?w=240&q=70" alt="" loading="lazy"></figure>
+            <figure><img src="https://images.unsplash.com/photo-1556228720-195a672e8a03?w=240&q=70" alt="" loading="lazy"></figure>
+          </div>
+          <span class="tag-off">até 70% off</span>
+        </div>
+        <p>achados conferidos chegando todo dia ✨</p>
       </div>
     </div>
 
