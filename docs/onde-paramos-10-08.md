@@ -168,13 +168,43 @@ publicava normal e o canal de WhatsApp ficava mudo com a fila cheia.
 `/\b[áa]gua micelar/` não casa com "Água Micelar". As regras de emoji
 usam lookaround com `\p{L}` por causa disso.
 
+**Canal novo nasce com etiqueta que não existe na Central, e ele emudece
+inteiro.** O Radar Delas ficou mudo até as 18:59 com 1.685 itens na fila,
+e a causa não era o WhatsApp: era `radardelas` não estar cadastrada no
+painel do Mercado Livre. O gerador responde
+`Tag is not associated with this affiliate` (código 109),
+`classificaFalhaDeLink` traduz isso para falha **do canal**, e o
+publicador descarta a fila inteira dele na rodada — inclusive os itens de
+Amazon e Shopee, que nem precisam da Central. Toda rodada morria no
+primeiro item de Mercado Livre da fila.
+
+O comportamento está certo e é deliberado, mas o sintoma engana: canal
+mudo com fila cheia parece problema de envio, de ritmo ou de credencial
+do WhatsApp, que foram os três primeiros lugares onde se procurou.
+**Ao criar canal, teste a etiqueta antes de qualquer outra coisa** —
+`geraLinks([url], etiqueta, sessao)` responde em um segundo e é a
+conferência mais barata que existe. Conferidas em 10/08, as outras oito
+(`radarbeauty`, `radarcasa`, `radarfitness`, `radargeek`, `radarkids`,
+`radarperfumes`, `radarpet`, `radartech`) estão todas cadastradas: a
+pendência do Beauty com `radargeral` que a D-045 registrava já foi
+fechada.
+
 ---
 
 ## O que ficou pendente
 
-**A primeira publicação no Radar Delas.** Estava agendada para a janela
-das 18h de 10/08. Se não caiu, o primeiro lugar para olhar é
-`/var/log/radar/publica.log` na VPS.
+~~**A primeira publicação no Radar Delas.**~~ **Caiu às 18:59 de 10/08**,
+com foto, `#publi` e link `meli.la`, e o `whatsapp_message_id` ficou
+gravado. Fecha o laço da D-071: da queda detectada até a mensagem no
+grupo de WhatsApp, sem humano. Duas coisas travavam, e as duas eram de
+configuração: o `publica.yml` não passava as variáveis da Evolution
+(commit `4b72625`, 16:54) e a etiqueta `radardelas` não existia na
+Central (criada pelo dono às 18:4x).
+
+**Os horários do Delas ganharam a hora 19** no mesmo dia, para não
+esperar até as 20h. A lista agora é `[8,10,12,14,16,18,19,20,21]`, e ela
+continua pulando 22, que é hora de pico segundo `lib/horarios.ts` —
+decisão a rever com o dono, não esquecimento.
 
 **Peso de marca em beleza.** Só 4% do que o canal publica é marca que a
 beauty tok reconhece. O mecanismo já existe para perfume (`pesoDaMarca`).

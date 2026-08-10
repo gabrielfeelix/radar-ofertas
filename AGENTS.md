@@ -182,10 +182,17 @@ trava do banco impede os dois publicarem juntos.
 arquivo tem os caminhos, os comandos e os quatro erros que já custaram
 tempo hoje.
 
-Um deles vale repetir aqui porque é armadilha de código:
+**A primeira mensagem caiu no grupo às 18:59 de 10/08** e o laço da D-071
+fechou: da queda detectada até o WhatsApp, sem humano.
+
+Dois deles valem repetir aqui porque são armadilha de código:
 **`canal_aceita_atributos` tem duas versões vivas**, e a de dois
 argumentos ignora todo filtro com escopo de nicho, sem erro nenhum.
-Sempre passe o nicho como terceiro argumento. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+Sempre passe o nicho como terceiro argumento. E **etiqueta de afiliado
+não cadastrada na Central emudece o canal inteiro**, inclusive os itens
+de Amazon e Shopee: foi o que segurou o Radar Delas o dia todo, com 1.685
+itens na fila, parecendo defeito de WhatsApp. Ao criar canal, teste a
+etiqueta antes de tudo. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
 
 ### 05/08/2026: a primeira decisão de divulgação (D-069)
 
@@ -277,7 +284,7 @@ de afiliado e chat conferido. O que mudou por baixo:
 |---|---|
 | `canal_atributo`: o canal filtra por atributo do produto. "Perfume masculino" não é nicho, é o `GENDER` do ML | D-042, migration 37 |
 | O canal é identificado pelo **`@nome` público**, não pelo id numérico — abrir o grupo ao público troca o id | D-044 |
-| Etiqueta de afiliado por canal, conferida contra o gerador. `radarbeauty` não existe: o Beauty está com `radargeral`, e é pendência | D-045 |
+| Etiqueta de afiliado por canal, conferida contra o gerador. As nove estão cadastradas na Central (conferido em 10/08); `radarbeauty` passou a existir e a pendência do `radargeral` fechou | D-045 |
 | Nichos `geek` e `perfume`, e os 30 ramos de Esportes que não são fitness marcados como secundários | migration 37 |
 | Ritmo a cinco minutos em pico e normal; madrugada em trinta | migration 39 |
 | As duas linhas de lastro que repetiam o "de" e o "por" que já estavam no corpo | migrations 39 e 40 |
