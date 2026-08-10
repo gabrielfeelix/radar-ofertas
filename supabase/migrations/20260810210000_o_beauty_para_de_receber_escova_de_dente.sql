@@ -75,8 +75,14 @@ update public.produto p
 -- o que está aprovado hoje continuaria saindo no canal errado. É a
 -- mesma decisão da migration que tirou jogo de tabuleiro do Tech.
 -- -------------------------------------------------------------
+-- `nova` e nao `pendente`: os status validos sao nova, aprovada,
+-- rejeitada, adiada e expirada (constraint `oferta_status_valido`).
+-- `pendente` foi chute meu, e o banco local nao pegou porque nao tinha
+-- nenhuma linha correspondente — o UPDATE afetou zero e a constraint
+-- nunca foi exercitada. Quem pegou foi a producao, na primeira
+-- tentativa de aplicar.
 update public.oferta o
-   set status = 'pendente', decidida_em = null, decidida_por = null
+   set status = 'nova', decidida_em = null, decidida_por = null
   from public.anuncio a, public.produto p
  where o.anuncio_id = a.id
    and a.produto_id = p.id
