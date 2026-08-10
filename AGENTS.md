@@ -155,9 +155,11 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 ## 9. Estado atual
 
-> **Chegou agora? Leia `docs/onde-paramos.md` primeiro.** Ele tem o
-> estado de 04/08, o que está quebrado, as decisões em aberto e os
-> erros que já foram cometidos para não se repetirem.
+> **Chegou agora? Leia `docs/onde-paramos-10-08.md` primeiro** — ele tem
+> o estado mais recente, o mapa de onde cada coisa mora (VPS, chip,
+> credenciais) e os erros de 10/08 anotados para não se repetirem.
+> Depois `docs/onde-paramos.md`, que é o de 04/08 e continua valendo
+> para tudo que o de 10/08 não cobre.
 >
 > **E leia isto:** o dono autorizou explicitamente mudar as regras deste
 > arquivo e da documentação quando a realidade as contrariar. Elas
@@ -165,7 +167,25 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 > Continuam intocáveis sem conversa apenas as que protegem a conta ou o
 > dinheiro: 3.1, 3.2, 3.3, 3.4 e 3.10.
 
-Atualizado em 05/08/2026. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
+Atualizado em 10/08/2026.
+
+### 10/08/2026: o WhatsApp saiu do papel (D-071, D-072)
+
+Existe VPS (Locaweb, `201.76.56.54`), existe Evolution em
+`zap.4yu.com.br`, existe chip conectado (instância `radar01`, primeiro
+dia 10/08) e existe canal `Radar Delas` com fila de 1693 itens limpa.
+O publicador roda de dois lugares — GitHub Actions e cron da VPS — e a
+trava do banco impede os dois publicarem juntos.
+
+**O mapa completo de onde cada coisa mora está em
+`docs/onde-paramos-10-08.md`.** Não reconstrua isso por tentativa: o
+arquivo tem os caminhos, os comandos e os quatro erros que já custaram
+tempo hoje.
+
+Um deles vale repetir aqui porque é armadilha de código:
+**`canal_aceita_atributos` tem duas versões vivas**, e a de dois
+argumentos ignora todo filtro com escopo de nicho, sem erro nenhum.
+Sempre passe o nicho como terceiro argumento. **Mantenha esta seção viva** — ela é o que uma sessão nova lê para saber onde parou. Atualize ao fim de cada bloco de trabalho.
 
 ### 05/08/2026: a primeira decisão de divulgação (D-069)
 
