@@ -73,6 +73,14 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          # A Evolution API, na VPS (D-071). SEM ESTAS DUAS LINHAS o
+          # canal de WhatsApp entra na rodada, é escolhido pelo ritmo e
+          # falha no envio com "falta WHATSAPP_API_URL" — o que trava o
+          # canal na rodada inteira. Medido em 10/08: o Telegram
+          # publicava normalmente e o Radar Delas ficava mudo, com a
+          # fila cheia, e o log só apareceria no fim da execução.
+          WHATSAPP_API_URL: ${{ secrets.WHATSAPP_API_URL }}
+          WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
           ML_MATT_TOOL: ${{ secrets.ML_MATT_TOOL }}
           # A Amazon monta o link sozinha: `tag` paga a comissão e
           # `ascsubtag` carrega o subid, sem sessão nem etiqueta. Sem
