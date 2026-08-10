@@ -47,7 +47,7 @@ O que não se negocia, porque é o que separa perder um chip de perder a audiên
 - **Nunca o número pessoal nem o de trabalho.** Banimento permanente é perda de identidade, não de ferramenta.
 - **O IP da VPS é brasileiro.** O país do IP tem que bater com o do número.
 - **Um chip por instância, com teto próprio.** `whatsapp_envios_dia_max` conta por `canal.whatsapp_instancia` e não por canal, porque é o número que cai. Teto de número maduro: menos de 200 envios/dia, menos de 30 por hora.
-- **Ritmo com folga sorteada.** Intervalo fixo é assinatura de robô documentada (`lib/ritmo.ts`).
+- **De 4 a 10 minutos entre promos, sorteado, e esta é a primeira regra do WhatsApp.** Palavras do dono em 10/08: *"tem que ser aleatório entre 4 à 10 min cada promo, NAO PODEMOS SER MENOS OU MAIS QUE ISSO"*. Vale **acima da faixa do dia** — pico, normal e madrugada usam a mesma janela, ao contrário do Telegram. Menos que 4 é padrão de disparo em massa; mais que 10 não é o que foi combinado. O sorteio é estável por canal e por último post, senão o laço do publicador o refaz a cada volta e o intervalo real estoura o teto (`intervaloDoWhatsAppEmMinutos`, em `lib/ritmo.ts`). Quem impede o grupo de tocar de madrugada é o `horarios_permitidos` do canal, não o intervalo.
 - **Número novo aquece antes de publicar.** 20 a 50 mensagens/dia nos 3 primeiros dias, 100 a 200/dia entre o 8º e o 14º, volume de operação a partir do 15º. `whatsapp_automatico = 0` até lá.
 
 O caminho manual continua existindo, e não é resto: `BotaoWhatsApp` abre o `wa.me` com a mensagem pronta, e é a operação enquanto o chip novo aquece.

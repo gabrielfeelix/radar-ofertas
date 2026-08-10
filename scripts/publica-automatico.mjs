@@ -1576,10 +1576,19 @@ async function melhorPrateleira(db, oferta) {
         continue;
       }
 
+      /*
+        O WHATSAPP TEM RITMO PRÓPRIO, e ele ignora a faixa do dia.
+
+        Regra do dono em 10/08: de 4 a 10 minutos entre promos,
+        sorteado, nunca menos e nunca mais. O `ritmo` configurado
+        continua servindo o Telegram; passar o canal aqui é o que troca
+        a régua (`lib/ritmo.ts`).
+      */
       const veredito = podePublicarAgora(
         new Date(),
         canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
         ritmo,
+        canal.plataforma === "whatsapp" ? { canalId: canal.id } : null,
       );
       const faltamMs = veredito.pode ? 0 : (veredito.faltamMinutos ?? 1) * 60_000;
       if (!melhor || faltamMs < melhor.faltamMs) melhor = { canal, faltamMs };

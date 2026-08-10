@@ -141,6 +141,69 @@ export function intervaloEmMinutos(
   return Math.max(1, comIntensidade - sorteado);
 }
 
+/* =============================================================
+   O RITMO DO WHATSAPP, que é outro e não negocia.
+   ============================================================= */
+
+/**
+ * O piso e o teto do intervalo no WhatsApp, em minutos.
+ *
+ * **Regra do dono, em 10/08, com estas palavras: *"tem que ser
+ * aleatório entre 4 à 10 min cada promo, NAO PODEMOS SER MENOS OU MAIS
+ * QUE ISSO"*.** É a primeira regra do WhatsApp, e vale acima da faixa
+ * do dia: pico, normal e madrugada usam esta mesma janela.
+ *
+ * Por que ela é diferente do Telegram: no Telegram o intervalo serve à
+ * audiência, e publicar demais faz o membro silenciar o canal. Aqui ele
+ * serve ao NÚMERO. Cadência regular é assinatura de robô no protocolo,
+ * e cadência curta demais é o padrão de disparo em massa que derruba
+ * conta. As duas pontas custam o chip, então as duas são duras.
+ *
+ * O que continua valendo por cima: o teto diário do canal, o
+ * `whatsapp_envios_dia_max` por chip, e o `horarios_permitidos` — é ele,
+ * e não o intervalo, que impede o grupo de tocar às 3 da manhã.
+ */
+export const WHATSAPP_INTERVALO_MIN = 4;
+export const WHATSAPP_INTERVALO_MAX = 10;
+
+/**
+ * Um número entre 0 e 1, sorteado mas ESTÁVEL para a mesma semente.
+ *
+ * `Math.random` não serve aqui, e a razão é sutil o bastante para
+ * merecer o comentário: o publicador chama `podePublicarAgora` de novo
+ * a cada volta do laço, enquanto dorme esperando a vez do canal. Com
+ * sorteio novo a cada chamada, o alvo se mexeria embaixo dele — sorteia
+ * 9, dorme, acorda, sorteia 5, e o intervalo real vira o maior dos
+ * sorteios da espera, passando dos 10 minutos que a regra proíbe.
+ *
+ * Amarrado ao canal e ao último post, o sorteio é um só enquanto aquele
+ * post for o último, e muda assim que sai o próximo. É acaso para quem
+ * olha de fora e é estável para o laço.
+ *
+ * O algoritmo é o hash de string do Java (`h * 31 + char`), que não
+ * serve para criptografia e aqui não precisa servir: o que se pede dele
+ * é espalhar sete valores, não resistir a ataque.
+ */
+function sorteioEstavel(semente: string): number {
+  let h = 0;
+  for (let i = 0; i < semente.length; i++) {
+    h = (Math.imul(h, 31) + semente.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0) / 4294967296;
+}
+
+/**
+ * O intervalo do WhatsApp: um inteiro de 4 a 10, inclusive nas pontas.
+ *
+ * A semente é `canalId|instanteDoUltimoPost`, montada por quem chama.
+ */
+export function intervaloDoWhatsAppEmMinutos(semente: string): number {
+  const faixas = WHATSAPP_INTERVALO_MAX - WHATSAPP_INTERVALO_MIN + 1;
+  const sorteado = Math.floor(sorteioEstavel(semente) * faixas);
+  // O `min` protege da borda em que o sorteio devolve exatamente 1.
+  return WHATSAPP_INTERVALO_MIN + Math.min(sorteado, faixas - 1);
+}
+
 export type Veredito =
   | { pode: true }
   | { pode: false; motivo: string; faltamMinutos?: number };
@@ -156,13 +219,22 @@ export function podePublicarAgora(
   agora: Date,
   ultimaPublicacaoEm: Date | null,
   ritmo: RitmoConfigurado,
+  /**
+   * Preenchido = canal de WhatsApp, e aí vale a janela de 4 a 10 min em
+   * vez da faixa do dia. Nulo = Telegram, o comportamento de sempre.
+   */
+  whatsapp: { canalId: string } | null = null,
 ): Veredito {
   const faixa = faixaDaHora(horaEmSaoPaulo(agora));
-  const intervalo = intervaloEmMinutos(faixa, ritmo);
 
   // Canal que nunca publicou não espera nada: o primeiro post é o que
-  // tira o canal do zero.
+  // tira o canal do zero. Vale para os dois — a regra dos 4 minutos é
+  // sobre a distância ENTRE promos, e aqui não existe a de trás.
   if (!ultimaPublicacaoEm) return { pode: true };
+
+  const intervalo = whatsapp
+    ? intervaloDoWhatsAppEmMinutos(`${whatsapp.canalId}|${ultimaPublicacaoEm.getTime()}`)
+    : intervaloEmMinutos(faixa, ritmo);
 
   const passados = (agora.getTime() - ultimaPublicacaoEm.getTime()) / 60_000;
   if (passados >= intervalo) return { pode: true };
@@ -170,7 +242,9 @@ export function podePublicarAgora(
   const faltam = Math.ceil(intervalo - passados);
   return {
     pode: false,
-    motivo: `faixa ${faixa}: um post a cada ${intervalo} min, faltam ${faltam}`,
+    motivo: whatsapp
+      ? `whatsapp: sorteou ${intervalo} min para esta promo, faltam ${faltam}`
+      : `faixa ${faixa}: um post a cada ${intervalo} min, faltam ${faltam}`,
     faltamMinutos: faltam,
   };
 }

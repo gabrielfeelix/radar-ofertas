@@ -7,7 +7,7 @@
  */
 import {
   RITMO_PADRAO, faixaDaHora, intervaloEmMinutos, podePublicarAgora, cabemAteMeiaNoite,
-  diaEmSaoPaulo, inicioDoDiaEmSaoPaulo,
+  diaEmSaoPaulo, inicioDoDiaEmSaoPaulo, intervaloDoWhatsAppEmMinutos,
 } from "../lib/ritmo.ts";
 
 let passou = 0, falhou = 0;
@@ -94,6 +94,83 @@ const tresDaManha = new Date("2026-08-01T06:00:00Z");
 confere(
   "publicou há 30 min de madrugada: ainda espera",
   !podePublicarAgora(tresDaManha, new Date(tresDaManha.getTime() - 30 * 60_000), RITMO_PADRAO).pode,
+);
+
+/*
+  O RITMO DO WHATSAPP.
+
+  A regra do dono não tem folga nas pontas: *"aleatório entre 4 à 10 min
+  cada promo, NAO PODEMOS SER MENOS OU MAIS QUE ISSO"*. Errar aqui não
+  levanta erro — o número só cai algumas semanas depois, e aí não dá
+  para saber se foi o ritmo ou outra coisa. Por isso o teste varre a
+  janela inteira em vez de conferir um caso.
+*/
+console.log("\no ritmo do whatsapp, de 4 a 10\n");
+
+const sorteados = new Set();
+let foraDaJanela = null;
+for (let i = 0; i < 5_000; i++) {
+  const m = intervaloDoWhatsAppEmMinutos(`canal-${i}|${i * 97}`);
+  sorteados.add(m);
+  if (m < 4 || m > 10) foraDaJanela = m;
+}
+
+confere("nunca sai da janela em 5.000 sorteios", foraDaJanela === null);
+confere("e usa os sete valores, de 4 a 10", sorteados.size === 7);
+
+/*
+  A ESTABILIDADE, que é o que faz a regra valer de verdade.
+
+  O publicador chama `podePublicarAgora` a cada volta do laço enquanto
+  dorme. Se o sorteio mudasse a cada chamada, o intervalo real viraria o
+  MAIOR dos sorteios da espera, e passaria de 10 min sem ninguém ver.
+*/
+confere(
+  "a mesma semente sorteia o mesmo número",
+  intervaloDoWhatsAppEmMinutos("beauty|123") === intervaloDoWhatsAppEmMinutos("beauty|123"),
+);
+
+let mudouComOPost = false;
+for (let i = 0; i < 200; i++) {
+  if (intervaloDoWhatsAppEmMinutos(`beauty|${i}`) !== intervaloDoWhatsAppEmMinutos("beauty|0")) {
+    mudouComOPost = true;
+  }
+}
+confere("e muda quando o último post muda", mudouComOPost);
+
+/*
+  A JANELA VALE EM QUALQUER HORA DO DIA.
+
+  É a diferença para o Telegram, que espera 90 min de madrugada. Quem
+  impede o grupo de tocar às 3 da manhã é o `horarios_permitidos` do
+  canal, não o intervalo.
+*/
+const doisMinAtras = (t) => new Date(t.getTime() - 2 * 60_000);
+const onzeMinAtras = (t) => new Date(t.getTime() - 11 * 60_000);
+const zap = { canalId: "beauty" };
+
+let esperouMenosDeQuatro = false;
+let esperouMaisDeDez = false;
+for (const hora of ["2026-08-01T06:00:00Z", "2026-08-01T11:00:00Z", "2026-08-01T23:00:00Z"]) {
+  const t = new Date(hora);
+  if (podePublicarAgora(t, doisMinAtras(t), RITMO_PADRAO, zap).pode) esperouMenosDeQuatro = true;
+  if (!podePublicarAgora(t, onzeMinAtras(t), RITMO_PADRAO, zap).pode) esperouMaisDeDez = true;
+}
+confere("com 2 min desde o último post, nunca libera", !esperouMenosDeQuatro);
+confere("com 11 min desde o último post, sempre libera", !esperouMaisDeDez);
+
+confere(
+  "o primeiro post do canal não espera nada",
+  podePublicarAgora(new Date("2026-08-01T11:00:00Z"), null, RITMO_PADRAO, zap).pode,
+);
+
+// E o Telegram não muda: sem o quarto argumento, a faixa do dia manda.
+confere(
+  "telegram continua com a faixa do dia: 30 min no normal",
+  !podePublicarAgora(vinteHoras, new Date(vinteHoras.getTime() - 11 * 60_000), {
+    ...RITMO_PADRAO,
+    intervaloPicoMin: 30,
+  }).pode,
 );
 
 console.log("\nquantos cabem\n");
