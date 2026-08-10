@@ -307,3 +307,21 @@ ambiente da Vercel e para os secrets do GitHub Actions, com o nome
 O caminho é criar uma instância nova (`radar02`) para o chip novo e apontar o
 canal para o bot novo — não reaproveitar o registro, senão o histórico de qual
 chip publicou o quê se perde.
+
+---
+
+## Uma esquisitice da rede, medida em 10/08
+
+**A VPS não alcança o `4yu.com.br`.** `curl` de lá para os IPs da Vercel
+(`216.198.79.1`, `64.29.17.1`) dá timeout de conexão, enquanto Mercado
+Livre, Shopee e Google respondem em milissegundos. É bloqueio entre a
+Locaweb e a Vercel, não configuração nossa.
+
+**Não afeta a operação**, e vale saber por quê: as fotos que o bot
+publica vêm do CDN do marketplace (`cf.shopee.com.br`,
+`http2.mlstatic.com`), e esses a VPS baixa normalmente. Testado com
+imagem real de anúncio de produção, 1,4 MB em 0,45 s.
+
+O que quebra é só usar imagem hospedada no site da 4YU numa mensagem.
+Se um dia isso for preciso, o caminho é hospedar a imagem em outro
+lugar, não mexer na VPS.
