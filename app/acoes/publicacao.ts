@@ -14,7 +14,7 @@ import {
 } from "@/lib/publicacoes";
 import { instanciaDoBot } from "@/lib/bots";
 import { montaMensagem } from "@/lib/mensagem";
-import { modeloGlobal } from "@/lib/modelo";
+import { modeloDoCanal } from "@/lib/modelo";
 import { usuarioAtual } from "@/lib/sessao";
 import { publicaComFoto } from "@/lib/telegram";
 import { publicaNoWhatsApp } from "@/lib/whatsapp";
@@ -70,7 +70,11 @@ export async function registraEnvio(form: FormData): Promise<void> {
 export async function publicaLote(form: FormData): Promise<void> {
   const canalAlvo = String(form.get("canal_id") ?? "");
   const usuario = await usuarioAtual();
-  const modelo = await modeloGlobal();
+
+  // O modelo é lido por canal, dentro do laço: canais diferentes falam
+  // línguas diferentes, e um modelo lido antes do laço daria o texto do
+  // primeiro canal a todos.
+  const modelos = new Map<string, Awaited<ReturnType<typeof modeloDoCanal>>>();
 
   // O teto é recontado a cada item, e não lido uma vez antes do laço:
   // cada envio consome uma vaga, e um teto lido de véspera deixaria o
@@ -104,6 +108,11 @@ export async function publicaLote(form: FormData): Promise<void> {
     // depois daria outra mensagem, porque o modelo muda — e a que foi
     // ao canal é a que precisa ser auditável, inclusive para provar a
     // identificação publicitária da regra 3.10.
+    if (!modelos.has(publicacao.canal.id)) {
+      modelos.set(publicacao.canal.id, await modeloDoCanal(publicacao.canal.id));
+    }
+    const modelo = modelos.get(publicacao.canal.id)!;
+
     const texto = montaMensagem(modelo, {
       ...publicacao.dadosDaMensagem,
       link: publicacao.link.url,

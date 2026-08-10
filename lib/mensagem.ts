@@ -1,3 +1,5 @@
+import { emojiDoProduto } from "./emoji-do-produto.ts";
+
 /**
  * O modelo da mensagem publicada, e como ele vira texto.
  *
@@ -89,6 +91,12 @@ export type DadosDaMensagem = {
   /** Desde quando observamos. Vira `{desde}` no lastro sem lastro. */
   observadoDesde: string;
   link: string;
+  /**
+   * O nicho do produto, para escolher o emoji quando o título não
+   * disser nada. Opcional: sem ele o emoji cai no genérico, que é
+   * degradação e não erro.
+   */
+  nichoSlug?: string | null;
   /** A série alcançou o mínimo para afirmar mínimo histórico? */
   podeAfirmarMinimo: boolean;
   /**
@@ -466,6 +474,12 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
     preco_antes: reais(dados.precoAntesCentavos),
     desconto: String(dados.descontoPct),
     loja: escapaHtml(dados.loja),
+    /*
+      O emoji sai do título, e do nicho quando o título não bastar.
+      Fica fora do `escapaHtml` de propósito: ele é escolhido pela
+      nossa tabela, não é dado de fora.
+    */
+    emoji: emojiDoProduto(dados.produto, dados.nichoSlug),
     vendedor: descreveVendedor(dados),
     /*
       O LINK TAMBÉM É ESCAPADO, e isto só pôde ser feito depois de medir.

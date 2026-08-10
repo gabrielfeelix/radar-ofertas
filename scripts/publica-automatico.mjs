@@ -319,7 +319,7 @@ async function main() {
       avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, selo_vendedor, frete_gratis,
       preco_leitura_centavos, preco_original_centavos, categoria_ramo,
       marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ),
-      produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos )
+      produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos, nicho:nicho_id ( slug ) )
     )`;
 
 /*
@@ -358,7 +358,7 @@ async function melhorPrateleira(db, oferta) {
         "avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, selo_vendedor, frete_gratis, " +
         "preco_leitura_centavos, preco_original_centavos, " +
         "marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ), " +
-        "produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos )",
+        "produto:produto_id ( titulo_canonico, nota_curador, nicho_id, atributos, nicho:nicho_id ( slug ) )",
     )
     .eq("id", melhorId)
     .maybeSingle();
@@ -414,27 +414,52 @@ async function melhorPrateleira(db, oferta) {
     })),
   ).map((x) => x.oferta);
 
-  // Modelo e canais, uma vez só.
-  const { data: modeloLinha } = await db
+  /*
+    OS MODELOS, e agora é PLURAL.
+
+    Era `.limit(1)` sobre os ativos, o que dava certo enquanto existia
+    um só. Com o Radar Delas ganhando texto próprio, `limit(1)` viraria
+    sorteio: o canal do Telegram poderia receber o modelo do grupo de
+    beleza, ou o contrário, dependendo da ordem que o Postgres
+    devolvesse. Bug silencioso, do tipo que só aparece lendo o post.
+
+    Agora vem tudo, e cada canal pega o seu; quem não tem, usa o global
+    (`canal_id` nulo).
+  */
+  const { data: modeloLinhas } = await db
     .from("modelo_mensagem")
     .select(
-      "corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, linha_cupom, nota_prefixo, corpo_cupom",
+      "canal_id, corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, linha_cupom, nota_prefixo, corpo_cupom",
     )
-    .eq("ativo", true)
-    .limit(1)
-    .maybeSingle();
+    .eq("ativo", true);
 
-  const modelo = {
-    corpo: modeloLinha.corpo,
-    lastroCom: modeloLinha.lastro_com,
-    lastroSem: modeloLinha.lastro_sem,
-    lastroQueda: modeloLinha.lastro_queda,
-    lastroDeclarado: modeloLinha.lastro_declarado,
-    linhaFrete: modeloLinha.linha_frete,
-    linhaCupom: modeloLinha.linha_cupom,
-    notaPrefixo: modeloLinha.nota_prefixo,
-    corpoCupom: modeloLinha.corpo_cupom,
-  };
+  const montaModelo = (l) => ({
+    corpo: l.corpo,
+    lastroCom: l.lastro_com,
+    lastroSem: l.lastro_sem,
+    lastroQueda: l.lastro_queda,
+    lastroDeclarado: l.lastro_declarado,
+    linhaFrete: l.linha_frete,
+    linhaCupom: l.linha_cupom,
+    notaPrefixo: l.nota_prefixo,
+    corpoCupom: l.corpo_cupom,
+  });
+
+  const modeloGlobalLinha = (modeloLinhas ?? []).find((l) => l.canal_id == null);
+  const modelosPorCanal = new Map(
+    (modeloLinhas ?? []).filter((l) => l.canal_id).map((l) => [l.canal_id, montaModelo(l)]),
+  );
+
+  if (!modeloGlobalLinha) {
+    console.log("✗ nenhum modelo global (canal_id nulo) cadastrado. Nada sai.");
+    return;
+  }
+
+  const modeloGlobal = montaModelo(modeloGlobalLinha);
+  const modeloDo = (canal) => modelosPorCanal.get(canal.id) ?? modeloGlobal;
+
+  // Mantido para o caminho do cupom, que ainda é global.
+  const modelo = modeloGlobal;
 
   /*
     A SESSÃO DA CENTRAL DE AFILIADOS.
@@ -1296,7 +1321,7 @@ async function melhorPrateleira(db, oferta) {
         .eq("id", pub.id);
     }
 
-    const texto = montaMensagem(modelo, {
+    const texto = montaMensagem(modeloDo(canal), {
       produto: aPublicar.produto?.titulo_canonico ?? "",
       precoCentavos: precoFinal,
       precoAntesCentavos: referenciaFinal,
@@ -1313,6 +1338,8 @@ async function melhorPrateleira(db, oferta) {
       precoAnteriorCentavos: trocou ? null : oferta.preco_anterior_centavos,
       gatilho: trocou ? "declarado" : oferta.gatilho,
       notaDoCurador: aPublicar.produto?.nota_curador,
+      // Decide o {emoji} quando o título não bastar.
+      nichoSlug: aPublicar.produto?.nicho?.slug ?? null,
       freteGratis: aPublicar.frete_gratis,
       /*
         O VENDEDOR PASSOU A SER DESCRITO, e não só nomeado.

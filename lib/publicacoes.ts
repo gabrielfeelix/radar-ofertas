@@ -300,6 +300,8 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
         observadoDesde: oferta.detectada_em.slice(0, 10),
         podeAfirmarMinimo: oferta.pode_afirmar_minimo,
         notaDoCurador: anuncio?.produto?.nota_curador ?? null,
+        // Decide o {emoji} quando o título não bastar.
+        nichoSlug: anuncio?.produto?.nicho?.slug ?? null,
       },
       precoNaFilaCentavos: linha.preco_na_fila_centavos,
       precoAgoraCentavos: precoAgora.get(oferta.anuncio_id) ?? oferta.preco_atual_centavos,

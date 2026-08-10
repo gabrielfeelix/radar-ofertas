@@ -36,26 +36,66 @@ const RESERVA: ModeloDeMensagem = {
   lastroSem: "Menor preço que observamos desde {desde}.",
 };
 
+const CAMPOS =
+  "corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo";
+
+type ModeloLido = Pick<
+  ModeloMensagemLinha,
+  "corpo" | "lastro_com" | "lastro_sem" | "lastro_queda" | "lastro_declarado" | "linha_frete" | "nota_prefixo"
+>;
+
+/** Uma linha do banco vira o formato que `montaMensagem` espera. */
+function montaModelo(linha: ModeloLido): ModeloDeMensagem {
+  return {
+    corpo: linha.corpo,
+    lastroCom: linha.lastro_com,
+    lastroSem: linha.lastro_sem,
+    lastroQueda: linha.lastro_queda,
+    lastroDeclarado: linha.lastro_declarado,
+    linhaFrete: linha.linha_frete,
+    notaPrefixo: linha.nota_prefixo,
+  };
+}
+
+/**
+ * O modelo de um canal, caindo no global quando ele não tem o seu.
+ *
+ * POR QUE POR CANAL. O registro muda com o público: o Radar Delas é um
+ * grupo de mulheres falando de beleza, e o Radar Geek não é. O mesmo
+ * texto nos dois soa deslocado num deles, e é sempre o mesmo defeito
+ * que faz canal de oferta parecer robô.
+ *
+ * A coluna `canal_id` já existia na tabela desde o começo; só a leitura
+ * é que ignorava ela.
+ */
+export async function modeloDoCanal(canalId: string | null): Promise<ModeloDeMensagem> {
+  if (!canalId) return modeloGlobal();
+
+  try {
+    const { data } = await supabaseServidor()
+      .from("modelo_mensagem")
+      .select(CAMPOS)
+      .eq("canal_id", canalId)
+      .eq("ativo", true)
+      .maybeSingle();
+
+    // Sem modelo próprio, o global. Canal novo não nasce mudo nem
+    // esperando alguém lembrar de cadastrar texto.
+    return data ? montaModelo(data as ModeloLido) : modeloGlobal();
+  } catch {
+    return modeloGlobal();
+  }
+}
+
 export async function modeloGlobal(): Promise<ModeloDeMensagem> {
   try {
     const { data } = await supabaseServidor()
       .from("modelo_mensagem")
-      .select("corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo")
+      .select(CAMPOS)
       .is("canal_id", null)
       .maybeSingle();
 
-    const linha = data as Pick<ModeloMensagemLinha, "corpo" | "lastro_com" | "lastro_sem" | "lastro_queda" | "lastro_declarado" | "linha_frete" | "nota_prefixo"> | null;
-    if (!linha) return RESERVA;
-
-    return {
-      corpo: linha.corpo,
-      lastroCom: linha.lastro_com,
-      lastroSem: linha.lastro_sem,
-      lastroQueda: linha.lastro_queda,
-      lastroDeclarado: linha.lastro_declarado,
-      linhaFrete: linha.linha_frete,
-      notaPrefixo: linha.nota_prefixo,
-    };
+    return data ? montaModelo(data as ModeloLido) : RESERVA;
   } catch {
     return RESERVA;
   }
