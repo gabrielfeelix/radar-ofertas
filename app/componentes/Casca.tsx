@@ -127,7 +127,10 @@ async function montaNavegacao(): Promise<{
     },
     {
       titulo: "Distribuição",
-      itens: [{ href: "/canais", rotulo: "Canais", ponto: "#2AABEE" }],
+      itens: [
+        { href: "/canais", rotulo: "Canais", ponto: "#2AABEE" },
+        { href: "/bots", rotulo: "Bots", ponto: "#1FA855" },
+      ],
     },
     {
       titulo: "Ajustes",
