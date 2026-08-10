@@ -8,6 +8,7 @@ import { Chip, ChipDePlataforma } from "@/app/componentes/Chip";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import { Modal } from "@/app/componentes/Modal";
 import { Identidade } from "@/app/componentes/Identidade";
+import { botsParaEscolha } from "@/lib/bots";
 import { canais, nichosDisponiveis, parteDoDono, vagasDeHoje, type Canal } from "@/lib/distribuicao";
 
 /**
@@ -27,7 +28,7 @@ import { canais, nichosDisponiveis, parteDoDono, vagasDeHoje, type Canal } from 
 export const dynamic = "force-dynamic";
 
 export default async function Canais() {
-  const [lista, nichos] = await Promise.all([canais(), nichosDisponiveis()]);
+  const [lista, nichos, bots] = await Promise.all([canais(), nichosDisponiveis(), botsParaEscolha()]);
   const ativos = lista.filter((c) => c.ativo);
   const capacidade = ativos.reduce((total, c) => total + c.tetoDiario, 0);
   const vagas = await vagasDeHoje();
@@ -44,7 +45,7 @@ export default async function Canais() {
           largura="larga"
           descricao="Todo canal aponta para um parceiro desde a primeira linha — e no começo esse parceiro é você mesmo."
         >
-          <FormularioCanal nichos={nichos} />
+          <FormularioCanal nichos={nichos} bots={bots} />
         </Modal>
       }
       kpis={[
@@ -91,7 +92,7 @@ export default async function Canais() {
               largura="larga"
               descricao="Todo canal aponta para um parceiro desde a primeira linha — e no começo esse parceiro é você mesmo."
             >
-              <FormularioCanal nichos={nichos} />
+              <FormularioCanal nichos={nichos} bots={bots} />
             </Modal>
           </div>
         </div>

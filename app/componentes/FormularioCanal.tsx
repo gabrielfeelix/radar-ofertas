@@ -32,10 +32,17 @@ import { foraDePico, HORARIOS_SUGERIDOS, leHorarios, PICOS } from "@/lib/horario
 export function FormularioCanal({
   canal,
   nichos,
+  bots = [],
 }: {
   canal?: Canal;
   /** Os nichos que existem no banco. Sem eles o canal não roteia nada. */
   nichos: { slug: string; nome: string }[];
+  /**
+   * Os bots ativos de WhatsApp. Lista vazia é estado legítimo: antes
+   * do primeiro chip cadastrado não há o que escolher, e o campo diz
+   * isso em vez de mostrar um seletor vazio sem explicação.
+   */
+  bots?: { id: string; nome: string; plataforma: string; identificador: string }[];
 }) {
   const [resultado, acao, salvando] = useActionState<ResultadoCanal | null, FormData>(
     salvaCanal,
@@ -77,7 +84,7 @@ export function FormularioCanal({
       | "horarios"
       | "telegram"
       | "whatsapp_grupo"
-      | "whatsapp_instancia",
+      | "bot",
   ) =>
     resultado?.ok === false && resultado.campo === campo ? resultado.mensagem : null;
 
@@ -163,16 +170,32 @@ export function FormularioCanal({
 
           <Campo
             rotulo="Chip que publica aqui"
-            dica="O nome da instância na Evolution, que é o mesmo que dizer qual número fala. O teto de envios do dia é contado por chip, somando todos os canais dele: é o chip que cai, não o canal."
-            erro={erroDe("whatsapp_instancia")}
+            dica="Qual número fala por este canal. O teto de envios do dia é contado por chip, somando todos os canais dele: é o chip que cai, não o canal."
+            erro={erroDe("bot")}
           >
-            <input
-              name="whatsapp_instancia"
-              type="text"
-              defaultValue={canal?.whatsappInstancia ?? ""}
-              placeholder="chip-01"
-              className={classeDeCampo}
-            />
+            {bots.filter((b) => b.plataforma === "whatsapp").length === 0 ? (
+              /*
+                Sem bot cadastrado, um seletor vazio não diz o que
+                fazer. O canal pode ser salvo assim: ele fica parado
+                até ganhar um chip, e o publicador registra o motivo
+                no log da rodada.
+              */
+              <p className="text-sm leading-longo text-texto-fraco">
+                Nenhum chip cadastrado ainda. Cadastre um em Bots e volte aqui: sem chip, este canal
+                fica parado.
+              </p>
+            ) : (
+              <select name="bot_id" defaultValue={canal?.botId ?? ""} className={classeDeCampo}>
+                <option value="">Sem chip, canal parado</option>
+                {bots
+                  .filter((b) => b.plataforma === "whatsapp")
+                  .map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.nome} · {b.identificador}
+                    </option>
+                  ))}
+              </select>
+            )}
           </Campo>
         </>
       )}

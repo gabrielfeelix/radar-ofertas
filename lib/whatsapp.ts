@@ -23,7 +23,8 @@ import { paraWhatsApp } from "@/lib/texto-whatsapp";
  *
  * AS TRÊS DEFESAS, e nenhuma é opcional:
  *
- *   1. **Um chip por instância** (`canal.whatsapp_instancia`), com teto
+ *   1. **Um chip por instância** (a tabela `bot`, apontada por
+ *      `canal.bot_id`), com teto
  *      de envios por dia contado por chip e não por canal. Sete canais
  *      num número só dariam ~210 envios/dia, acima do teto de número
  *      maduro (menos de 200/dia, menos de 30/hora).

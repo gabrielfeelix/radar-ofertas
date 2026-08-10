@@ -46,8 +46,18 @@ import {
   diaEmSaoPaulo,
   horaEmSaoPaulo,
   inicioDoDiaEmSaoPaulo,
+  podeChipFalarAgora,
   podePublicarAgora,
 } from "../lib/ritmo.ts";
+import { diaDoAquecimento, tetoDoDia } from "../lib/aquecimento.ts";
+
+/*
+  Bot sem data de aquecimento é bot de Telegram, ou um chip cadastrado
+  antes de a rampa existir. Tratar como já aquecido é o certo: a rampa
+  protege número NOVO, e inventar aquecimento para um número velho
+  calaria um canal que já funcionava.
+*/
+const DIA_JA_AQUECIDO = 999;
 import { intercalaPorVariedade } from "../lib/variedade.ts";
 import { pesoDaMarca } from "../lib/marca-de-perfume.ts";
 import { canalAceitaAtributos } from "../lib/canal-aceita.ts";
@@ -244,9 +254,9 @@ async function mandaAoWhatsApp(instancia, grupoJid, texto, foto) {
  * mensagem sai e QUANDO, e quem sabe COMO é esta função. Foi o que
  * permitiu ligar o WhatsApp mexendo em um lugar só.
  */
-async function manda(canal, texto, foto) {
+async function manda(canal, texto, foto, instancia) {
   if (canal.plataforma === "whatsapp") {
-    return mandaAoWhatsApp(canal.whatsapp_instancia, canal.whatsapp_grupo_id, texto, foto);
+    return mandaAoWhatsApp(instancia, canal.whatsapp_grupo_id, texto, foto);
   }
   return mandaAoTelegram(canal.telegram_chat_id, texto, foto);
 }
@@ -489,7 +499,7 @@ async function melhorPrateleira(db, oferta) {
   const { data: canais } = await db
     .from("canal")
     .select(
-      "id, operacao_id, nome, plataforma, telegram_chat_id, whatsapp_grupo_id, whatsapp_instancia, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
+      "id, operacao_id, nome, plataforma, telegram_chat_id, whatsapp_grupo_id, bot_id, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
     )
     .eq("ativo", true);
 
@@ -886,29 +896,78 @@ async function melhorPrateleira(db, oferta) {
     aqui é o que protege o NÚMERO: um chip servindo sete canais a 30
     posts/dia faria ~210 envios, acima do teto de número maduro que a
     D-053 mediu (menos de 200/dia). Estourar isso não quebra combinado
-    nenhum, derruba a conta — e é por isso que a contagem é por
-    `whatsapp_instancia` e não por canal.
+    nenhum, derruba a conta — e é por isso que a contagem é por BOT e
+    não por canal.
+
+    O teto do dia vem da RAMPA, e não mais de um parâmetro plano:
+    `bot.envios_dia_max` passado por `tetoDoDia`. O parâmetro
+    `whatsapp_envios_dia_max` sobrou como valor sugerido de bot novo.
+    Duas fontes de verdade para o mesmo teto é como se descobre, tarde,
+    que o número mandou o dobro.
   */
-  const TETO_POR_CHIP = par.whatsapp_envios_dia_max ?? 150;
+  const { data: listaDeBots } = await db
+    .from("bot")
+    .select("id, nome, instancia, aquecimento_inicio, envios_dia_max, ativo");
+
+  const bots = new Map((listaDeBots ?? []).map((b) => [b.id, b]));
+
+  const instanciaDoCanal = (canal) => {
+    const bot = bots.get(canal.bot_id);
+    return bot?.ativo ? (bot.instancia ?? "") : "";
+  };
+
+  function tetoDoBot(botId) {
+    const bot = bots.get(botId);
+    if (!bot || !bot.ativo) return 0;
+    // Sem data de início não há rampa: é bot de Telegram, ou um chip
+    // cadastrado antes de a rampa existir. O teto cheio vale.
+    const dia = bot.aquecimento_inicio
+      ? diaDoAquecimento(bot.aquecimento_inicio, new Date())
+      : DIA_JA_AQUECIDO;
+    return tetoDoDia(dia, bot.envios_dia_max);
+  }
+
   const enviadasPorChip = new Map();
 
+  /*
+    O ÚLTIMO ENVIO DE CADA CHIP, que é o que sustenta o intervalo por
+    número. Começa no que o banco sabe e é atualizado a cada envio da
+    rodada, em `contaNoChip`.
+  */
+  const ultimoEnvioDoBot = new Map();
+
+  for (const c of canais ?? []) {
+    if (c.plataforma !== "whatsapp" || !c.bot_id || !c.ultima_publicacao_em) continue;
+    const este = new Date(c.ultima_publicacao_em);
+    const anterior = ultimoEnvioDoBot.get(c.bot_id);
+    if (!anterior || este > anterior) ultimoEnvioDoBot.set(c.bot_id, este);
+  }
+
+  /*
+    TODOS os canais entram na conta do chip, inclusive os desativados
+    hoje. O que já saiu pelo número saiu, e desativar o canal depois
+    não desfaz o envio. Contar só os ativos afrouxaria o teto do
+    número exatamente no dia em que alguém mexeu na configuração.
+  */
+  const botDoCanal = new Map((canais ?? []).map((c) => [c.id, c.bot_id]));
+
   if (whatsappLigado) {
-    const doWhats = canaisAtivos.filter((c) => c.plataforma === "whatsapp");
-    for (const c of doWhats) {
-      const chip = c.whatsapp_instancia ?? "";
-      enviadasPorChip.set(chip, (enviadasPorChip.get(chip) ?? 0) + (enviadasHoje[c.id] ?? 0));
+    for (const [canalId, quantas] of Object.entries(enviadasHoje)) {
+      const botId = botDoCanal.get(canalId);
+      if (botId) enviadasPorChip.set(botId, (enviadasPorChip.get(botId) ?? 0) + quantas);
     }
   }
 
   function chipNoTeto(canal) {
     if (canal.plataforma !== "whatsapp") return false;
-    return (enviadasPorChip.get(canal.whatsapp_instancia ?? "") ?? 0) >= TETO_POR_CHIP;
+    if (!canal.bot_id) return false;
+    return (enviadasPorChip.get(canal.bot_id) ?? 0) >= tetoDoBot(canal.bot_id);
   }
 
   function contaNoChip(canal) {
-    if (canal.plataforma !== "whatsapp") return;
-    const chip = canal.whatsapp_instancia ?? "";
-    enviadasPorChip.set(chip, (enviadasPorChip.get(chip) ?? 0) + 1);
+    if (canal.plataforma !== "whatsapp" || !canal.bot_id) return;
+    enviadasPorChip.set(canal.bot_id, (enviadasPorChip.get(canal.bot_id) ?? 0) + 1);
+    ultimoEnvioDoBot.set(canal.bot_id, new Date());
   }
 
   /* Envia uma oferta pendente. Devolve se saiu. */
@@ -938,10 +997,13 @@ async function melhorPrateleira(db, oferta) {
       os canais de WhatsApp nasceram na época em que a regra 3.2 proibia
       publicar, então nenhum tem grupo. Quem cobra é isto aqui.
     */
-    if (canal.plataforma === "whatsapp" && (!canal.whatsapp_grupo_id || !canal.whatsapp_instancia)) {
-      console.log(
-        `  ✗ ${canal.nome}: falta ${!canal.whatsapp_grupo_id ? "o grupo" : "a instância"} de WhatsApp, canal parado nesta rodada`,
-      );
+    if (canal.plataforma === "whatsapp" && (!canal.whatsapp_grupo_id || !instanciaDoCanal(canal))) {
+      const falta = !canal.whatsapp_grupo_id
+        ? "o grupo"
+        : !canal.bot_id
+          ? "o chip"
+          : "o chip ATIVO (o bot existe mas está desligado)";
+      console.log(`  ✗ ${canal.nome}: falta ${falta} de WhatsApp, canal parado nesta rodada`);
       canaisTravados.add(canal.id);
       return false;
     }
@@ -1268,7 +1330,7 @@ async function melhorPrateleira(db, oferta) {
       link: curto,
     });
 
-    const envio = await manda(canal, texto, fotoValida(aPublicar));
+    const envio = await manda(canal, texto, fotoValida(aPublicar), instanciaDoCanal(canal));
     if (!envio.ok) {
       console.log(`  ✗ ${canal.nome}: ${envio.motivo}`);
       return false;
@@ -1324,7 +1386,7 @@ async function melhorPrateleira(db, oferta) {
       validade: diaEmSaoPaulo(new Date(cupom.vigente_ate)),
     });
 
-    const envio = await manda(canal, texto, null);
+    const envio = await manda(canal, texto, null, instanciaDoCanal(canal));
     if (!envio.ok) {
       console.log(`  ✗ ${canal.nome}: cupom ${cupom.codigo}: ${envio.motivo}`);
       return false;
@@ -1559,7 +1621,7 @@ async function melhorPrateleira(db, oferta) {
       */
       if (chipNoTeto(canal)) {
         console.log(
-          `  ⏸ ${canal.nome}: chip ${canal.whatsapp_instancia ?? "(sem nome)"} bateu ${TETO_POR_CHIP} envios hoje`,
+          `  ⏸ ${canal.nome}: chip ${bots.get(canal.bot_id)?.nome ?? "(sem bot)"} bateu ${tetoDoBot(canal.bot_id)} envios hoje`,
         );
         noTeto += fila.length;
         filaDoCanal.set(canal.id, []);
@@ -1584,12 +1646,27 @@ async function melhorPrateleira(db, oferta) {
         continua servindo o Telegram; passar o canal aqui é o que troca
         a régua (`lib/ritmo.ts`).
       */
-      const veredito = podePublicarAgora(
+      const doCanal = podePublicarAgora(
         new Date(),
         canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
         ritmo,
         canal.plataforma === "whatsapp" ? { canalId: canal.id } : null,
       );
+
+      /*
+        O CANAL LIBERA E O CHIP AINDA PODE SEGURAR.
+
+        Sem esta segunda trava, oito grupos no mesmo número teriam oito
+        relógios independentes: o laço publicaria um por vez, mas em
+        sequência, e o número mandaria oito mensagens em menos de um
+        minuto. Cada canal teria respeitado a própria regra.
+      */
+      const doChip =
+        canal.plataforma === "whatsapp" && canal.bot_id
+          ? podeChipFalarAgora(new Date(), ultimoEnvioDoBot.get(canal.bot_id) ?? null, canal.bot_id)
+          : { pode: true };
+
+      const veredito = doCanal.pode ? doChip : doCanal;
       const faltamMs = veredito.pode ? 0 : (veredito.faltamMinutos ?? 1) * 60_000;
       if (!melhor || faltamMs < melhor.faltamMs) melhor = { canal, faltamMs };
     }

@@ -219,7 +219,14 @@ export type CanalLinha = {
    * é o publicador, no log da rodada.
    */
   whatsapp_grupo_id: string | null;
-  whatsapp_instancia: string | null;
+  /**
+   * Quem publica neste canal.
+   *
+   * Substituiu `whatsapp_instancia`, que era texto solto: ele aceitava
+   * erro de digitação em silêncio, e o teto de envios precisa ser
+   * contado por número, não por canal.
+   */
+  bot_id: string | null;
   membros_estimados: number | null;
   /** O orçamento do dia. É o que vira "vagas hoje" na aprovação. */
   posts_por_dia_max: number;
@@ -230,6 +237,37 @@ export type CanalLinha = {
   operador_id: string | null;
   ativo: boolean;
   ultima_publicacao_em: string | null;
+  criado_em: string;
+  atualizado_em: string;
+};
+
+/**
+ * Quem fala: um bot de Telegram ou um chip de WhatsApp.
+ *
+ * O teto de envios e a rampa de aquecimento moram aqui, e não no canal,
+ * porque é o número que cai. Dois canais no mesmo chip somam, e é a
+ * soma que derruba a conta.
+ */
+export type BotLinha = {
+  id: string;
+  operacao_id: string;
+  nome: string;
+  plataforma: string;
+  /** O `@` no Telegram ou o número no WhatsApp. Leitura humana. */
+  identificador: string;
+  /** Nome da instância na Evolution. Só WhatsApp, e obrigatório nela. */
+  instancia: string | null;
+  /**
+   * O NOME da variável de ambiente que guarda o token ou a apikey.
+   * NUNCA o valor: segredo não entra no banco (regra 3.1).
+   */
+  variavel_do_segredo: string;
+  /** Dia 1 da rampa. A curva vive em `lib/aquecimento.ts`. */
+  aquecimento_inicio: string | null;
+  /** Teto do chip do 15º dia em diante. Antes, a rampa é menor. */
+  envios_dia_max: number;
+  ativo: boolean;
+  observacao: string | null;
   criado_em: string;
   atualizado_em: string;
 };
@@ -625,6 +663,10 @@ export type Banco = {
       >;
       modelo_mensagem: Tabela<ModeloMensagemLinha, "operacao_id" | "nome" | "corpo">;
       comporta_dia: Tabela<ComportaDiaLinha, "operacao_id" | "dia" | "comporta">;
+      bot: Tabela<
+        BotLinha,
+        "operacao_id" | "nome" | "plataforma" | "identificador" | "variavel_do_segredo"
+      >;
       canal: Tabela<CanalLinha, "operacao_id" | "nome" | "plataforma">;
       canal_nicho: Tabela<CanalNichoLinha, "canal_id" | "nicho_id">;
       canal_atributo: Tabela<CanalAtributoLinha, "operacao_id" | "canal_id" | "atributo" | "valores">;

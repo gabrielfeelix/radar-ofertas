@@ -52,7 +52,9 @@ export async function salvaCanal(
   // do painel da Evolution; não tem formato para adivinhar, então vai
   // como a pessoa colou, só sem espaço.
   const whatsappGrupoId = String(form.get("whatsapp_grupo_id") ?? "").trim();
-  const whatsappInstancia = String(form.get("whatsapp_instancia") ?? "").trim();
+  // Qual bot publica aqui. Vazio é permitido: canal sem bot fica
+  // parado, e o publicador diz isso no log da rodada.
+  const botId = String(form.get("bot_id") ?? "").trim();
 
   if (nome.length < 2) {
     return { ok: false, campo: "nome", mensagem: "Dê um nome ao canal." };
@@ -125,7 +127,7 @@ export async function salvaCanal(
     plataforma,
     telegramChatId,
     whatsappGrupoId,
-    whatsappInstancia,
+    botId,
     nichos,
     tetoDiario,
     audiencia: Number.isFinite(audiencia) ? Math.max(0, audiencia) : 0,

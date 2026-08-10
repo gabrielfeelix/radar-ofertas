@@ -12,6 +12,7 @@ import {
   publicacoesDaFila,
   vagasDoCanal,
 } from "@/lib/publicacoes";
+import { instanciaDoBot } from "@/lib/bots";
 import { montaMensagem } from "@/lib/mensagem";
 import { modeloGlobal } from "@/lib/modelo";
 import { usuarioAtual } from "@/lib/sessao";
@@ -111,7 +112,11 @@ export async function publicaLote(form: FormData): Promise<void> {
     const envio =
       publicacao.canal.plataforma === "whatsapp"
         ? await publicaNoWhatsApp(
-            publicacao.canal.whatsappInstancia ?? "",
+            // O canal guarda o bot; quem publica precisa do nome da
+            // instância na Evolution. Vazio significa canal sem chip
+            // cadastrado, e `publicaNoWhatsApp` devolve isso como erro
+            // de configuração em vez de tentar a rede.
+            await instanciaDoBot(publicacao.canal.botId),
             publicacao.canal.whatsappGrupoId ?? "",
             texto,
             publicacao.imagemUrl,
