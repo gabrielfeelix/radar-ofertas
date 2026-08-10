@@ -100,7 +100,7 @@ const REGRAS: { emoji: string; padrao: RegExp; nota: string }[] = [
     emoji: "💇",
     nota: "cabelo, produto e ferramenta",
     padrao: regra(
-      "shampoo|xampu|condicionador|leave[- ]?in|m[áa]scara (?:capilar|p[óo]s[- ]?qu[íi]mica|de tratamento)|[óo]leo capilar|finalizador|progressiva|antirres[íi]duo|hidrata[çc][ãa]o capilar|matizador|tintura|colora[çc][ãa]o|secador|chapinha|prancha alisadora|modelador de cachos|escova (?:de cabelo|de madeira|secadora|alisadora)|soft hair|bra[ée]|truss|wella|joico|keune",
+      "shampoo|xampu|condicionador|creme para pentear|creme de pentear|leave[- ]?in|m[áa]scara (?:capilar|p[óo]s[- ]?qu[íi]mica|de tratamento)|[óo]leo capilar|finalizador|progressiva|antirres[íi]duo|hidrata[çc][ãa]o capilar|matizador|tintura|colora[çc][ãa]o|secador|chapinha|prancha alisadora|modelador de cachos|escova (?:de cabelo|de madeira|secadora|alisadora)|soft hair|bra[ée]|truss|wella|joico|keune",
     ),
   },
   /*
@@ -129,7 +129,7 @@ const REGRAS: { emoji: string; padrao: RegExp; nota: string }[] = [
     emoji: "🛁",
     nota: "corpo e banho",
     padrao: regra(
-      "sabonete|desodorante|antitranspirante|hidratante corporal|lo[çc][ãa]o hidratante|depilat[óo]rio|[óo]leo corporal|talco|banho",
+      "sabonete|desodorante|antitranspirante|hidratante corporal|lo[çc][ãa]o hidratante|depila[çc][ãa]o|depilat[óo]ri[ao]|cera depilat|[óo]leo corporal|talco|banho",
     ),
   },
 ];

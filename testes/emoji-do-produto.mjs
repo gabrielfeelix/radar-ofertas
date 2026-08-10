@@ -114,6 +114,14 @@ confere(
   emojiDoProduto("Gillette Desodorante Antitranspirante em Gel Cool Wave 45 g") === "🛁",
 );
 
+/*
+  LACUNAS VISTAS NA FILA REAL de 10/08, renderizando o modelo do Delas
+  com item de verdade: os tres primeiros sairam com o generico.
+*/
+console.log("\nlacunas achadas renderizando a fila\n");
+eh("Creme Para Pentear Hipoalergico 300ml", "💇");
+eh("Óleo Removedor Cera Pós Depilação Corporal 100ml Depilflax", "🛁");
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
