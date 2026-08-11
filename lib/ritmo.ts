@@ -189,6 +189,35 @@ function sorteioEstavel(semente: string): number {
   for (let i = 0; i < semente.length; i++) {
     h = (Math.imul(h, 31) + semente.charCodeAt(i)) | 0;
   }
+
+  /*
+    O EMBARALHAMENTO FINAL, E ELE NÃO É ENFEITE.
+
+    MEDIDO EM 11/08, ao alargar a faixa: doze sorteios seguidos com
+    sementes vizinhas devolveram `14, 14, 18, 18, 18, 18, 18, 18…`. O
+    hash do Java espalha o suficiente para escolher entre sete valores,
+    que era a faixa de 4 a 10, e não espalha para quinze.
+
+    O motivo é o de sempre nesse hash: os bits altos, que são os que a
+    divisão usa, mudam pouco quando a semente muda pouco — e as nossas
+    sementes são vizinhas de propósito, porque carregam um instante em
+    milissegundos.
+
+    E um intervalo que se repete é exatamente o que o dono proibiu, em
+    maiúscula: *"NUNCA SER HORARIO EXATOOOOOOO, ISSO TEM CARA DE ROBO"*.
+    Sorteio que devolve 18 doze vezes é horário exato com outro nome.
+
+    O finalizador abaixo é o do MurmurHash3: três deslocamentos com
+    multiplicação, que levam a diferença de um bit na entrada para
+    metade dos bits na saída. Continua determinístico, que é o que o
+    laço do publicador exige.
+  */
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+
   return (h >>> 0) / 4294967296;
 }
 
@@ -197,11 +226,50 @@ function sorteioEstavel(semente: string): number {
  *
  * A semente é `canalId|instanteDoUltimoPost`, montada por quem chama.
  */
-export function intervaloDoWhatsAppEmMinutos(semente: string): number {
-  const faixas = WHATSAPP_INTERVALO_MAX - WHATSAPP_INTERVALO_MIN + 1;
+export function intervaloDoWhatsAppEmMinutos(semente: string, porHora?: number): number {
+  const { min, max } = faixaDoWhatsApp(porHora);
+  const faixas = max - min + 1;
   const sorteado = Math.floor(sorteioEstavel(semente) * faixas);
   // O `min` protege da borda em que o sorteio devolve exatamente 1.
-  return WHATSAPP_INTERVALO_MIN + Math.min(sorteado, faixas - 1);
+  return min + Math.min(sorteado, faixas - 1);
+}
+
+/**
+ * A faixa de sorteio para uma taxa de posts por hora.
+ *
+ * POR QUE A FAIXA DEIXOU DE SER FIXA, e o pedido do dono em 11/08 é a
+ * explicação inteira. A regra antiga era 4 a 10 minutos cravado, e com
+ * ela o canal fazia os posts do dia em duas horas e emudecia: às 14h29
+ * de 11/08 o Radar Delas estava parado desde 12h21, com a cota do dia
+ * gasta. **Intervalo curto com teto diário não é ritmo, é rajada.**
+ *
+ * Então o intervalo passa a sair da taxa: 3 por hora quer dizer um a
+ * cada 20 minutos, e a faixa é 20 mais ou menos 35%.
+ *
+ *     3 por hora   ->  13 a 27 min
+ *     5 por hora   ->   8 a 16 min
+ *    10 por hora   ->   4 a  8 min
+ *
+ * E repare onde a rampa termina: a 10 por hora a faixa volta a ser
+ * praticamente a de 4 a 10 da regra original. O ritmo de operação é o
+ * mesmo de sempre; o que mudou é o caminho até ele.
+ *
+ * OS 35% NÃO SÃO ENFEITE. Palavras do dono, em maiúscula:
+ * *"LEMBRA DE NUNCA SER HORARIO EXATOOOOOOO, ISSO TEM CARA DE ROBO, TEM
+ * QUE SER IMPREVISIVEL"*. Uma faixa larga o bastante para o intervalo
+ * nunca se repetir é o que separa isto de um cron.
+ *
+ * O piso de 4 minutos continua de pé em qualquer taxa: abaixo disso é
+ * padrão de disparo em massa, e essa ponta nunca foi negociada.
+ */
+export function faixaDoWhatsApp(porHora?: number): { min: number; max: number } {
+  if (!porHora || porHora <= 0) {
+    return { min: WHATSAPP_INTERVALO_MIN, max: WHATSAPP_INTERVALO_MAX };
+  }
+  const alvo = 60 / porHora;
+  const min = Math.max(WHATSAPP_INTERVALO_MIN, Math.round(alvo * 0.65));
+  const max = Math.max(min + 1, Math.round(alvo * 1.35));
+  return { min, max };
 }
 
 export type Veredito =
@@ -223,7 +291,7 @@ export function podePublicarAgora(
    * Preenchido = canal de WhatsApp, e aí vale a janela de 4 a 10 min em
    * vez da faixa do dia. Nulo = Telegram, o comportamento de sempre.
    */
-  whatsapp: { canalId: string } | null = null,
+  whatsapp: { canalId: string; porHora?: number } | null = null,
 ): Veredito {
   const faixa = faixaDaHora(horaEmSaoPaulo(agora));
 
@@ -233,7 +301,7 @@ export function podePublicarAgora(
   if (!ultimaPublicacaoEm) return { pode: true };
 
   const intervalo = whatsapp
-    ? intervaloDoWhatsAppEmMinutos(`${whatsapp.canalId}|${ultimaPublicacaoEm.getTime()}`)
+    ? intervaloDoWhatsAppEmMinutos(`${whatsapp.canalId}|${ultimaPublicacaoEm.getTime()}`, whatsapp.porHora)
     : intervaloEmMinutos(faixa, ritmo);
 
   const passados = (agora.getTime() - ultimaPublicacaoEm.getTime()) / 60_000;
@@ -274,6 +342,8 @@ export function podeChipFalarAgora(
   agora: Date,
   ultimoEnvioDoChip: Date | null,
   botId: string,
+  /** A taxa do dia do aquecimento. Ver `faixaDoWhatsApp`. */
+  porHora?: number,
 ): Veredito {
   // Chip que ainda não falou hoje não espera: a regra é sobre a
   // distância ENTRE envios, e aqui não existe o de trás.
@@ -281,6 +351,7 @@ export function podeChipFalarAgora(
 
   const intervalo = intervaloDoWhatsAppEmMinutos(
     `chip:${botId}|${ultimoEnvioDoChip.getTime()}`,
+    porHora,
   );
   const passados = (agora.getTime() - ultimoEnvioDoChip.getTime()) / 60_000;
   if (passados >= intervalo) return { pode: true };

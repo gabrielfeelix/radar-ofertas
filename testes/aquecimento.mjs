@@ -5,7 +5,7 @@
  * e aí não dá para saber se foi a rampa ou outra coisa. Por isso o
  * teste cobre cada degrau, e não uma amostra.
  */
-import { diaDoAquecimento, tetoDoDia } from "../lib/aquecimento.ts";
+import { diaDoAquecimento, tetoDoDia, porHoraDoDia } from "../lib/aquecimento.ts";
 
 let passou = 0, falhou = 0;
 const confere = (n, ok) => { if (ok) { passou++; console.log(`✓ ${n}`); } else { falhou++; console.log(`✗ ${n}`); } };
@@ -38,12 +38,12 @@ confere(
 
 console.log("\na curva, que é decisão do dono\n");
 
-confere("dia 1 são 10", tetoDoDia(1, 150) === 10);
-confere("dia 2 são 15", tetoDoDia(2, 150) === 15);
-confere("dia 3 são 20", tetoDoDia(3, 150) === 20);
-confere("dia 4 são 25", tetoDoDia(4, 150) === 25);
-confere("dia 5 são 30", tetoDoDia(5, 150) === 30);
-confere("dia 14 ainda são 30", tetoDoDia(14, 150) === 30);
+confere("dia 1: 3 por hora x 24 = 72", tetoDoDia(1, 150) === 72);
+confere("dia 2 continua em 72", tetoDoDia(2, 150) === 72);
+confere("dia 5 é o último de 72", tetoDoDia(5, 150) === 72);
+confere("dia 6 sobe para 5 por hora, 120", tetoDoDia(6, 150) === 120);
+confere("dia 11 sobe para 10 por hora, e o teto do chip corta em 150", tetoDoDia(11, 150) === 150);
+confere("a janela do canal multiplica: 3 por hora em 9 horas são 27", tetoDoDia(1, 150, 9) === 27);
 confere("dia 15 libera o teto cheio", tetoDoDia(15, 150) === 150);
 confere("e depois continua o teto cheio", tetoDoDia(400, 150) === 150);
 

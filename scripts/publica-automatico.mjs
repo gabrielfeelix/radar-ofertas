@@ -49,7 +49,7 @@ import {
   podeChipFalarAgora,
   podePublicarAgora,
 } from "../lib/ritmo.ts";
-import { diaDoAquecimento, tetoDoDia } from "../lib/aquecimento.ts";
+import { diaDoAquecimento, tetoDoDia, porHoraDoDia } from "../lib/aquecimento.ts";
 import { geraGancho } from "../lib/gancho.ts";
 
 /*
@@ -965,6 +965,18 @@ async function melhorPrateleira(db, oferta) {
     return bot?.ativo ? (bot.instancia ?? "") : "";
   };
 
+  /*
+    A TAXA POR HORA DO DIA DE HOJE, que é o que dá o intervalo.
+
+    Sem data de início não há rampa (Telegram, ou chip cadastrado antes
+    de ela existir), e aí o intervalo volta à faixa de 4 a 10 de sempre.
+  */
+  function porHoraDoBot(botId) {
+    const bot = bots.get(botId);
+    if (!bot || !bot.ativo || !bot.aquecimento_inicio) return undefined;
+    return porHoraDoDia(diaDoAquecimento(bot.aquecimento_inicio, new Date()));
+  }
+
   function tetoDoBot(botId) {
     const bot = bots.get(botId);
     if (!bot || !bot.ativo) return 0;
@@ -1814,7 +1826,9 @@ async function melhorPrateleira(db, oferta) {
         new Date(),
         canal.ultima_publicacao_em ? new Date(canal.ultima_publicacao_em) : null,
         ritmo,
-        canal.plataforma === "whatsapp" ? { canalId: canal.id } : null,
+        canal.plataforma === "whatsapp"
+          ? { canalId: canal.id, porHora: porHoraDoBot(canal.bot_id) }
+          : null,
       );
 
       /*
@@ -1827,7 +1841,12 @@ async function melhorPrateleira(db, oferta) {
       */
       const doChip =
         canal.plataforma === "whatsapp" && canal.bot_id
-          ? podeChipFalarAgora(new Date(), ultimoEnvioDoBot.get(canal.bot_id) ?? null, canal.bot_id)
+          ? podeChipFalarAgora(
+              new Date(),
+              ultimoEnvioDoBot.get(canal.bot_id) ?? null,
+              canal.bot_id,
+              porHoraDoBot(canal.bot_id),
+            )
           : { pode: true };
 
       const veredito = doCanal.pode ? doChip : doCanal;

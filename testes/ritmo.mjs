@@ -5,7 +5,7 @@
  * trinta posts de uma vez, ou fica mudo o dia inteiro. Nos dois casos
  * o sistema acha que está funcionando.
  */
-import {
+import { faixaDoWhatsApp,
   RITMO_PADRAO, faixaDaHora, intervaloEmMinutos, podePublicarAgora, cabemAteMeiaNoite,
   diaEmSaoPaulo, inicioDoDiaEmSaoPaulo, intervaloDoWhatsAppEmMinutos, podeChipFalarAgora,
 } from "../lib/ritmo.ts";
@@ -276,3 +276,46 @@ confere(
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
+
+console.log("\na faixa do WhatsApp sai da taxa por hora (11/08)\n");
+
+confere("3 por hora vira 13 a 27 min", faixaDoWhatsApp(3).min === 13 && faixaDoWhatsApp(3).max === 27);
+confere("5 por hora vira 8 a 16 min", faixaDoWhatsApp(5).min === 8 && faixaDoWhatsApp(5).max === 16);
+confere(
+  "10 por hora volta para 4 a 8, que é praticamente a regra original",
+  faixaDoWhatsApp(10).min === 4 && faixaDoWhatsApp(10).max === 8,
+);
+confere(
+  "sem taxa, a faixa é a de sempre",
+  faixaDoWhatsApp().min === 4 && faixaDoWhatsApp().max === 10,
+);
+confere(
+  "o piso de 4 minutos nunca cai, nem numa taxa absurda",
+  faixaDoWhatsApp(60).min >= 4,
+);
+
+/*
+  O SORTEIO PRECISA ESPALHAR, e este teste existe por um defeito real:
+  ao alargar a faixa em 11/08, doze sementes vizinhas devolveram
+  `14, 14, 18, 18, 18…`. Intervalo que se repete é horário exato com
+  outro nome, e é o que o dono proibiu.
+*/
+const sorteios = Array.from({ length: 16 }, (_, i) =>
+  intervaloDoWhatsAppEmMinutos(`canal-abc|${1754900000000 + i * 911}`, 3),
+);
+confere(
+  "dezesseis sementes vizinhas dão pelo menos seis intervalos distintos",
+  new Set(sorteios).size >= 6,
+);
+confere(
+  "e nenhum deles sai da faixa sorteada",
+  sorteios.every((v) => v >= 13 && v <= 27),
+);
+confere(
+  "a mesma semente devolve sempre o mesmo, que é o que o laço exige",
+  intervaloDoWhatsAppEmMinutos("canal-abc|1754900000000", 3) ===
+    intervaloDoWhatsAppEmMinutos("canal-abc|1754900000000", 3),
+);
+
+console.log(`\n${passou} passaram, ${falhou} falharam`);
+if (falhou > 0) process.exit(1);
