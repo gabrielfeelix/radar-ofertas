@@ -388,3 +388,97 @@ export function cabemAteMeiaNoite(agora: Date, ritmo: RitmoConfigurado): number 
 
   return Math.floor(total);
 }
+
+/**
+ * A BORDA DO DIA, SORTEADA — abrir e fechar sem hora cheia.
+ *
+ * `horarios_permitidos` é uma lista de HORAS, então o canal abria às
+ * 09:00:00 e fechava às 21:59 cravado, todo dia igual. Pedido do dono
+ * em 11/08, e ele foi específico:
+ *
+ *   *"pare todo dia às 21h e volte às 09h, ok? nao EXATAMENTEEEEEE, É
+ *   RANDOMIZADO, pode ser 20:57, 21:07, o prazo maximo é 21:11 e o
+ *   minimo é 09:07"*
+ *
+ * É a mesma exigência do intervalo entre posts, aplicada à borda: o
+ * primeiro e o último post do dia são os dois mais fáceis de cronometrar
+ * de fora, e hora cheia todo dia é assinatura de agendador.
+ *
+ * AS FOLGAS SAEM DOS NÚMEROS QUE ELE DEU. Sobre a primeira hora
+ * permitida, de 7 a 21 minutos depois; sobre a última, de 3 minutos
+ * antes a 11 depois. Com a lista de 9 a 21 isso dá exatamente o que ele
+ * pediu: abre entre 09:07 e 09:21, fecha entre 20:57 e 21:11.
+ *
+ * O SORTEIO É ESTÁVEL POR DIA, e isso não é detalhe. O publicador
+ * pergunta "posso agora?" muitas vezes por hora; com sorteio novo a
+ * cada pergunta a borda andaria para frente e para trás, e o canal
+ * fecharia e reabriria sozinho. A semente carrega o dia, então a borda
+ * é uma só do começo ao fim e muda na virada.
+ */
+const ABERTURA_FOLGA_MIN = 7;
+const ABERTURA_FOLGA_MAX = 21;
+const FECHAMENTO_FOLGA_MIN = -3;
+const FECHAMENTO_FOLGA_MAX = 11;
+
+export type BordaDoDia = { abreEmMinutos: number; fechaEmMinutos: number };
+
+/**
+ * A borda de hoje para este canal, em minutos desde a meia-noite de
+ * São Paulo.
+ *
+ * `horas` é o `horarios_permitidos` do canal. Lista vazia devolve nulo,
+ * que quer dizer "sem restrição" — a mesma leitura que o publicador já
+ * fazia, e a diferença importa: canal com a coluna zerada à mão
+ * emudeceria para sempre.
+ *
+ * Lista com buraco no meio (7, 12, 20) não é tratada como três janelas:
+ * a borda sai da MENOR e da MAIOR hora, e as horas do meio continuam
+ * valendo pela lista. A borda só decide as pontas do dia.
+ */
+export function bordaDoDia(horas: number[] | null | undefined, semente: string): BordaDoDia | null {
+  if (!Array.isArray(horas) || horas.length === 0) return null;
+
+  const primeira = Math.min(...horas);
+  const ultima = Math.max(...horas);
+
+  const folga = (min: number, max: number, sufixo: string) => {
+    const faixas = max - min + 1;
+    const sorteado = Math.floor(sorteioEstavel(`${semente}|${sufixo}`) * faixas);
+    return min + Math.min(sorteado, faixas - 1);
+  };
+
+  return {
+    abreEmMinutos: primeira * 60 + folga(ABERTURA_FOLGA_MIN, ABERTURA_FOLGA_MAX, "abre"),
+    fechaEmMinutos: ultima * 60 + folga(FECHAMENTO_FOLGA_MIN, FECHAMENTO_FOLGA_MAX, "fecha"),
+  };
+}
+
+/** Minutos desde a meia-noite de São Paulo. */
+export function minutosEmSaoPaulo(agora: Date): number {
+  const partes = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(agora);
+  const h = Number(partes.find((p) => p.type === "hour")?.value ?? 0);
+  const m = Number(partes.find((p) => p.type === "minute")?.value ?? 0);
+  return h * 60 + m;
+}
+
+/**
+ * O canal está dentro da janela de hoje?
+ *
+ * Devolve `true` quando não há restrição, pela mesma razão de sempre:
+ * ausência de configuração não pode virar silêncio permanente.
+ */
+export function dentroDaJanelaDoDia(
+  horas: number[] | null | undefined,
+  canalId: string,
+  agora: Date,
+): boolean {
+  const borda = bordaDoDia(horas, `${canalId}|${diaEmSaoPaulo(agora)}`);
+  if (!borda) return true;
+  const agoraMin = minutosEmSaoPaulo(agora);
+  return agoraMin >= borda.abreEmMinutos && agoraMin <= borda.fechaEmMinutos;
+}

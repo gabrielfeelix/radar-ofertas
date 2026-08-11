@@ -43,6 +43,7 @@ import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
 import { paraWhatsApp, saiComCardDeLink } from "../lib/texto-whatsapp.ts";
 import {
   RITMO_PADRAO,
+  dentroDaJanelaDoDia,
   diaEmSaoPaulo,
   horaEmSaoPaulo,
   inicioDoDiaEmSaoPaulo,
@@ -598,6 +599,21 @@ async function melhorPrateleira(db, oferta) {
   function foraDoHorario(canal) {
     const horas = canal.horarios_permitidos;
     if (!Array.isArray(horas) || horas.length === 0) return false;
+
+    /*
+      A BORDA DO DIA É SORTEADA, e o miolo continua sendo a lista.
+
+      Abrir 09:00:00 e fechar 21:59 cravado, todo dia, é assinatura de
+      agendador — o primeiro e o último post são os dois mais fáceis de
+      cronometrar de fora. Pedido do dono em 11/08, com os números:
+      abre entre 09:07 e 09:21, fecha entre 20:57 e 21:11
+      (`lib/ritmo.ts`, `bordaDoDia`).
+
+      As duas conferências convivem: a borda decide as PONTAS do dia, a
+      lista continua decidindo as horas do meio. Um canal configurado
+      com buraco (7, 12, 20) segue mudo às 15h.
+    */
+    if (!dentroDaJanelaDoDia(horas, canal.id, new Date())) return true;
     return !horas.includes(horaEmSaoPaulo(new Date()));
   }
 

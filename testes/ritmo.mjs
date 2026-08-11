@@ -5,7 +5,7 @@
  * trinta posts de uma vez, ou fica mudo o dia inteiro. Nos dois casos
  * o sistema acha que está funcionando.
  */
-import { faixaDoWhatsApp,
+import { bordaDoDia, faixaDoWhatsApp,
   RITMO_PADRAO, faixaDaHora, intervaloEmMinutos, podePublicarAgora, cabemAteMeiaNoite,
   diaEmSaoPaulo, inicioDoDiaEmSaoPaulo, intervaloDoWhatsAppEmMinutos, podeChipFalarAgora,
 } from "../lib/ritmo.ts";
@@ -316,6 +316,50 @@ confere(
   intervaloDoWhatsAppEmMinutos("canal-abc|1754900000000", 3) ===
     intervaloDoWhatsAppEmMinutos("canal-abc|1754900000000", 3),
 );
+
+console.log(`\n${passou} passaram, ${falhou} falharam`);
+if (falhou > 0) process.exit(1);
+
+console.log("\na borda do dia é sorteada, e nunca é hora cheia (11/08)\n");
+
+{
+  const horas = Array.from({ length: 13 }, (_, i) => 9 + i); // 9..21
+  const dias = ["2026-08-12","2026-08-13","2026-08-14","2026-08-15","2026-08-16","2026-08-17","2026-08-18","2026-08-19"];
+  const bordas = dias.map((d) => bordaDoDia(horas, `canal-delas|${d}`));
+
+  confere(
+    "nunca abre antes de 09:07, que é o mínimo que o dono pediu",
+    bordas.every((b) => b.abreEmMinutos >= 9 * 60 + 7),
+  );
+  confere(
+    "nunca abre depois de 09:21",
+    bordas.every((b) => b.abreEmMinutos <= 9 * 60 + 21),
+  );
+  confere(
+    "nunca fecha depois de 21:11, que é o prazo máximo que ele deu",
+    bordas.every((b) => b.fechaEmMinutos <= 21 * 60 + 11),
+  );
+  confere(
+    "nunca fecha antes de 20:57",
+    bordas.every((b) => b.fechaEmMinutos >= 20 * 60 + 57),
+  );
+  confere(
+    "a borda muda de um dia para o outro, senão vira horário fixo",
+    new Set(bordas.map((b) => `${b.abreEmMinutos}:${b.fechaEmMinutos}`)).size >= 5,
+  );
+  confere(
+    "o mesmo dia devolve sempre a mesma borda, senão o canal fecharia e reabriria sozinho",
+    bordaDoDia(horas, "canal-delas|2026-08-12").abreEmMinutos ===
+      bordaDoDia(horas, "canal-delas|2026-08-12").abreEmMinutos,
+  );
+  confere(
+    "dois canais no mesmo dia não abrem juntos",
+    bordaDoDia(horas, "canal-a|2026-08-12").abreEmMinutos !==
+      bordaDoDia(horas, "canal-b|2026-08-12").abreEmMinutos,
+  );
+  confere("lista vazia é sem restrição, não silêncio", bordaDoDia([], "x") === null);
+  confere("lista nula é sem restrição", bordaDoDia(null, "x") === null);
+}
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
