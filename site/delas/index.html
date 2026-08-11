@@ -14,7 +14,24 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- Pixel do Meta: colar o snippet oficial aqui quando o ID existir (D-069). -->
+<!-- Pixel do Meta (D-069). O ID é público por natureza: ele vai no HTML
+     de toda página que mede, e é isso que o navegador de quem visita lê.
+     Não é segredo e não entra na regra 3.1. -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '1784790645884896');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=1784790645884896&ev=PageView&noscript=1"
+/></noscript>
 
 <style>
   :root{
@@ -804,6 +821,7 @@
     <p class="transparencia revela">
       <b>Transparência:</b> os links do grupo são de afiliado, e a comissão quem paga é a loja, nunca você.
       Toda promo chega marcada com <b>#publi</b>. Sem cadastro, sem pedir seus dados, e você sai quando quiser.
+      Esta página usa cookies do Meta só para medir quantas pessoas entraram pelo anúncio.
     </p>
   </div>
 </section>
@@ -856,6 +874,31 @@
   new IntersectionObserver((e) => {
     barra.classList.toggle("mostra", !e[0].isIntersecting);
   }).observe(document.getElementById("cta-hero"));
+
+  /*
+    A CONVERSÃO DESTA PÁGINA É O CLIQUE, e é ela que o anúncio otimiza.
+
+    Só `PageView` diz ao Meta quem VIU a página, e a campanha acabaria
+    otimizando para gente que abre e vai embora. `Lead` marca quem de
+    fato saiu daqui para o grupo, que é o único desfecho que interessa.
+
+    `content_name` separa o botão do topo do botão fixo e do final: se um
+    deles concentrar os cliques, isso é dado de design, não palpite.
+
+    Não bloqueia o clique nem atrasa a saída de propósito. O pixel manda
+    o evento por imagem, que sobrevive à navegação; segurar o link por
+    300ms "para garantir" custaria conversão real por medição.
+  */
+  document.querySelectorAll('a[href*="chat.whatsapp.com"]').forEach((botao, i) => {
+    botao.addEventListener("click", () => {
+      if (typeof fbq !== "function") return;
+      fbq("track", "Lead", {
+        content_name: botao.closest(".barra-cta") ? "cta-fixo"
+          : botao.id === "cta-hero" ? "cta-hero" : "cta-final",
+        content_category: "grupo-whatsapp-radar-delas",
+      });
+    });
+  });
 </script>
 
 </body>
