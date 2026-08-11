@@ -206,15 +206,29 @@ esperar até as 20h. A lista agora é `[8,10,12,14,16,18,19,20,21]`, e ela
 continua pulando 22, que é hora de pico segundo `lib/horarios.ts` —
 decisão a rever com o dono, não esquecimento.
 
-**O card de link só está provado no papel.** A migration 63 fez o
-Mercado Livre sair como texto com card em vez de foto anexada, para não
-encher a galeria de quem lê. As tags `og:` do `meli.la` foram conferidas
-com `curl` e trazem foto e nome do produto, **mas quem monta o card é o
-Baileys dentro da Evolution**, e isso só se confere no chip real. Olhe o
-primeiro post de Mercado Livre que sair no grupo: se vier sem imagem,
-`whatsapp_link_preview = 0` no painel devolve o `sendMedia` na rodada
-seguinte, sem deploy. Shopee e Amazon não mudaram: os links delas não
-têm `og:image` (medido em 10/08), e o card viria vazio.
+**O card de link só está provado no papel, e há dois riscos conhecidos.**
+A migration 63 fez o Mercado Livre sair como texto com card em vez de
+foto anexada, para não encher a galeria de quem lê. As tags `og:` do
+`meli.la` trazem foto e nome do produto, conferidas com `curl` inclusive
+com user-agent de robô de preview. **O que não dá para conferir daqui é
+quem monta o card: o Baileys, dentro da Evolution, na VPS.**
+
+**Olhe o primeiro post de Mercado Livre que sair no grupo.** O sintoma
+diz qual é o problema, se houver:
+
+| O que você vê | Causa provável | O que fazer |
+|---|---|---|
+| Card com foto e nome | nada, funcionou | nada |
+| Texto puro, sem card | bug aberto da Evolution no `linkPreview` (issue #2262, relatada na 2.3.6; a VPS roda 2.3.7) | `whatsapp_link_preview = 0` |
+| Card com título e sem foto | o `og:image` do ML é `.webp`, que o WhatsApp lê mal | dá para consertar: a mesma URL com `.jpg` responde 200 |
+
+Zerar o parâmetro devolve o `sendMedia` na rodada seguinte, sem deploy.
+
+**Shopee e Amazon não mudaram, e não é descuido.** A Shopee devolve
+**403 com 160 bytes** para o robô de preview, e a Amazon responde 1 MB de
+HTML sem nenhum `og:`, `twitter:` ou `image_src`. Card delas viria vazio,
+que é pior que foto anexada. Isso muda na Fase 2, quando o `og:` passar a
+ser do nosso redirecionador.
 
 **Peso de marca em beleza.** Só 4% do que o canal publica é marca que a
 beauty tok reconhece. O mecanismo já existe para perfume (`pesoDaMarca`).

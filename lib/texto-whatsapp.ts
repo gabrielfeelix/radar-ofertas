@@ -66,10 +66,32 @@ export function paraWhatsApp(html: string): string {
  *   Mercado Livre  `meli.la/...`           →  `og:image` com a foto do
  *                                             produto e `og:title` com o
  *                                             nome. Card completo, de graça.
- *   Shopee         `s.shopee.com.br/...`   →  redireciona para o item e a
- *                                             página **não traz `og:`**.
- *   Amazon         `amazon.com.br/dp/...`  →  responde 200 com 1 MB de
- *                                             HTML e **sem `og:image`**.
+ *   Shopee         `s.shopee.com.br/...`   →  **HTTP 403 com 160 bytes**
+ *                                             para o robô de preview. Não
+ *                                             é falta de tag, é bloqueio.
+ *   Amazon         `amazon.com.br/dp/...`  →  200 com 1 MB de HTML e
+ *                                             **nenhum `og:`, `twitter:`
+ *                                             ou `image_src`**. Só título.
+ *
+ * As três foram conferidas duas vezes, a segunda com o user-agent
+ * `facebookexternalhit`, que é o que os sites tratam como robô de
+ * preview. O resultado não mudou.
+ *
+ * **DOIS RISCOS CONHECIDOS, e eles são do nosso lado, não das lojas.**
+ * Nenhum dos dois se confere sem o chip real, e é por isso que o
+ * parâmetro `whatsapp_link_preview` existe:
+ *
+ *   1. A Evolution tem bug aberto em que `linkPreview: true` no
+ *      `sendText` não renderiza card nenhum (issue #2262, relatada na
+ *      2.3.6; a VPS roda 2.3.7). Sintoma: post SEM card, texto puro.
+ *   2. O `og:image` do Mercado Livre é **`.webp`**, e o WhatsApp lida
+ *      mal com WebP em preview, sobretudo em Android antigo. Sintoma
+ *      diferente: card COM título e SEM foto. A mesma URL trocando a
+ *      extensão para `.jpg` responde 200 com JPEG de 26 KB, o que dá o
+ *      caminho de conserto se for este o caso.
+ *
+ * Os sintomas são distintos de propósito: olhando o primeiro post de
+ * Mercado Livre no grupo dá para saber qual dos dois é, ou se nenhum.
  *
  * Ligar o card para as três calaria a foto de duas, e a Shopee é a maior
  * parte da fila do Radar Delas hoje: seria trocar galeria cheia por post
