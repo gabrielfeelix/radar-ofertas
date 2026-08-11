@@ -14,24 +14,21 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- Pixel do Meta (D-069). O ID é público por natureza: ele vai no HTML
-     de toda página que mede, e é isso que o navegador de quem visita lê.
-     Não é segredo e não entra na regra 3.1. -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '1784790645884896');
-fbq('track', 'PageView');
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=1784790645884896&ev=PageView&noscript=1"
-/></noscript>
+<!-- Google Tag Manager (GTM-KMNTV3D9). Este é o único código de medição
+     da página: GA4, Pixel do Meta, Google Ads e Clarity vivem dentro do
+     contêiner, e passam a ser editáveis sem mexer neste arquivo nem
+     publicar de novo. O ID é público por natureza — ele vai no HTML de
+     toda página que mede, é isso que o navegador de quem visita lê, e
+     por isso não entra na regra 3.1.
+
+     O Pixel do Meta era daqui até 10/08 (D-069). Ele saiu para o
+     contêiner com o mesmo ID, 1784790645884896, justamente para não
+     reiniciar o aprendizado da campanha que já está rodando. -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-KMNTV3D9');</script>
 
 <style>
   :root{
@@ -630,6 +627,11 @@ src="https://www.facebook.com/tr?id=1784790645884896&ev=PageView&noscript=1"
 </head>
 <body>
 
+<!-- Google Tag Manager, parte do <body>. Serve só a quem está com
+     JavaScript desligado: sem ela, essa visita não seria contada. -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KMNTV3D9"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+
 <div class="fita">✦ &nbsp;grupo novo no ar&nbsp; ✦</div>
 
 <div class="pagina">
@@ -807,7 +809,7 @@ src="https://www.facebook.com/tr?id=1784790645884896&ev=PageView&noscript=1"
       <p class="olho" style="color:var(--rose-po)">o radar está ligado</p>
       <h2>Os melhores achados <em>somem rápido</em></h2>
       <p>Quem está no grupo vê primeiro. Entra agora, e se não gostar é só sair, sem drama.</p>
-      <a class="cta cta-claro" href="https://chat.whatsapp.com/LScmqfBr8VxHEVNYWiOwMb">
+      <a class="cta cta-claro" id="cta-final" href="https://chat.whatsapp.com/LScmqfBr8VxHEVNYWiOwMb">
         <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39a9.87 9.87 0 0 0 4.74 1.21c5.46 0 9.9-4.44 9.9-9.9S17.5 2 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.11.82.83-3.04-.2-.31a8.16 8.16 0 0 1-1.26-4.34c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.65 8.2-8.17 8.2Zm4.52-6.13c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.17.24-.64.8-.78.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.35-2.93c-.25-.43.25-.4.72-1.34.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.24-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.6.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.29Z"/></svg>
         Entrar no grupo do WhatsApp
       </a>
@@ -833,7 +835,7 @@ src="https://www.facebook.com/tr?id=1784790645884896&ev=PageView&noscript=1"
 
 <!-- CTA fixo no celular, aparece quando o botão do topo some -->
 <div class="barra-cta" id="barra-cta">
-  <a class="cta" href="https://chat.whatsapp.com/LScmqfBr8VxHEVNYWiOwMb">
+  <a class="cta" id="cta-fixo" href="https://chat.whatsapp.com/LScmqfBr8VxHEVNYWiOwMb">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39a9.87 9.87 0 0 0 4.74 1.21c5.46 0 9.9-4.44 9.9-9.9S17.5 2 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.11.82.83-3.04-.2-.31a8.16 8.16 0 0 1-1.26-4.34c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.65 8.2-8.17 8.2Z"/></svg>
     Entrar no grupo do WhatsApp
   </a>
@@ -882,23 +884,23 @@ src="https://www.facebook.com/tr?id=1784790645884896&ev=PageView&noscript=1"
     otimizando para gente que abre e vai embora. `Lead` marca quem de
     fato saiu daqui para o grupo, que é o único desfecho que interessa.
 
-    `content_name` separa o botão do topo do botão fixo e do final: se um
-    deles concentrar os cliques, isso é dado de design, não palpite.
+    Não existe mais código de rastreio aqui, e é de propósito: quem
+    escuta o clique agora é o acionador de link do GTM, que casa o
+    `Click URL` com `chat.whatsapp.com` e dispara de uma vez o `lead` do
+    GA4, a conversão do Google Ads e o `Lead` do Pixel. Mudar de
+    ferramenta virou trabalho de contêiner, não de deploy.
 
-    Não bloqueia o clique nem atrasa a saída de propósito. O pixel manda
-    o evento por imagem, que sobrevive à navegação; segurar o link por
-    300ms "para garantir" custaria conversão real por medição.
+    O QUE ESTA PÁGINA PRECISA GARANTIR são os três `id` dos botões:
+    `cta-hero`, `cta-final` e `cta-fixo`. O GTM sobe do elemento clicado
+    até o `<a>` mais próximo e manda esse id como `local_cta`, então é
+    possível ver qual dos três converte. Sem id, o relatório vira
+    "sem-id" e a informação de design se perde. Se algum botão novo
+    entrar, dá um id a ele.
+
+    E não se segura o clique para "garantir" o envio: o pixel manda o
+    evento por imagem, que sobrevive à navegação, e atrasar o link em
+    300ms custaria conversão real em troca de medição.
   */
-  document.querySelectorAll('a[href*="chat.whatsapp.com"]').forEach((botao, i) => {
-    botao.addEventListener("click", () => {
-      if (typeof fbq !== "function") return;
-      fbq("track", "Lead", {
-        content_name: botao.closest(".barra-cta") ? "cta-fixo"
-          : botao.id === "cta-hero" ? "cta-hero" : "cta-final",
-        content_category: "grupo-whatsapp-radar-delas",
-      });
-    });
-  });
 </script>
 
 </body>

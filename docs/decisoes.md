@@ -3227,3 +3227,75 @@ achatar os dois manda consertar a coisa errada às 22h de um sábado.
 **Mudaria se:** aparecer API oficial de grupo com teto real. Aí o teto
 por número deixa de ser a restrição, e a rampa inteira perde a razão de
 existir.
+
+---
+
+## D-073 · A medição da LP vira contêiner, e o acionador que ninguém testou marcaria zero
+
+**Data:** 2026-08-10
+
+O dono pediu rastreio na LP do Radar Delas e perguntou, no meio do
+caminho: *"ue é só tu jogar o pixel no gtm e colocar só o gtm na LP n
+é?"*. É exatamente isso, e é o que foi feito.
+
+### O que mudou no arquivo
+
+A LP tinha o Pixel do Meta escrito à mão no `<head>` e um `addEventListener`
+no fim do `<body>` disparando `Lead` no clique. Os dois saíram. No lugar
+ficou só o Google Tag Manager, `GTM-KMNTV3D9`, e dentro dele moram GA4,
+Pixel, Google Ads e Microsoft Clarity.
+
+O ganho não é técnico, é de quem manda: trocar ferramenta de medição
+virou trabalho de contêiner, sem tocar em arquivo e sem publicar de novo.
+O custo é que o Pixel passa a carregar alguns milissegundos depois, o que
+em tráfego pago de celular custa uns poucos `PageView` de quem sai
+correndo. Não paga manter tag espalhada em dois lugares.
+
+**O ID do Pixel foi mantido em `1784790645884896`**, o que já estava na
+página, e não o `559506894966522` que estava no contêiner. Trocar de
+pixel no meio de campanha reinicia o aprendizado da Meta, e isso é
+dinheiro já gasto sendo jogado fora.
+
+### O defeito que estava para entrar no ar
+
+O contêiner tinha 17 alterações pendentes, bem montadas, e um acionador
+`[Lead] [Botão WhatsApp]` filtrando `Click URL contém 551141178146` — um
+número de `wa.me`. Os três botões da LP apontam para
+`chat.whatsapp.com/LScmqfBr8VxHEVNYWiOwMb`, que não contém esse número.
+
+Publicado daquele jeito, **GA4, Google Ads e Pixel marcariam zero
+conversão com tudo parecendo instalado**. É o pior modo de falha de
+medição: não dá erro, dá silêncio, e o silêncio se confunde com "a
+campanha não converte". O filtro virou expressão regular e cobre os dois
+formatos: `chat\.whatsapp\.com|wa\.me|551141178146`.
+
+### Qual botão converte
+
+Os três CTAs ganharam `id`: `cta-hero`, `cta-final` e `cta-fixo`. Uma
+variável de JavaScript no contêiner sobe do elemento clicado até o `<a>`
+mais próximo e manda o id como `local_cta` no evento `lead` — subir é
+necessário porque o clique quase sempre cai no SVG dentro do botão, não
+no link. Sem isso o relatório diz que a página converte, mas não diz por
+onde, e a próxima decisão de layout vira palpite.
+
+### GA4: propriedade nova, na conta que o projeto já usa
+
+Foi criada a **Radar Delas** (`G-SWPZZ3JMZ0`) na conta `Analytics - 4YU`,
+ao lado de `4yu.com.br`, `Deixei Aqui` e `Quanto Cobro`. Fuso de São
+Paulo, BRL, retenção de 14 meses (o padrão são 2, e 14 é o teto do plano
+gratuito) e `lead` marcado como evento-chave.
+
+A alternativa era o `G-BTKSNGLZTB` que estava no contêiner, e ela foi
+descartada por um motivo prático: ele vive numa conta Analytics separada,
+que a service account não alcança. Cada ajuste ali seria trabalho manual
+do dono. O Google Ads `AW-837285450` não depende dessa escolha e ficou
+como estava, junto com o vinculador de conversões e o remarketing.
+
+**Nada disso viola a 3.1.** ID de medição é público por natureza: ele vai
+no HTML de toda página que mede, e é isso que o navegador de quem visita
+lê. O que é segredo continua fora do Git.
+
+**Mudaria se:** a campanha da Meta estiver de fato apontada para o pixel
+`559506894966522` — nesse caso o certo é o contrário, e basta trocar a
+constante `Pixel do Facebook` no contêiner, sem tocar na LP. É a primeira
+coisa a conferir no Gerenciador de Eventos.
