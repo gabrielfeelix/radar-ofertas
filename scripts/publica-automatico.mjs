@@ -40,7 +40,7 @@ import { classificaFalhaDeLink } from "../lib/falha-de-link.ts";
 import { geraLinkCurtoDaShopee, itemDaShopee } from "../lib/shopee-api.ts";
 import { revalidaPreco } from "../lib/revalida-preco.ts";
 import { montaMensagem, montaMensagemDeCupom } from "../lib/mensagem.ts";
-import { paraWhatsApp } from "../lib/texto-whatsapp.ts";
+import { paraWhatsApp, saiComCardDeLink } from "../lib/texto-whatsapp.ts";
 import {
   RITMO_PADRAO,
   diaEmSaoPaulo,
@@ -209,7 +209,7 @@ async function mandaAoTelegram(chatId, texto, foto) {
  * `lib/telegram.ts`. A conversão do texto, que é a parte com lógica,
  * NÃO é duplicada: vem de `lib/texto-whatsapp.ts`, importado no topo.
  */
-async function mandaAoWhatsApp(instancia, grupoJid, texto, foto) {
+async function mandaAoWhatsApp(instancia, grupoJid, texto, foto, comCard = false) {
   const base = (process.env.WHATSAPP_API_URL ?? "").replace(/\/+$/, "");
   const chave = process.env.WHATSAPP_API_KEY;
 
@@ -218,10 +218,25 @@ async function mandaAoWhatsApp(instancia, grupoJid, texto, foto) {
   if (!grupoJid) return { ok: false, motivo: "canal sem grupo de WhatsApp cadastrado" };
 
   const corpo = paraWhatsApp(texto);
-  const rota = foto ? "sendMedia" : "sendText";
-  const carga = foto
+
+  /*
+    CARD DE LINK EM VEZ DE FOTO ANEXADA (migration 63).
+
+    Com `comCard`, a foto é DESCARTADA de propósito e o WhatsApp monta o
+    card a partir do link que já está no texto. Não é perda: nas lojas
+    dessa lista o card vem com a mesma foto do produto, e a diferença é
+    que ele não é mídia — não baixa e não entope a galeria de quem lê.
+
+    Quem decide é `saiComCardDeLink`, em `lib/texto-whatsapp.ts`, e a
+    decisão é compartilhada com o caminho manual do painel: o publicador
+    e a tela mandando de formas diferentes seria o tipo de divergência
+    que só aparece lendo o grupo.
+  */
+  const anexaFoto = Boolean(foto) && !comCard;
+  const rota = anexaFoto ? "sendMedia" : "sendText";
+  const carga = anexaFoto
     ? { number: grupoJid, mediatype: "image", media: foto, caption: corpo }
-    : { number: grupoJid, text: corpo, linkPreview: false };
+    : { number: grupoJid, text: corpo, linkPreview: comCard };
 
   try {
     const r = await fetch(`${base}/message/${rota}/${encodeURIComponent(instancia)}`, {
@@ -235,8 +250,9 @@ async function mandaAoWhatsApp(instancia, grupoJid, texto, foto) {
     if (!r.ok) {
       const motivo = String(d?.response?.message ?? d?.message ?? `HTTP ${r.status}`);
       // Foto que a loja recusa servir não pode custar a publicação.
-      if (foto && /media|download|url|buffer/i.test(motivo)) {
-        return mandaAoWhatsApp(instancia, grupoJid, texto, null);
+      // Sem foto anexada não há o que repetir: a queda seria do envio.
+      if (anexaFoto && /media|download|url|buffer/i.test(motivo)) {
+        return mandaAoWhatsApp(instancia, grupoJid, texto, null, comCard);
       }
       return { ok: false, motivo };
     }
@@ -254,10 +270,12 @@ async function mandaAoWhatsApp(instancia, grupoJid, texto, foto) {
  * mensagem sai e QUANDO, e quem sabe COMO é esta função. Foi o que
  * permitiu ligar o WhatsApp mexendo em um lugar só.
  */
-async function manda(canal, texto, foto, instancia) {
+async function manda(canal, texto, foto, instancia, comCard = false) {
   if (canal.plataforma === "whatsapp") {
-    return mandaAoWhatsApp(instancia, canal.whatsapp_grupo_id, texto, foto);
+    return mandaAoWhatsApp(instancia, canal.whatsapp_grupo_id, texto, foto, comCard);
   }
+  // O Telegram não entra nisto: lá a foto é `sendPhoto` e não cai em
+  // galeria nenhuma, então o problema que o card resolve não existe.
   return mandaAoTelegram(canal.telegram_chat_id, texto, foto);
 }
 
@@ -1357,7 +1375,23 @@ async function melhorPrateleira(db, oferta) {
       link: curto,
     });
 
-    const envio = await manda(canal, texto, fotoValida(aPublicar), instanciaDoCanal(canal));
+    /*
+      O CARD DE LINK, decidido por LOJA (migration 63).
+
+      Só vale para o WhatsApp: no Telegram a foto não cai na galeria de
+      ninguém, então o problema que o card resolve não existe lá.
+    */
+    const comCard =
+      canal.plataforma === "whatsapp" &&
+      saiComCardDeLink(aPublicar.marketplace?.slug, (par.whatsapp_link_preview ?? 1) === 1);
+
+    const envio = await manda(
+      canal,
+      texto,
+      fotoValida(aPublicar),
+      instanciaDoCanal(canal),
+      comCard,
+    );
     if (!envio.ok) {
       console.log(`  ✗ ${canal.nome}: ${envio.motivo}`);
       return false;

@@ -50,3 +50,59 @@ export function paraWhatsApp(html: string): string {
       .replace(/&amp;/g, "&")
   );
 }
+
+/* =============================================================
+   FOTO ANEXADA OU CARD DE PREVIEW: a decisão, num lugar só.
+   ============================================================= */
+
+/**
+ * As lojas cujo link sozinho já produz um card com foto do produto.
+ *
+ * **Por que isto é uma lista e não um sim para todo mundo:** o card do
+ * WhatsApp é montado a partir das meta tags `og:` do destino, e as três
+ * lojas se comportam de formas diferentes. Medido em 10/08, seguindo os
+ * nossos próprios links de afiliado até o fim:
+ *
+ *   Mercado Livre  `meli.la/...`           →  `og:image` com a foto do
+ *                                             produto e `og:title` com o
+ *                                             nome. Card completo, de graça.
+ *   Shopee         `s.shopee.com.br/...`   →  redireciona para o item e a
+ *                                             página **não traz `og:`**.
+ *   Amazon         `amazon.com.br/dp/...`  →  responde 200 com 1 MB de
+ *                                             HTML e **sem `og:image`**.
+ *
+ * Ligar o card para as três calaria a foto de duas, e a Shopee é a maior
+ * parte da fila do Radar Delas hoje: seria trocar galeria cheia por post
+ * sem imagem, que é pior para a conversão.
+ *
+ * **Isto tem prazo de validade, e o prazo é a Fase 2.** Com o
+ * redirecionador próprio no ar, o `og:` passa a ser NOSSO em qualquer
+ * loja, e o card vale para todas: é o que os concorrentes já fazem com
+ * domínio de encurtador (`amzn.divulgador.link`, visto em 10/08). Quando
+ * isso acontecer, esta lista some e o `sendMedia` sai de cena.
+ */
+const LOJAS_COM_CARD_PROPRIO = new Set(["mercado_livre"]);
+
+/**
+ * A mensagem sai como texto com card, ou como foto anexada?
+ *
+ * **O que está em jogo é a galeria de quem lê.** `sendMedia` é mensagem
+ * de mídia de verdade: o WhatsApp baixa sozinho e, no Android, o arquivo
+ * aparece na galeria junto das fotos de família. A trinta posts por dia
+ * isso é da ordem de 90 MB por mês no celular dela, e é motivo de sair
+ * do grupo tão real quanto volume de mensagem
+ * (`docs/pesquisa/sintese.md` §5). O card de preview não é mídia: não
+ * baixa, não ocupa, não polui.
+ *
+ * Devolve `false` quando não há certeza de que o card vem com foto,
+ * porque post sem imagem nenhuma é o pior dos três desfechos.
+ *
+ * @param lojaSlug  `marketplace.slug` do anúncio que vai sair.
+ * @param ligado    O parâmetro `whatsapp_link_preview`. Existe para
+ *                  desligar isto em produção sem publicar versão, caso o
+ *                  card não apareça como esperado no chip de verdade.
+ */
+export function saiComCardDeLink(lojaSlug: string | null | undefined, ligado: boolean): boolean {
+  if (!ligado) return false;
+  return LOJAS_COM_CARD_PROPRIO.has(String(lojaSlug ?? ""));
+}

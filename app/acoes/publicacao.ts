@@ -16,7 +16,9 @@ import { instanciaDoBot } from "@/lib/bots";
 import { montaMensagem } from "@/lib/mensagem";
 import { modeloDoCanal } from "@/lib/modelo";
 import { usuarioAtual } from "@/lib/sessao";
+import { supabaseServidor } from "@/lib/supabase/servidor";
 import { publicaComFoto } from "@/lib/telegram";
+import { saiComCardDeLink } from "@/lib/texto-whatsapp";
 import { publicaNoWhatsApp } from "@/lib/whatsapp";
 
 /**
@@ -76,6 +78,22 @@ export async function publicaLote(form: FormData): Promise<void> {
   // primeiro canal a todos.
   const modelos = new Map<string, Awaited<ReturnType<typeof modeloDoCanal>>>();
 
+  /*
+    O FREIO DO CARD DE LINK (migration 63), lido UMA vez para o lote.
+
+    Ao contrário do teto de vagas, que é recontado a cada item porque
+    cada envio o consome, este não muda no meio de um lote: é
+    configuração, e reler por item seria uma consulta por mensagem sem
+    nada em troca. Ausente vale 1, que é o comportamento novo.
+  */
+  const { data: linhaCard } = await supabaseServidor()
+    .from("parametro")
+    .select("valor")
+    .eq("chave", "whatsapp_link_preview")
+    .is("nicho_id", null)
+    .maybeSingle();
+  const cardDeLinkLigado = Number(linhaCard?.valor ?? 1) === 1;
+
   // O teto é recontado a cada item, e não lido uma vez antes do laço:
   // cada envio consome uma vaga, e um teto lido de véspera deixaria o
   // botão que existe para poupar toque ser justamente o que estoura o
@@ -129,6 +147,12 @@ export async function publicaLote(form: FormData): Promise<void> {
             publicacao.canal.whatsappGrupoId ?? "",
             texto,
             publicacao.imagemUrl,
+            // O mesmo critério do publicador automático (migration 63):
+            // nas lojas cujo link já traz `og:image`, sai texto com card
+            // em vez de foto anexada, para não encher a galeria de quem
+            // lê. A decisão mora em `lib/texto-whatsapp.ts` justamente
+            // para os dois caminhos não divergirem.
+            saiComCardDeLink(publicacao.marketplaceSlug, cardDeLinkLigado),
           )
         : await publicaComFoto(
             publicacao.canal.telegramChatId ?? "",

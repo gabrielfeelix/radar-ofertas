@@ -73,6 +73,14 @@ export async function publicaNoWhatsApp(
   grupoJid: string,
   texto: string,
   fotoUrl: string | null = null,
+  /**
+   * Manda texto com card de link em vez da foto anexada (migration 63).
+   *
+   * Quem decide é `saiComCardDeLink`, e a decisão é a MESMA do
+   * publicador automático de propósito: a tela e o laço mandando de
+   * formas diferentes seria divergência que só aparece lendo o grupo.
+   */
+  comCard = false,
 ): Promise<ResultadoDoEnvio> {
   const cred = credenciais();
   if ("faltando" in cred) return { ok: false, configuracao: true, motivo: cred.faltando };
@@ -85,14 +93,15 @@ export async function publicaNoWhatsApp(
   }
 
   const corpo = paraWhatsApp(texto);
+  const anexaFoto = Boolean(fotoUrl) && !comCard;
 
-  const rota = fotoUrl
+  const rota = anexaFoto
     ? `${cred.base}/message/sendMedia/${encodeURIComponent(instancia)}`
     : `${cred.base}/message/sendText/${encodeURIComponent(instancia)}`;
 
-  const carga = fotoUrl
+  const carga = anexaFoto
     ? { number: grupoJid, mediatype: "image", media: fotoUrl, caption: corpo }
-    : { number: grupoJid, text: corpo, linkPreview: false };
+    : { number: grupoJid, text: corpo, linkPreview: comCard };
 
   try {
     const r = await fetch(rota, {
@@ -109,8 +118,8 @@ export async function publicaNoWhatsApp(
 
       // Foto que a loja recusa servir não pode custar a publicação:
       // cai para texto, que ainda vende. Mesma regra do Telegram.
-      if (fotoUrl && /media|download|url|buffer/i.test(motivo)) {
-        return publicaNoWhatsApp(instancia, grupoJid, texto, null);
+      if (anexaFoto && /media|download|url|buffer/i.test(motivo)) {
+        return publicaNoWhatsApp(instancia, grupoJid, texto, null, comCard);
       }
       return { ok: false, motivo: traduz(motivo) };
     }

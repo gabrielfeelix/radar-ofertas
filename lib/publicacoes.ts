@@ -69,6 +69,14 @@ export type Publicacao = {
    * quem garante o prazo é esta conta.
    */
   imagemUrl: string | null;
+  /**
+   * `marketplace.slug` do anúncio, que decide COMO a mensagem sai no
+   * WhatsApp: card de link ou foto anexada (`saiComCardDeLink`).
+   *
+   * Está aqui e não só dentro de `dadosDaMensagem` porque aquilo é o
+   * que a mensagem DIZ, e isto é como ela é ENTREGUE.
+   */
+  marketplaceSlug: string;
   enviadaEm: string | null;
   origem: OrigemDoEnvio | null;
   cancelada: boolean;
@@ -312,6 +320,7 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
         anuncio?.imagem_obtida_em,
         anuncio?.marketplace?.cache_preco_max_horas,
       ),
+      marketplaceSlug: anuncio?.marketplace?.slug ?? "",
       enviadaEm: linha.estado === "enviada" ? linha.enviada_em : null,
       origem: linha.estado === "enviada" ? (linha.origem as OrigemDoEnvio) : null,
       cancelada: linha.estado === "cancelada",

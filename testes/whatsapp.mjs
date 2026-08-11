@@ -10,7 +10,7 @@
  * literal ao grupo. O WhatsApp não entende `parse_mode`, e post com
  * `<b>` à vista parece golpe.
  */
-import { paraWhatsApp } from "../lib/texto-whatsapp.ts";
+import { paraWhatsApp, saiComCardDeLink } from "../lib/texto-whatsapp.ts";
 
 let passou = 0, falhou = 0;
 const confere = (n, ok) => { if (ok) { passou++; console.log(`✓ ${n}`); } else { falhou++; console.log(`✗ ${n}`); } };
@@ -71,6 +71,41 @@ confere("não sobra nenhuma tag", !/<[^>]+>/.test(saida));
 confere("não sobra nenhuma entidade escapada", !/&(amp|lt|gt|quot|#39);/.test(saida));
 confere("o subid continua no texto", saida.includes("sub_id=radarpet01"));
 confere("a identificação de publicidade sobrevive (regra 3.10)", saida.includes("#publi"));
+
+/* =============================================================
+   CARD DE LINK OU FOTO ANEXADA (migration 63)
+
+   Errar aqui também não dá erro: a mensagem sai nos dois casos. Errar
+   para MAIS (card onde a loja não tem `og:`) publica post sem imagem
+   nenhuma, e errar para MENOS enche a galeria de quem lê. Os dois só
+   aparecem lendo o grupo, dias depois.
+   ============================================================= */
+console.log("\ncard de link ou foto anexada\n");
+
+confere(
+  "Mercado Livre sai com card: o meli.la traz og:image e og:title (medido em 10/08)",
+  saiComCardDeLink("mercado_livre", true) === true,
+);
+confere(
+  "Shopee continua com foto anexada: o s.shopee.com.br não traz og: nenhum",
+  saiComCardDeLink("shopee", true) === false,
+);
+confere(
+  "Amazon continua com foto anexada: a página não traz og:image",
+  saiComCardDeLink("amazon", true) === false,
+);
+confere(
+  "loja desconhecida não vira card, porque o card sem og: é post sem imagem",
+  saiComCardDeLink("loja_que_nao_existe", true) === false,
+);
+confere(
+  "slug nulo não quebra e não vira card",
+  saiComCardDeLink(null, true) === false && saiComCardDeLink(undefined, true) === false,
+);
+confere(
+  "o parâmetro em 0 devolve TODAS as lojas para a foto anexada",
+  saiComCardDeLink("mercado_livre", false) === false,
+);
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);

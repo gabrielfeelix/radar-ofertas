@@ -406,15 +406,36 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     -webkit-mask-image:linear-gradient(90deg,transparent,#000 8% 92%,transparent);
     mask-image:linear-gradient(90deg,transparent,#000 8% 92%,transparent);
   }
+  /*
+    O LETREIRO INFINITO, e ele quebrava por uma conta de largura.
+
+    Antes eram duas cópias e `translateX(-50%)`. A conta só fecha quando
+    UMA cópia é mais larga que a tela: com seis categorias dando ~1.100px
+    numa tela de 1.800px, a metade que ainda não entrou não cobre o
+    buraco, e o fim do letreiro aparecia vazio antes de voltar.
+
+    Agora o JS clona o grupo até o trilho passar do dobro da tela, e só
+    então duplica o conjunto. O `-50%` fica exato porque cada grupo é uma
+    peça de largura idêntica: o respiro é `padding-right` DENTRO do grupo,
+    e não `gap` no trilho. Com gap no trilho sobraria sempre um vão a
+    mais que a metade não conta, e o salto voltaria, menor e mais difícil
+    de achar.
+  */
   .trilho{
-    display:inline-flex;
+    display:flex;
+    width:max-content;
+  }
+  .grupo{
+    display:flex;
     align-items:baseline;
     gap:38px;
-    width:max-content;
-    padding-left:38px;
+    padding-right:38px;
   }
-  .js .trilho{animation:rola 30s linear infinite}
-  @keyframes rola{to{transform:translateX(-50%)}}
+  .js .trilho.pronto{animation:rola 34s linear infinite}
+  @keyframes rola{
+    from{transform:translateX(0)}
+    to{transform:translateX(-50%)}
+  }
   .trilho span{
     font-family:'Playfair Display',serif;
     font-style:italic;
@@ -615,7 +636,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     .js .revela,.js .anima-chat .dia,.js .anima-chat .msg,.js .anima-chat .reacao{
       opacity:1 !important;transform:none !important;animation:none !important;transition:none !important;
     }
-    .js .flutua,.js .trilho,.js .rolo,.js .marca-topo,.js h1 .l,.js .sub,
+    .js .flutua,.js .trilho.pronto,.js .rolo,.js .marca-topo,.js h1 .l,.js .sub,
     .js .hero .cta,.js .hero .cta-micro,.js .prova-colagem,.js .telefone{animation:none !important}
     .telefone{transform:rotate(-2.5deg) !important}
   }
@@ -741,9 +762,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <!-- ================= LETREIRO ================= -->
 <div class="letreiro" aria-hidden="true">
-  <div class="trilho">
-    <span>skincare</span><i>✦</i><span>maquiagem</span><i>✦</i><span>perfume</span><i>✦</i><span>cabelo</span><i>✦</i><span>casa</span><i>✦</i><span>autocuidado</span><i>✦</i>
-    <span>skincare</span><i>✦</i><span>maquiagem</span><i>✦</i><span>perfume</span><i>✦</i><span>cabelo</span><i>✦</i><span>casa</span><i>✦</i><span>autocuidado</span><i>✦</i>
+  <div class="trilho" id="trilho">
+    <div class="grupo">
+      <span>skincare</span><i>✦</i><span>maquiagem</span><i>✦</i><span>perfume</span><i>✦</i><span>cabelo</span><i>✦</i><span>casa</span><i>✦</i><span>autocuidado</span><i>✦</i>
+    </div>
   </div>
 </div>
 
@@ -850,6 +872,42 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   }, { threshold: 0.15 });
   document.querySelectorAll(".revela").forEach((el) => io.observe(el));
   setTimeout(() => document.querySelectorAll(".revela").forEach((el) => el.classList.add("viu")), 3000);
+
+  /*
+    O LETREIRO SE MONTA CONFORME A TELA.
+
+    Uma cópia das seis categorias dá ~1.100px. Numa tela de 1.800px duas
+    cópias não cobrem o ciclo e o fim do trilho aparecia vazio. Aqui o
+    grupo é clonado até passar do dobro da largura visível, e só então o
+    conjunto inteiro é duplicado: é a duplicação que faz o `-50%` cair
+    exatamente sobre um quadro idêntico ao inicial, sem salto.
+
+    `pronto` liga a animação depois de montar, senão ela rodaria sobre um
+    trilho curto no primeiro quadro. E o `resize` remonta, porque girar o
+    celular ou abrir o navegador em outra largura muda a conta.
+  */
+  const trilho = document.getElementById("trilho");
+  const grupoBase = trilho.querySelector(".grupo");
+  function montaLetreiro() {
+    trilho.classList.remove("pronto");
+    trilho.replaceChildren(grupoBase.cloneNode(true));
+    // O teto de 40 é só uma trava contra laço infinito, caso a largura
+    // do grupo seja lida como zero antes da fonte carregar.
+    let voltas = 0;
+    while (trilho.scrollWidth < window.innerWidth * 2 && voltas++ < 40) {
+      trilho.appendChild(grupoBase.cloneNode(true));
+    }
+    for (const g of [...trilho.children]) trilho.appendChild(g.cloneNode(true));
+    trilho.classList.add("pronto");
+  }
+  montaLetreiro();
+  // As fontes mudam a largura do grupo: remonta quando elas chegarem.
+  if (document.fonts?.ready) document.fonts.ready.then(montaLetreiro);
+  let esperaResize;
+  addEventListener("resize", () => {
+    clearTimeout(esperaResize);
+    esperaResize = setTimeout(montaLetreiro, 200);
+  });
 
   // a conversa começa quando o telefone aparece
   const chat = document.getElementById("chat");
