@@ -641,6 +641,8 @@ async function melhorPrateleira(db, oferta) {
   let cuponsPublicados = 0;
   let adiadosPorProporcao = 0;
   let foraDeHorario = 0;
+  /* Quais canais já entraram na conta de "fora do horário" nesta rodada. */
+  const foraDeHorarioContado = new Set();
   let encerradas = 0;
   const motivos = {};
 
@@ -1773,13 +1775,30 @@ async function melhorPrateleira(db, oferta) {
         continue;
       }
       /*
-        Fora do horário o canal sai DESTA rodada e a fila fica de pé: as
-        publicações continuam `pendente` e saem quando a hora abrir. Não
-        é descarte, é espera, e por isso não conta como reprovação.
+        Fora do horário o canal PULA ESTA VOLTA, e a fila dele fica
+        inteira — na memória e no banco.
+
+        ELA ERA ESVAZIADA AQUI, e isso deixou o Radar Delas mudo o dia
+        inteiro em 11/08. A rodada dura 50 minutos e pode atravessar a
+        virada de uma janela: começou 07:45, achou o canal fora do
+        horário, zerou a fila em memória, e às 08:00 — com a janela
+        aberta — não havia mais o que publicar. O canal só voltava a
+        falar na rodada seguinte, e essa é a diferença entre publicar
+        na janela e perder a janela.
+
+        Nos canais de Telegram isso nunca apareceu porque eles aceitam
+        as 24 horas e nunca ficam fora. É um defeito que só existe para
+        canal com janela estreita, que é exatamente o do WhatsApp.
+
+        A contagem para o resumo passa a ser por canal, uma vez só: sem
+        isso ela cresceria a cada volta do laço e o número do fim viria
+        multiplicado pelo número de voltas.
       */
       if (foraDoHorario(canal)) {
-        foraDeHorario += filaDoCanal.get(canal.id)?.length ?? 0;
-        filaDoCanal.set(canal.id, []);
+        if (!foraDeHorarioContado.has(canal.id)) {
+          foraDeHorario += fila.length;
+          foraDeHorarioContado.add(canal.id);
+        }
         continue;
       }
 
