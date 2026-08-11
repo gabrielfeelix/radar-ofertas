@@ -159,7 +159,14 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   h1{
     font-family:'Playfair Display',serif;
     font-weight:500;
-    font-size:clamp(40px,5.6vw,64px);
+    /*
+      +8px nas duas pontas, pedido do dono em 11/08: era
+      clamp(40px, 5.6vw, 64px). O termo em `vw` sobe junto, na mesma
+      proporção do teto (5.6 x 72/64), senão o título cresceria nas
+      pontas e ficaria menor no meio da faixa, que é onde vive a maioria
+      das telas.
+    */
+    font-size:clamp(48px,6.3vw,72px);
     line-height:1.08;
     color:var(--ameixa);
     letter-spacing:-.015em;
@@ -427,7 +434,8 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   @media(max-width:919px){
     .hero{gap:36px;padding:30px 0 48px}
     .marca-topo{margin-bottom:20px}
-    h1{font-size:clamp(33px,8.8vw,40px);margin-bottom:16px}
+    /* +8px também aqui, senão o celular ignorava o aumento (11/08). */
+    h1{font-size:clamp(41px,10.6vw,48px);margin-bottom:16px}
     .sub{font-size:15px;margin-bottom:26px}
     .prova-colagem{display:none}
     .telefone{width:min(300px,82vw)}
@@ -981,11 +989,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     esperaResize = setTimeout(montaLetreiro, 200);
   });
 
-  // a conversa começa quando o telefone aparece
+  /*
+    A CONVERSA COMEÇA NO CARREGAMENTO, e não quando o telefone entra na
+    tela. Pedido do dono em 11/08: *"já pré-renderiza ele, ao invés de
+    só aparecer quando eu chegar nessa seção"*.
+
+    O `IntersectionObserver` fazia sentido enquanto o telefone estava
+    abaixo da dobra no desktop. Só que no celular ele já aparece na
+    primeira tela, e no desktop a pessoa que rola rápido chegava depois
+    da animação ter valido: nos dois casos o efeito era o de conteúdo
+    faltando, não o de conversa acontecendo.
+
+    `requestAnimationFrame` para a classe entrar depois da primeira
+    pintura — se ela entrar junto com o HTML, o navegador pode agrupar
+    tudo num quadro só e a animação não roda, ela só termina.
+  */
   const chat = document.getElementById("chat");
-  new IntersectionObserver((e, obs) => {
-    if (e[0].isIntersecting) { chat.classList.add("rodando"); obs.disconnect(); }
-  }, { threshold: 0.3 }).observe(chat);
+  requestAnimationFrame(() => chat.classList.add("rodando"));
 
   // inclinação sutil do telefone seguindo o mouse (só desktop, só sem reduced motion)
   const telefone = document.getElementById("telefone");
