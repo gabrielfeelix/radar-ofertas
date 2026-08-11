@@ -23,6 +23,26 @@
  * regra 3.3 no caso da Amazon, que proíbe guardar a imagem e cujo link
  * expira em 24h. Título e nicho bastam, e foi medido com produto real.
  *
+ * O REGISTRO MUDOU EM 11/08, e a mudança é a razão de metade deste
+ * arquivo. A instrução de 10/08 mandava escrever em CAIXA ALTA sempre e
+ * "provocar, brincar, exagerar" em todo post, e dava como exemplo do tom
+ * `DURA MAIS QUE MUITO RELACIONAMENTO 💋`. Três coisas nisso estavam
+ * erradas ao mesmo tempo:
+ *
+ *   caixa alta em trinta posts por dia não é ênfase, é o timbre do
+ *   canal, e o timbre vira o de bot de promoção;
+ *
+ *   piada OBRIGATÓRIA vira piada forçada, e amiga de verdade só faz
+ *   graça de vez em quando;
+ *
+ *   modelo de linguagem copia o REGISTRO dos exemplos antes de obedecer
+ *   à instrução, e aqueles exemplos eram trocadilho de legenda antiga.
+ *
+ * No lugar disso: minúscula por padrão, maiúscula só no soco, e SEIS
+ * MODOS sorteados entre os posts. O conserto do carimbo não é escrever
+ * mais engraçado, é variar o tipo de frase, que é o mesmo remédio que a
+ * lista de `recentes` já tentava dar sozinha.
+ *
  * O QUE NÃO SE NEGOCIA, e por isso é validado e não pedido por favor:
  *
  *   regra 3.4  o gancho NÃO fala de preço, desconto nem porcentagem.
@@ -39,8 +59,30 @@
  * o post sai como sempre saiu. O gancho é tempero, não ingrediente.
  */
 
-/** O modelo, escolhido comparando saída real em 10/08. */
-export const MODELO_PADRAO = "gemini-3.5-flash";
+/**
+ * O modelo, e a troca de 11/08 foi por COTA, não por qualidade.
+ *
+ * Era `gemini-3.5-flash`, escolhido comparando saída real em 10/08. O
+ * que a comparação não mediu foi o teto, e ele é o que decide se o
+ * recurso existe: o plano gratuito dá **20 requisições por dia** nesse
+ * modelo. A própria API diz, com todas as letras:
+ *
+ *   Quota exceeded for metric: generate_content_free_tier_requests,
+ *   limit: 20, model: gemini-3.5-flash
+ *
+ * Vinte por dia contra um teto de 150 posts por canal, em nove canais,
+ * significa gancho nos primeiros vinte e silêncio no resto. E o modo de
+ * falha é o pior possível de diagnosticar: nada quebra, os posts saem,
+ * e a diferença só aparece lendo o canal.
+ *
+ * O `-lite` foi medido no mesmo dia, com os mesmos títulos de produção e
+ * a mesma instrução: a saída é igual ou melhor, e a cota é muito maior.
+ * Metade dos exemplos que o dono aprovou em 11/08 saiu dele.
+ *
+ * `gemini-2.5-flash` e `gemini-2.5-flash-lite` não são saída: os dois
+ * respondem 404 com *"no longer available to new users"*.
+ */
+export const MODELO_PADRAO = "gemini-3.5-flash-lite";
 
 /**
  * O teto de tamanho.
@@ -61,30 +103,139 @@ const MAX_CARACTERES = 60;
 const PALAVRAS_DE_PRECO =
   /(pre[çc]o|barat|desconto|promo[çc]|oferta|gr[áa]tis|r\$|reais|metade|off\b|pechinch|liquida[çc])/i;
 
-export const INSTRUCAO_BASE = `Você escreve a PRIMEIRA LINHA de um post de promoção num grupo de WhatsApp.
+/**
+ * NÚMERO POR EXTENSO, que é o furo que a recusa de dígito deixava.
+ *
+ * MEDIDO EM 11/08, com título de produção: de um `Booster Box Copag
+ * Megaevolução 36 Pacotes` saiu *"sessenta pacotinhos pra abrir num
+ * sábado à noite"*. Nenhum dígito, nenhuma palavra de preço, e a
+ * validação inteira deixou passar. Trinta e seis viraram sessenta.
+ *
+ * Não é a regra 3.4, porque não é preço. É a mesma doença dela: número
+ * que ninguém conferiu, numa linha que ninguém leu antes de publicar. E
+ * quem confere uma vez e vê que está errado não confia em nenhum outro
+ * número da mensagem, inclusive nos que vieram do banco e estão certos.
+ *
+ * A LISTA COMEÇA NO DOIS, e a exclusão é deliberada:
+ *
+ *   `um` e `uma` são artigo antes de serem número, e barrá-los mataria
+ *   metade dos ganchos bons (*"um cabo a menos na mesa"*).
+ *
+ *   `meia` e `meio` ficam de fora pelo mesmo motivo: *"a sala limpa por
+ *   meia hora inteira"* não afirma quantidade de produto nenhum.
+ *
+ *   Ordinal fica de fora: *"cabelo de segundo dia"* é cena, não conta.
+ */
+const NUMERO_POR_EXTENSO =
+  /\b(dois|duas|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|(?:qua|ca)torze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa|cem|cento|duzentos|trezentos|quatrocentos|quinhentos|mil|milh[õo](?:es|ao)|d[úu]zia|dezena|centena)s?\b/i;
+
+/**
+ * O QUE ENVELHECEU, e por que isto é validação e não pedido no prompt.
+ *
+ * O gancho nasceu em 10/08 com uma instrução que mandava gritar em caixa
+ * alta e "provocar, brincar, exagerar" em todo post. Os exemplos que ela
+ * dava (`DURA MAIS QUE MUITO RELACIONAMENTO 💋`, `CHEGA DE VIRAR CAMARÃO
+ * NO SOL ☀️`) são trocadilho de legenda antiga, e modelo de linguagem
+ * copia o REGISTRO dos exemplos muito antes de obedecer à instrução.
+ *
+ * O resultado saiu na primeira leva: `CHEGA DE SOFRER COM SECADOR
+ * FRAQUINHO 💨`. O `CHEGA DE` já era o carimbo medido em 10/08, quatro
+ * ganchos em seis, e é o mesmo mal que a regra 3.11 combate no travessão:
+ * a linha não está errada, ela está denunciando que quem escreveu não é
+ * gente do grupo.
+ *
+ * A lista é curta de propósito. Cada entrada aqui é uma construção que
+ * não tem uso honesto num gancho nosso, e recusar custa um post sem
+ * gancho, que continua sendo um post bom. Gosto fica no prompt; o que
+ * vira regra aqui é só o que já apareceu ou já virou vício de canal.
+ */
+const CONSTRUCOES_GASTAS: RegExp[] = [
+  // O carimbo medido. Só na abertura: "e chega de" no meio de uma frase
+  // é português normal, o vício é a linha inteira começar assim.
+  /^chega de\b/i,
+  // Vocativo de canal de promoção. Ninguém fala assim no próprio grupo.
+  /\bamigas?\b/i,
+  /\bmeninas\b/i,
+  /^gente[,!\s]/i,
+  /gente do c[ée]u/i,
+  // Urgência inventada. Nós não sabemos o estoque de ninguém.
+  /\bcorre\b/i,
+  /[úu]ltimas unidades/i,
+  // Gíria datada e superlativo de anúncio.
+  /\bamei\b/i,
+  /\barras(ou|o)\b/i,
+  /\bimperd[íi]vel\b/i,
+  /\bsocorro\b/i,
+  /\bincr[íi]vel\b/i,
+  /\bmaravilhos[oa]\b/i,
+  /\btop\b/i,
+  // Frase de embalagem.
+  /vai agradecer/i,
+  /voc[êe] precisa/i,
+];
+
+export const INSTRUCAO_BASE = `Você escreve a PRIMEIRA LINHA de um post de promoção num grupo de WhatsApp ou Telegram.
 
 Essa linha é um gancho: é o que faz a pessoa parar de rolar a tela. Ela vem ANTES do nome do produto e do preço, que já aparecem logo abaixo.
 
-COMO ESCREVER
-- Fale como amiga animada mandando mensagem no grupo, nunca como loja.
+O REGISTRO
+- Escreva em minúscula, como quem digita rápido no grupo.
 - De 3 a 8 palavras. Curto.
-- MAIÚSCULAS, como quem chega contando a novidade.
-- Provoque, brinque, exagere um pouquinho. Pode usar gíria e humor.
+- Fale como uma pessoa de verdade mandando mensagem, nunca como loja e nunca como locutor de propaganda.
 - Fale do BENEFÍCIO ou da cena da vida real, não da ficha técnica.
-- No máximo um emoji, e só se somar.
+- No máximo um emoji, e só quando ele disser o que a palavra não disse. A maioria dos ganchos não leva emoji nenhum.
+
+OS SEIS MODOS. Escolha UM e varie entre um post e o seguinte.
+
+1. A CENA REAL, e é o modo mais usado. Nomeia o momento da vida em que o produto entra. Sem piada.
+   cabelo seco antes do café esfriar
+   pra não perder mais brinco na gaveta
+   o xixi fora do lugar acabou
+   veste e sai, sem discussão
+
+2. O VEREDITO SECO. Opinião curta de quem já usou.
+   esse segura o cacho na chuva
+   batom que sobrevive ao almoço
+   cabo que não morre em um mês
+
+3. A CONFIDÊNCIA. Alguém contando uma descoberta.
+   achei sem procurar e vim avisar
+   tô usando faz um mês, vim contar
+
+4. O EXAGERO HONESTO, e é aqui que mora o humor. Exagera a CENA, nunca o produto.
+   guardei os sapatos e virei outra pessoa
+   meu banheiro finalmente parece de gente
+   a bagunça da pia não sobreviveu
+
+5. A PROVOCAÇÃO CURTA.
+   seu secador atual não faz isso
+   seu fone tá pedindo aposentadoria
+
+6. O SOCO EM MAIÚSCULA. Uma palavra só em caixa alta, o resto em minúscula.
+   cabelo seco em MINUTOS
+   essa gaveta ficou DECENTE
+
+A GRAÇA É NA MEDIDA. Um gancho em cada três pode ser engraçado; o resto é só útil. Piada em todo post cansa mais rápido que post sem piada nenhuma.
 
 NUNCA
 - Não diga preço, valor, porcentagem, desconto, "barato", "promoção", "oferta" nem "metade do preço". Os números vêm logo abaixo, e inventar número sobre preço queima o grupo.
 - Não use travessão. Use vírgula ou dois pontos.
 - Não use hashtag, aspas, link nem ponto final.
+- Não diga quantidade, nem em algarismo nem por extenso. Nada de "sessenta pacotinhos", "duas peças", "três meses". O título já diz, e errar a conta queima o grupo do mesmo jeito que errar o preço.
 - Não invente característica que o título não garante.
-- Nada de grosseria, escatologia ou piada de mau gosto sobre o corpo de quem lê. É brincadeira entre amigas, não deboche.
+- Nada de grosseria, escatologia ou piada sobre o corpo de quem lê.
+- Não comece com "chega de". Já virou carimbo nosso.
+- Nada de vocativo: nada de "amiga", "amigas", "meninas", "gente".
+- Nada destas palavras: amei, arrasou, top, imperdível, corre, socorro, luxo, maravilhoso, incrível.
+- Nada de trocadilho forçado, de rima, nem de frase de embalagem ("seu cabelo vai agradecer", "você precisa disso na sua vida").
+- Nada de urgência inventada ("corre que tá acabando", "últimas unidades").
 
-EXEMPLOS DO TOM:
-Sapateira organizadora -> ORGANIZAAAA ESSES SAPATO
-Kit 2 cobertores casal -> PRA NÃO TER MAIS BRIGA NO SOFÁ DE CASA
-Batom de longa duração -> DURA MAIS QUE MUITO RELACIONAMENTO 💋
-Protetor solar         -> CHEGA DE VIRAR CAMARÃO NO SOL ☀️
+O QUE SOA VELHO, e é exatamente o que não imitar:
+  CHEGA DE VIRAR CAMARÃO NO SOL ☀️
+  DURA MAIS QUE MUITO RELACIONAMENTO 💋
+  AMIGAS, CORRE QUE EU ACHEI
+  SOCORRO QUE COISA LINDA 😍😍
+  SEU CABELO VAI AGRADECER
 
 Responda SÓ com a linha, nada mais.`;
 
@@ -101,13 +252,13 @@ Responda SÓ com a linha, nada mais.`;
 export function validaGancho(bruto: string | null | undefined): string | null {
   if (!bruto) return null;
 
-  const t = String(bruto)
+  let t = String(bruto)
     // Modelo às vezes devolve a linha entre aspas ou com rótulo.
     .replace(/^\s*(gancho|linha|resposta)\s*:\s*/i, "")
     .replace(/[\r\n]+/g, " ")
     // Regra 3.11: travessão vira vírgula em vez de reprovar a linha
-    // inteira. É o único conserto automático aqui, porque é de
-    // pontuação e não muda o que a frase afirma.
+    // inteira. É conserto e não recusa, porque é de pontuação e não
+    // muda o que a frase afirma.
     .replace(/\s*[—–]\s*/g, ", ")
     .replace(/\s+/g, " ")
     .trim()
@@ -116,12 +267,40 @@ export function validaGancho(bruto: string | null | undefined): string | null {
     .trim();
 
   if (!t) return null;
+
+  /*
+    A LINHA INTEIRA EM CAIXA ALTA VIRA MINÚSCULA.
+
+    A instrução antiga mandava gritar em todo post, e caixa alta trinta
+    vezes por dia deixa de ser ênfase: vira o timbre do canal, e o timbre
+    é de bot de promoção. O registro que o dono aprovou é o contrário,
+    minúscula de quem digita rápido no grupo.
+
+    É conserto e não recusa, pela mesma razão do travessão: é forma, não
+    é o que a frase afirma. E pega SÓ a linha inteira em caixa alta.
+    `essa gaveta ficou DECENTE` tem minúscula e passa intacta, que é
+    justamente o modo em que a maiúscula volta a significar alguma coisa.
+
+    O par `\p{Ll}` / `\p{Lu}` em vez de comparar com `toUpperCase()`:
+    emoji, número e pontuação não têm caixa, e uma linha só de emoji não
+    pode ser confundida com um grito.
+  */
+  if (/\p{Lu}/u.test(t) && !/\p{Ll}/u.test(t)) t = t.toLocaleLowerCase("pt-BR");
+
   if (t.length > MAX_CARACTERES) return null;
 
   // Regra 3.4: dígito no gancho é promessa de número que ninguém
   // conferiu. O preço verdadeiro vem do banco, duas linhas abaixo.
   if (/\d/.test(t)) return null;
   if (PALAVRAS_DE_PRECO.test(t)) return null;
+
+  // E o mesmo número escrito com letra, que passava por baixo da linha
+  // acima até 11/08.
+  if (NUMERO_POR_EXTENSO.test(t)) return null;
+
+  // O que já virou carimbo ou já soa velho. Recusar custa um post sem
+  // gancho; publicar custa o canal parecer os outros oitenta.
+  if (CONSTRUCOES_GASTAS.some((padrao) => padrao.test(t))) return null;
 
   // Marcação, link e hashtag: nada disso é gancho, e `#` colidiria com
   // a identificação publicitária da regra 3.10.
