@@ -220,12 +220,16 @@ saiu com `linkPreview: true` e a imagem não apareceu. Palavras do dono:
 hoje é o de sempre: foto anexada em todas as lojas**. O código do
 híbrido fica de pé e desligado, e religar é trocar o parâmetro para 1.
 
-Falta saber QUAL dos dois problemas é, e a resposta muda o conserto: se
-não veio card nenhum, é o bug da Evolution (issue #2262) e o caminho é
-montar a miniatura do nosso lado, que é o que o concorrente faz. Se veio
-card sem foto, é o WebP do `og:image` do ML, e aí tem conserto barato.
-**Quem olhou o grupo sabe; está anotado aqui para quem chegar depois
-perguntar isso primeiro.**
+**E a foto anexada foi conferida logo depois, no mesmo grupo e no mesmo
+chip: aparece normalmente.** Ou seja, o `sendMedia` está sadio e o
+problema é só do caminho do card. Post pelo card ficou sem imagem, post
+com `sendMedia` ficou com imagem, na mesma noite.
+
+Falta saber QUAL dos dois problemas do card é, e a resposta muda o
+conserto: sem card nenhum é o bug da Evolution (issue #2262), e o
+caminho passa a ser montar a miniatura do nosso lado, que é o que o
+concorrente do print faz; card sem foto é o WebP do `og:image` do ML, e
+esse tem conserto barato. **Pergunte isso antes de religar o parâmetro.**
 
 A tabela abaixo continua valendo para a próxima tentativa:
 
