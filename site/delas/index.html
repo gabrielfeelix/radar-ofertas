@@ -333,41 +333,48 @@
   .f2{bottom:-16px;right:-2%}
   .f3{top:12%;right:-8%;background:var(--ameixa);color:var(--porcelana);border-color:var(--ameixa)}
   @media(max-width:919px){
-    .f1{display:none}
-    .f2{bottom:-14px;right:6px;font-size:11.5px;padding:8px 13px}
+    .f1{top:30%;left:-4px;font-size:11.5px;padding:8px 12px;z-index:2}
+    .f2{bottom:-14px;right:2px;font-size:11.5px;padding:8px 13px}
     .f3{display:none}
   }
 
-  /* ---- hero compacta no celular: tudo numa tela so ---- */
+  /* ---- mobile: celular inteiro, com o topo ja convidando na primeira tela ---- */
   @media(max-width:919px){
-    .hero{gap:34px;padding:36px 0 44px}
-    .marca-topo{margin-bottom:22px}
-    h1{font-size:clamp(32px,9vw,42px);margin-bottom:16px}
-    .sub{font-size:15px;margin-bottom:28px}
+    .hero{gap:36px;padding:30px 0 48px}
+    .marca-topo{margin-bottom:20px}
+    h1{font-size:clamp(33px,8.8vw,40px);margin-bottom:16px}
+    .sub{font-size:15px;margin-bottom:26px}
     .prova-colagem{display:none}
-    .telefone{width:min(238px,68vw)}
-    .tela{min-height:0}
-    /* janela fixa: a conversa roda sozinha dentro dela, como um gif.
-       flex:none e obrigatorio: com flex:1 a janela estica ate o
-       conteudo inteiro e o telefone vira uma salsicha. */
-    .chat{flex:none;height:272px;overflow:hidden}
-    .js .rolo{animation:rolagem 9s ease-in-out 3.4s infinite}
-    /* o cabecalho compacta junto com o telefone */
-    .ilha{width:70px;height:19px;top:17px}
-    .status{padding:11px 18px 4px;font-size:10.5px}
-    .wa-topo{padding:6px 10px 10px;gap:8px}
-    .wa-topo .avatar{width:30px;height:30px;font-size:11px}
-    .wa-topo .nome{font-size:12.5px;white-space:nowrap}
-    .wa-topo .qtd{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:104px}
-    .wa-topo .icones{gap:10px}
+    .telefone{width:min(300px,82vw)}
+    /* o cabecalho compacto: o nome nunca quebra em duas linhas */
+    .ilha{width:76px;height:20px;top:19px}
+    .status{padding:12px 20px 5px;font-size:11px}
+    .wa-topo{padding:7px 11px 11px;gap:9px}
+    .wa-topo .avatar{width:32px;height:32px;font-size:11.5px}
+    .wa-topo .nome{font-size:13px;white-space:nowrap}
+    .wa-topo .qtd{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
     .wa-topo .icones svg:first-child{display:none}
-    .msg{font-size:12px}
   }
-  @keyframes rolagem{
-    0%,10%{transform:translateY(0)}
-    46%,62%{transform:translateY(-44%)}
-    94%,100%{transform:translateY(0)}
+
+  /* ---- a coreografia de entrada: o primeiro segundo e o que convence ---- */
+  @keyframes sobe{
+    from{opacity:0;transform:translateY(18px)}
+    to{opacity:1;transform:none}
   }
+  @keyframes sobeFone{
+    from{opacity:0;transform:rotate(-2.5deg) translateY(28px)}
+    to{opacity:1;transform:rotate(-2.5deg)}
+  }
+  .js .marca-topo{animation:sobe .5s ease-out backwards}
+  .js h1 .l{animation:sobe .6s cubic-bezier(.2,.8,.3,1) backwards}
+  .js h1 .l:nth-child(1){animation-delay:.08s}
+  .js h1 .l:nth-child(2){animation-delay:.18s}
+  .js h1 .l:nth-child(3){animation-delay:.28s}
+  .js .sub{animation:sobe .6s .4s ease-out backwards}
+  .js .hero .cta{animation:sobe .6s .5s ease-out backwards}
+  .js .hero .cta-micro{animation:sobe .6s .58s ease-out backwards}
+  .js .prova-colagem{animation:sobe .6s .66s ease-out backwards}
+  .js .telefone{animation:sobeFone .8s .45s cubic-bezier(.2,.8,.3,1) backwards}
   .js .flutua{animation:deriva 7s ease-in-out infinite alternate}
   .js .f2{animation-delay:1.6s}
   .js .f3{animation-delay:3.1s}
@@ -594,7 +601,8 @@
     .js .revela,.js .anima-chat .dia,.js .anima-chat .msg,.js .anima-chat .reacao{
       opacity:1 !important;transform:none !important;animation:none !important;transition:none !important;
     }
-    .js .flutua,.js .trilho,.js .rolo{animation:none !important}
+    .js .flutua,.js .trilho,.js .rolo,.js .marca-topo,.js h1 .l,.js .sub,
+    .js .hero .cta,.js .hero .cta-micro,.js .prova-colagem,.js .telefone{animation:none !important}
     .telefone{transform:rotate(-2.5deg) !important}
   }
 
@@ -638,7 +646,7 @@
         <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2c-5.46 0-9.9 4.44-9.9 9.9 0 1.75.46 3.45 1.32 4.95L2 22l5.3-1.39a9.87 9.87 0 0 0 4.74 1.21c5.46 0 9.9-4.44 9.9-9.9S17.5 2 12.04 2Zm0 18.1a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.11.82.83-3.04-.2-.31a8.16 8.16 0 0 1-1.26-4.34c0-4.52 3.68-8.2 8.2-8.2s8.2 3.68 8.2 8.2-3.65 8.2-8.17 8.2Zm4.52-6.13c-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.17.24-.64.8-.78.97-.14.16-.29.18-.54.06a6.7 6.7 0 0 1-3.35-2.93c-.25-.43.25-.4.72-1.34.08-.16.04-.3-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.24-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.6.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.29Z"/></svg>
         Entrar no grupo do WhatsApp
       </a>
-      <span class="cta-micro">abre direto no aplicativo · grátis · sai quando quiser</span>
+      <span class="cta-micro">abre direto no aplicativo · é grátis</span>
 
       <div class="prova-colagem">
         <div class="fila">
