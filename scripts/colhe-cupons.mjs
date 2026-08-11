@@ -25,6 +25,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { escopoDoCupom } from "../lib/escopo-do-cupom.ts";
+import { escopoPeloTexto } from "../lib/escopo-pelo-texto.ts";
 import {
   extraiCupons,
   fimDoDiaEmSaoPaulo,
@@ -76,6 +77,16 @@ async function main() {
   // funcionava enquanto todo cupom trazia `DDMM` no fim; sem data, o
   // "prefixo" é o código inteiro e nada casava (`lib/escopo-do-cupom.ts`).
   const listaDeEscopos = prefixos ?? [];
+
+  /*
+    O nicho por slug, para o escopo lido do texto virar `nicho_id`.
+
+    `lib/escopo-pelo-texto.ts` devolve slug e não id de propósito: ele é
+    regra pura, testável sem banco, e não deve saber o uuid de nada.
+    A tradução mora aqui, que é quem já fala com o banco.
+  */
+  const { data: nichos } = await db.from("nicho").select("id, slug");
+  const nichoPorSlug = new Map((nichos ?? []).map((n) => [n.slug, n.id]));
 
   const { data: fontes } = await db
     .from("fonte_descoberta")
@@ -157,6 +168,7 @@ async function main() {
   console.log(`${lidos} canais lidos · ${vistos.size} cupons distintos\n`);
 
   let gravados = 0;
+  let destravados = 0;
   let vencidos = 0;
 
   for (const c of vistos.values()) {
@@ -188,13 +200,39 @@ async function main() {
     // O prefixo é o código sem o `DDMM` do fim. Sem data, o código
     // inteiro é o prefixo, e é assim que ele é mapeado em
     // `cupom_prefixo`.
-    const escopo = escopoDoCupom(c.codigo, listaDeEscopos);
+    const porPrefixo = escopoDoCupom(c.codigo, listaDeEscopos);
+
+    /*
+      O TEXTO ENTRA ONDE O PREFIXO NÃO ALCANÇA.
+
+      Medido em 11/08: 67 dos 76 cupons colhidos estavam parados por
+      não casarem com nenhum dos dez prefixos cadastrados, e o último
+      post de cupom tinha saído em 01/08. O Mercado Livre inventa nome
+      novo toda semana (`DROGARIA`, `PAYDAY`, `TOMACUPOM`), então
+      cadastrar prefixo é enxugar gelo.
+
+      O escopo estava escrito no post o tempo todo, em português:
+      *"10% OFF no site"* vale em qualquer canal, *"seleção de
+      produtos"* não vale em nenhum. Ver `lib/escopo-pelo-texto.ts`.
+
+      O PREFIXO CONTINUA GANHANDO, e a ordem importa: ele é curadoria
+      nossa, conferida uma vez e reaproveitada; o texto é leitura de
+      frase de terceiro. Onde os dois falam, vale o nosso.
+    */
+    const porTexto = porPrefixo ? null : escopoPeloTexto(c.contexto);
+    const escopo = porPrefixo ?? (porTexto
+      ? { geral: porTexto.geral, nicho_id: porTexto.nichoSlug ? (nichoPorSlug.get(porTexto.nichoSlug) ?? null) : null }
+      : null);
+
+    // Categoria nomeada que não existe como nicho nosso não vira geral
+    // por acidente: sem `nicho_id` o cupom volta a ser inerte.
+    const escopoValido = escopo && (escopo.geral || escopo.nicho_id) ? escopo : null;
 
     const emQuantos = c.canais.size;
-    const marca = escopo?.geral
-      ? "geral"
-      : escopo?.nicho_id
-        ? "de nicho"
+    const marca = escopoValido?.geral
+      ? `geral${porTexto ? " (pelo texto)" : ""}`
+      : escopoValido?.nicho_id
+        ? `de nicho${porTexto ? " (pelo texto)" : ""}`
         : "SEM MAPA (não publica)";
     const linha =
       `${c.codigo.padEnd(22)} ${String(c.percentual).padStart(2)}%  ` +
@@ -223,8 +261,8 @@ async function main() {
         valor_minimo_centavos: c.minimoCentavos,
         teto_desconto_centavos: c.tetoCentavos,
         vigente_ate: ate.toISOString(),
-        nicho_id: escopo?.nicho_id ?? null,
-        geral: escopo?.geral ?? false,
+        nicho_id: escopoValido?.nicho_id ?? null,
+        geral: escopoValido?.geral ?? false,
       },
       { onConflict: "operacao_id,marketplace_id,codigo", ignoreDuplicates: true },
     )
@@ -237,13 +275,47 @@ async function main() {
     else if ((data ?? []).length > 0) {
       gravados++;
       console.log(`  ✓ ${linha}`);
+    } else if (escopoValido) {
+      /*
+        O CUPOM QUE JÁ ESTAVA E NASCEU INERTE.
+
+        `ignoreDuplicates` protege o valor do cupom de ser sobrescrito
+        por uma leitura pior de outro canal, e isso continua certo. Mas
+        ele também congelava o ESCOPO: um cupom gravado antes desta
+        regra, ou gravado pela colheita da Edge Function (que não lê
+        escopo nenhum), ficava `geral = false` com nicho nulo para
+        sempre — e essa combinação nunca publica.
+
+        Era o estado de 67 dos 76 cupons do banco em 11/08.
+
+        Então o escopo, e SÓ ele, é preenchido depois. O `is null` e o
+        `eq false` no filtro são o que impede isto de virar
+        sobrescrita: quem já tem escopo não é tocado, inclusive o que
+        foi decidido à mão.
+      */
+      const { data: destravado } = await db
+        .from("cupom")
+        .update({ nicho_id: escopoValido.nicho_id ?? null, geral: escopoValido.geral ?? false })
+        .eq("operacao_id", c.operacaoId)
+        .eq("marketplace_id", mkt.id)
+        .eq("codigo", c.codigo)
+        .eq("geral", false)
+        .is("nicho_id", null)
+        .select("id");
+
+      if ((destravado ?? []).length > 0) {
+        destravados++;
+        console.log(`  ↑ ${linha} (estava inerte, ganhou escopo)`);
+      } else {
+        console.log(`  = ${linha} (já estava)`);
+      }
     } else {
       console.log(`  = ${linha} (já estava)`);
     }
   }
 
   console.log(
-    `\n${SECO ? "(seco) " : ""}${gravados} gravados · ${vencidos} descartados por já terem vencido`,
+    `\n${SECO ? "(seco) " : ""}${gravados} gravados · ${destravados} destravados · ${vencidos} descartados por já terem vencido`,
   );
 }
 

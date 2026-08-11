@@ -277,6 +277,15 @@ export type CupomLido = {
   minimoCentavos: number;
   tetoCentavos: number | null;
   /**
+   * O bloco de texto de onde os valores saíram.
+   *
+   * Existe para o escopo ser lido do que o canal ESCREVEU, e não
+   * adivinhado do nome do código (`lib/escopo-pelo-texto.ts`). É o
+   * mesmo bloco que deu o percentual, o mínimo e o teto, então quem
+   * decidir o escopo está lendo a mesma frase que prometeu o desconto.
+   */
+  contexto: string;
+  /**
    * O dia e o mês que o próprio código carrega, quando ele carrega.
    *
    * Nulo em cupom achado pelo rótulo (`FASHIONML`, `PIPOCA`), que não
@@ -536,6 +545,7 @@ export function extraiCupons(texto: string): CupomLido[] {
       percentual,
       minimoCentavos: valorApos(bloco, MINIMO) ?? 0,
       tetoCentavos: valorApos(bloco, TETO),
+      contexto: bloco,
       dia: c.dia,
       mes: c.mes,
       origem: c.origem,
