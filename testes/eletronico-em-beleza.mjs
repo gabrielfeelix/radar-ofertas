@@ -9,7 +9,7 @@
  * A regra do teste é a mesma do `USO`: **na dúvida, deixa passar**.
  * Falso positivo aqui apaga oferta boa em silêncio, e ninguém descobre.
  */
-import { ehEletronicoEmBeleza, atributosComTipo, TIPO_ELETRONICO } from "../lib/eletronico-em-beleza.ts";
+import { ehEletronicoEmBeleza, atributosComTipo, tipoForaDaBeleza, TIPO_ELETRONICO, TIPO_BARBEARIA } from "../lib/eletronico-em-beleza.ts";
 
 let passou = 0, falhou = 0;
 const confere = (n, ok) => { if (ok) { passou++; console.log(`✓ ${n}`); } else { falhou++; console.log(`✗ ${n}`); } };
@@ -56,6 +56,59 @@ confere(
   ehEletronicoEmBeleza("Suporte de Celular com Espelho de Maquiagem Ventosa") === true,
 );
 confere("capa de celular continua sendo pega", ehEletronicoEmBeleza("Capa De Celular Transparente") === true);
+
+console.log("\nmáquina de cortar pelo não é do canal de beleza\n");
+
+confere(
+  "o Supergroom real, publicado por engano em 11/08",
+  tipoForaDaBeleza("Aparador De Pelos Supergroom-10 Mondial Bivolt Bg-10") === TIPO_BARBEARIA,
+);
+confere("barbeador elétrico", tipoForaDaBeleza("Barbeador Elétrico Masculino Recarregável") === TIPO_BARBEARIA);
+confere("máquina de cortar cabelo", tipoForaDaBeleza("Máquina De Cortar Cabelo Kemei Profissional") === TIPO_BARBEARIA);
+confere("gilete", tipoForaDaBeleza("Kit Gilete Mach3 Com 4 Cargas") === TIPO_BARBEARIA);
+confere("lâmina de barbear", tipoForaDaBeleza("Lâmina De Barbear Prestobarba Descartável") === TIPO_BARBEARIA);
+confere("aparador de pelos do nariz", tipoForaDaBeleza("Aparador Cortador de Pelos 2 em 1 Nariz e Orelha") === TIPO_BARBEARIA);
+confere(
+  "barbearia ganha do resgate de beleza, que é por onde eles entravam",
+  tipoForaDaBeleza("Barbeador Elétrico Com Carregador Usb") === TIPO_BARBEARIA,
+);
+
+console.log("\ndepilação continua sendo beleza, e é a persona do canal\n");
+
+confere("depilador feminino", tipoForaDaBeleza("Depilador Elétrico Feminino Recarregável Usb") === null);
+confere(
+  "a Gillette Venus que já saiu e é post bom",
+  tipoForaDaBeleza("Aparelho Para Depilar Suave Sensitive 2 Unid Gillette Venus") === null,
+);
+confere("cera depilatória", tipoForaDaBeleza("Cera Depilatória Roll On Tutti Depil") === null);
+confere("pinça", tipoForaDaBeleza("Pinça De Sobrancelha Inox Bico Reto") === null);
+
+// Os seis falsos positivos reais que a migration 71 marcou por engano,
+// achados minutos depois de aplicá-la.
+confere(
+  "caneta depiladora feminina de sobrancelha, que diz 'aparador de pelos'",
+  tipoForaDaBeleza("Caneta Depiladora Elétrica Feminina Sobrancelha Facial Recarregável Usb Portátil Aparador De Pelos Rosto Buço") === null,
+);
+confere(
+  "depiladora de design íntimo",
+  tipoForaDaBeleza("Depiladora 3 em 1 Recarregável - Aparador de Pelos, Design Íntimo e Corporal") === null,
+);
+confere(
+  "lâmina de sobrancelha, que diz 'navalha'",
+  tipoForaDaBeleza("KIT 36 unidades Lâminas Sobrancelha e Rosto Navalha Depilação") === null,
+);
+confere(
+  "kit de aparar sobrancelha, que diz 'navalha'",
+  tipoForaDaBeleza("KIT Tem 2 NAVALHA+1 TESOURA PENTE/Kit para aparar sobrancelhas") === null,
+);
+confere(
+  "e o inverso: 'cortar cabelo' e 'barbear' ganham mesmo com 'depilador' no título",
+  tipoForaDaBeleza("Maquina De Cortar Cabelo Barbear Sem Fio Aparador De Pelos Acabamento Depilador Intimo Masculino") === TIPO_BARBEARIA,
+);
+confere(
+  "navalha de barbear continua sendo barbearia",
+  tipoForaDaBeleza("Navalhete Navalha Profissional Inox P/ Barbear E Acabamentos") === TIPO_BARBEARIA,
+);
 
 console.log("\naparelho de beleza é resgatado, mesmo mencionando eletrônico\n");
 

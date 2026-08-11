@@ -40,6 +40,33 @@
 /** O valor que vai para `produto.atributos.TIPO`. */
 export const TIPO_ELETRONICO = "eletronico";
 
+/**
+ * O segundo valor: máquina de cortar pelo.
+ *
+ * POR QUE ELE PRECISOU EXISTIR, e a pergunta do dono em 11/08 é a
+ * definição: *"aparador, gilete, etc não entram no grupo de BELEZA né
+ * amigão, ele pode até não ser masculino, mas por que um aparador entra
+ * no grupo de beleza?"*
+ *
+ * O que fez o `Aparador De Pelos Supergroom-10 Mondial` chegar lá não
+ * foi defeito nenhum: o Mercado Livre o classifica em `Cuidados
+ * pessoais` e o nosso nicho `beleza` herda essa árvore. Pela taxonomia
+ * está certo. Pelo grupo, não: quem entrou num canal de skincare,
+ * cabelo e maquiagem não entrou para ver máquina de barbear.
+ *
+ * ISTO NÃO É O FILTRO DE GÊNERO, e a diferença importa. `GENDER`
+ * resolve o aparador que se declara masculino, e só pega quem declara —
+ * em beleza a maioria não declara nada. Aqui o corte é pelo QUE A COISA
+ * É, e vale mesmo quando o anúncio é omisso ou diz "sem gênero".
+ *
+ * O QUE FICA DE FORA, de propósito: depilador, epilador, cera, pinça e
+ * lâmina feminina. Depilação é rotina de beleza da persona do canal
+ * (`docs/personas-dos-canais.md`), e o `Aparelho Para Depilar Gillette
+ * Venus` que já saiu é post bom. A linha é máquina de cortar cabelo e
+ * barba, não remoção de pelo.
+ */
+export const TIPO_BARBEARIA = "barbearia";
+
 function normaliza(texto: string): string {
   return texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
@@ -119,6 +146,83 @@ const CELULAR_DE_TELEFONE =
   /(?<!\b(?:nutricao|renovacao|regeneracao|reparacao|recuperacao|revitalizacao|oxigenacao|hidratacao|protecao|comunicacao|multiplicacao|divisao|energia|nivel|matriz|atividade|memoria|defesa|acao|estimulo)\s{1,3})\bcelular\b/;
 
 /*
+  MÁQUINA DE CORTAR PELO. Ver `TIPO_BARBEARIA` no topo.
+
+  Vem ANTES do resgate de beleza e antes da lista de eletrônico, porque
+  é a decisão mais específica das três: `barbeador` e `aparador de
+  pelos` estavam justamente no resgate, salvos do filtro de eletrônico,
+  e é por ali que eles entravam no canal.
+
+  `gilete` entra pelo nome da marca virada substantivo, que é como o
+  título do anúncio escreve. `lamina de barbear` cobre a recarga.
+*/
+const BARBEARIA_FORTE = [
+  "barbear",
+  "barbeador",
+  "maquina de cortar cabelo",
+  "cortador de cabelo",
+  "maquina de acabamento",
+  "gilete",
+  "multigroomer",
+  "barba e cabelo",
+  "aparador de barba",
+];
+
+/*
+  O SINAL FRACO, e é ele que a depilação desarma.
+
+  MEDIDO NA PRÓPRIA MIGRATION 71, logo depois de aplicá-la: dos 96
+  produtos marcados, seis eram de mulher e entraram por aqui —
+
+    Caneta Depiladora Elétrica Feminina Sobrancelha Facial ... Aparador
+    De Pelos Rosto Buço                                    (três cores)
+    Depiladora 3 em 1 Recarregável, Aparador de Pelos, Design Íntimo
+    KIT 36 Lâminas Sobrancelha e Rosto Navalha Depilação
+    KIT 2 NAVALHA + 1 TESOURA PENTE, Kit para aparar sobrancelhas
+
+  "Aparador de pelos" e "navalha" são as duas palavras que a barbearia
+  masculina e a depilação feminina usam igual. Sozinhas elas não podem
+  decidir, e por isso vivem aqui embaixo, depois do resgate.
+
+  O caso que prova que os dois níveis são necessários: *"Maquina De
+  Cortar Cabelo Barbear ... Aparador De Pelos Acabamento Depilador
+  Intimo Masculino"* tem `depilador` no título e continua sendo
+  barbearia, porque `cortar cabelo` e `barbear` estão no nível de cima.
+*/
+const BARBEARIA_FRACA = [
+  "aparador de pelo",
+  "aparador de pelos",
+  "aparador cortador",
+  "maquina de corte",
+  "cortador de pelo",
+  "cortador de pelos",
+  "lamina de barbear",
+  "navalha",
+  "trimmer",
+  "pelos do nariz",
+  "aparador nasal",
+];
+
+/*
+  DEPILAÇÃO É BELEZA, e desarma o sinal fraco acima.
+
+  A persona do canal (`docs/personas-dos-canais.md`) tira sobrancelha,
+  buço e pelo do corpo, e isso é rotina de autocuidado, não barbearia.
+  O `Aparelho Para Depilar Gillette Venus` que já saiu é post bom.
+*/
+const DEPILACAO = [
+  "depilad",
+  "depilar",
+  "depilac",
+  "depilat",
+  "sobrancelha",
+  "epilador",
+  "buco",
+  "design intimo",
+  "venus",
+];
+
+/*
   Palavras que devolvem o produto para a beleza mesmo tendo casado
   acima.
 
@@ -157,12 +261,33 @@ const AINDA_E_BELEZA = [
  * claramente de outro mundo, não para adivinhar.
  */
 export function ehEletronicoEmBeleza(titulo: string | null | undefined): boolean {
-  if (!titulo) return false;
+  return tipoForaDaBeleza(titulo) === TIPO_ELETRONICO;
+}
+
+/**
+ * O produto é de um mundo que não é o do canal de beleza? Qual deles?
+ *
+ * Devolve `null` no caso duvidoso, que é a mesma covardia deliberada de
+ * `ehSuprimentoProfissional`: a regra existe para tirar o que é
+ * claramente de outro mundo, não para adivinhar.
+ *
+ * A ORDEM É A REGRA. Barbearia primeiro, porque `barbeador` e `aparador
+ * de pelos` moram no resgate de beleza — eles são aparelho de cuidado
+ * pessoal de verdade, e era por essa porta que entravam no canal.
+ */
+export function tipoForaDaBeleza(titulo: string | null | undefined): string | null {
+  if (!titulo) return null;
   const t = normaliza(titulo);
 
-  if (AINDA_E_BELEZA.some((m) => t.includes(m))) return false;
-  if (ELETRONICO.some((m) => new RegExp(`\\b${m}\\b`).test(t))) return true;
-  return CELULAR_DE_TELEFONE.test(t);
+  // Barbear e cortar cabelo decidem sozinhos, e nada os desarma.
+  if (BARBEARIA_FORTE.some((m) => t.includes(m))) return TIPO_BARBEARIA;
+  // Depilação desarma o sinal fraco, que a barbearia e ela dividem.
+  if (DEPILACAO.some((m) => t.includes(m))) return null;
+  if (BARBEARIA_FRACA.some((m) => t.includes(m))) return TIPO_BARBEARIA;
+
+  if (AINDA_E_BELEZA.some((m) => t.includes(m))) return null;
+  if (ELETRONICO.some((m) => new RegExp(`\\b${m}\\b`).test(t))) return TIPO_ELETRONICO;
+  return CELULAR_DE_TELEFONE.test(t) ? TIPO_ELETRONICO : null;
 }
 
 /**
@@ -177,6 +302,7 @@ export function atributosComTipo(
   atuais: Record<string, string> | null | undefined,
 ): Record<string, string> | null {
   if (atuais && typeof atuais.TIPO === "string" && atuais.TIPO.trim() !== "") return null;
-  if (!ehEletronicoEmBeleza(titulo)) return null;
-  return { ...(atuais ?? {}), TIPO: TIPO_ELETRONICO };
+  const tipo = tipoForaDaBeleza(titulo);
+  if (!tipo) return null;
+  return { ...(atuais ?? {}), TIPO: tipo };
 }
