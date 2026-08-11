@@ -30,6 +30,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { atributosComGenero } from "../lib/genero-pelo-titulo.ts";
 import { atributosComUso } from "../lib/uso-do-produto.ts";
+import { atributosComTipo } from "../lib/eletronico-em-beleza.ts";
 import { escolheCota } from "../lib/cota-da-coleta.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
@@ -433,13 +434,18 @@ async function main() {
               publicar no canal errado e pior que nao publicar.
             */
             /*
-              Dois atributos saem do titulo, pelo mesmo motivo: o feed
-              nao traz nenhum. GENDER destrava o canal masculino (D-063)
-              e USO tira suprimento de salao do Beauty.
+              Tres atributos saem do titulo, pelo mesmo motivo: o feed
+              nao traz nenhum. GENDER destrava o canal masculino (D-063),
+              USO tira suprimento de salao do Beauty, e TIPO tira o
+              eletronico que a Shopee classifica como `Beauty Tools` —
+              limpador de AirPods chegou ao Radar Delas por esse caminho
+              em 11/08.
             */
-            atributos:
-              atributosComUso(linha.title, atributosComGenero(linha.title, null)) ??
-              atributosComGenero(linha.title, null),
+            atributos: (() => {
+              const comGenero = atributosComGenero(linha.title, null);
+              const comUso = atributosComUso(linha.title, comGenero) ?? comGenero;
+              return atributosComTipo(linha.title, comUso) ?? comUso;
+            })(),
           })
           .select("id")
           .single();

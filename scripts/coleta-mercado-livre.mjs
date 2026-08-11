@@ -36,6 +36,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { atributosDe, chaveDeIdentidade } from "../lib/identidade.ts";
 import { atributosComUso } from "../lib/uso-do-produto.ts";
+import { atributosComTipo } from "../lib/eletronico-em-beleza.ts";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const API = "https://api.mercadolibre.com";
@@ -1378,9 +1379,19 @@ async function main() {
           marcada como profissional, desfazendo as 741 correções que
           aquela migration fez.
         */
-        const atributos =
+        const comUso =
           atributosComUso(produto.name, atributosApi, nichosDeVolume.has(nichoDoProduto)) ??
           atributosApi;
+
+        /*
+          E o TIPO, que tira o eletronico de dentro da beleza. Aqui ele
+          quase nunca marca nada, porque o ML classifica limpador de
+          fone em `MLB-COMPUTER_CLEANING_KITS` e o nicho ja sai
+          `eletronico`. Entra assim mesmo para a regra ser uma so:
+          catalogo que muda de lado nao pode depender de qual coletor
+          achou o produto.
+        */
+        const atributos = atributosComTipo(produto.name, comUso) ?? comUso;
 
         if (!linha) {
           const { data: novo, error } = await db

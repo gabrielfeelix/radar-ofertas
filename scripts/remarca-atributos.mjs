@@ -37,6 +37,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import { atributosComGenero } from "../lib/genero-pelo-titulo.ts";
 import { atributosComUso } from "../lib/uso-do-produto.ts";
+import { atributosComTipo } from "../lib/eletronico-em-beleza.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -98,6 +99,14 @@ for (;;) {
     const comGenero = atributosComGenero(titulo, atributos);
     if (comGenero) {
       atributos = comGenero;
+      mudou = true;
+    }
+
+    // TIPO = eletronico, que e o que tira limpador de AirPods do canal
+    // de beleza. Ver `lib/eletronico-em-beleza.ts`.
+    const comTipo = atributosComTipo(titulo, atributos);
+    if (comTipo) {
+      atributos = comTipo;
       mudou = true;
     }
 
