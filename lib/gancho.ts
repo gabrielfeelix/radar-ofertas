@@ -130,6 +130,39 @@ const NUMERO_POR_EXTENSO =
   /\b(dois|duas|tr[êe]s|quatro|cinco|seis|sete|oito|nove|dez|onze|doze|treze|(?:qua|ca)torze|quinze|dezesseis|dezessete|dezoito|dezenove|vinte|trinta|quarenta|cinquenta|sessenta|setenta|oitenta|noventa|cem|cento|duzentos|trezentos|quatrocentos|quinhentos|mil|milh[õo](?:es|ao)|d[úu]zia|dezena|centena)s?\b/i;
 
 /**
+ * NOJEIRA E COMENTÁRIO SOBRE O CORPO, as duas que escaparam em 11/08.
+ *
+ * O QUE ACONTECEU, e vale ficar escrito porque a causa é a mesma nas
+ * duas. A instrução pede "exagero honesto" e diz para exagerar a CENA,
+ * e o caminho mais curto para uma cena exagerada é a cena suja: de um
+ * limpador de fone saiu *"tira a craca do fone sem drama"*, e de um
+ * creme saiu *"passou no teste do travesseiro sem acordar melecada"*.
+ * Antes disso, na leva de 10/08, *"BOCA DE RICA SEM PRECISAR DE
+ * PREENCHIMENTO"* num grupo de mulheres.
+ *
+ * A instrução já proibia as duas em texto ("nada de grosseria,
+ * escatologia ou piada sobre o corpo de quem lê"). Não bastou, e a
+ * lição é a mesma que a 3.4 ensinou: proibição que só vive no prompt é
+ * pedido, não regra. Modelo de linguagem obedece na média e falha na
+ * cauda, e a cauda é o post que a pessoa lê.
+ *
+ * FALSO POSITIVO AQUI CUSTA UM POST SEM GANCHO. Um único gancho nojento
+ * num grupo de beleza custa a pessoa, e ela não avisa que saiu.
+ *
+ * `gordura` fica fora da lista de propósito: "tira a gordura do fogão"
+ * é produto de limpeza fazendo o trabalho dele. O que entra é o
+ * vocabulário que só existe para dar nojo ou para apontar defeito em
+ * quem lê.
+ */
+const NOJEIRA_OU_CORPO: RegExp[] = [
+  // Sujeira como piada.
+  /\b(craca|melec\w*|catarro|ranho|chul[ée]|gosma\w*|nojo|nojeir\w*|nojent\w*|imund\w*|fedor|fedid\w*|encardid\w*|pus|sebo)\b/i,
+  // Defeito apontado no corpo de quem lê. O produto pode tratar disso;
+  // o gancho não precisa dizer que a pessoa tem.
+  /\b(celulite|estrias?|flacidez|fl[áa]cid\w*|papada|pelanca|banha|barriga|botox|preenchimento|rugas?|espinhas?|cravos?|gordura localizada)\b/i,
+];
+
+/**
  * O QUE ENVELHECEU, e por que isto é validação e não pedido no prompt.
  *
  * O gancho nasceu em 10/08 com uma instrução que mandava gritar em caixa
@@ -223,7 +256,9 @@ NUNCA
 - Não use hashtag, aspas, link nem ponto final.
 - Não diga quantidade, nem em algarismo nem por extenso. Nada de "sessenta pacotinhos", "duas peças", "três meses". O título já diz, e errar a conta queima o grupo do mesmo jeito que errar o preço.
 - Não invente característica que o título não garante.
-- Nada de grosseria, escatologia ou piada sobre o corpo de quem lê.
+- Nada de grosseria nem de escatologia. NADA DE NOJEIRA: não fale de craca, meleca, catarro, gosma, sebo, encardido, fedor nem de sujeira acumulada. O produto pode limpar sujeira; o gancho fala do resultado limpo, nunca da sujeira em detalhe.
+- NADA SOBRE O CORPO DE QUEM LÊ. Não mencione celulite, estria, flacidez, papada, barriga, ruga, espinha, cravo nem preenchimento. Um creme antirruga vira "pele descansada de manhã", nunca "adeus rugas". Apontar defeito em quem lê expulsa a pessoa do grupo, e ela sai sem avisar.
+- O exagero é da CENA, e a cena exagerada não é a cena suja. "guardei os sapatos e virei outra pessoa" é exagero; "tira a craca do fone" é nojeira.
 - Não comece com "chega de". Já virou carimbo nosso.
 - Nada de vocativo: nada de "amiga", "amigas", "meninas", "gente".
 - Nada destas palavras: amei, arrasou, top, imperdível, corre, socorro, luxo, maravilhoso, incrível.
@@ -301,6 +336,10 @@ export function validaGancho(bruto: string | null | undefined): string | null {
   // O que já virou carimbo ou já soa velho. Recusar custa um post sem
   // gancho; publicar custa o canal parecer os outros oitenta.
   if (CONSTRUCOES_GASTAS.some((padrao) => padrao.test(t))) return null;
+
+  // Nojeira e comentário sobre o corpo de quem lê. Recusar custa um
+  // post sem gancho; publicar custa a pessoa, e ela sai sem avisar.
+  if (NOJEIRA_OU_CORPO.some((padrao) => padrao.test(t))) return null;
 
   // Marcação, link e hashtag: nada disso é gancho, e `#` colidiria com
   // a identificação publicitária da regra 3.10.

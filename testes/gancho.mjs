@@ -79,6 +79,36 @@ confere(
   validaGancho("guardei tudo e chega de bagunça") === "guardei tudo e chega de bagunça",
 );
 
+console.log("\nnojeira e comentário sobre o corpo de quem lê\n");
+
+confere(
+  "o caso real de 11/08: craca reprova",
+  validaGancho("tira a craca do fone sem drama") === null,
+);
+confere(
+  "o outro caso real: melecada reprova",
+  validaGancho("passou no teste do travesseiro sem acordar melecada") === null,
+);
+confere(
+  '"preenchimento" reprova, é o BOCA DE RICA de 10/08',
+  validaGancho("boca de rica sem precisar de preenchimento") === null,
+);
+confere('"catarro" reprova', validaGancho("limpa o catarro do umidificador") === null);
+confere('"sebo" reprova', validaGancho("controla o sebo desde a primeira semana") === null);
+confere('"encardido" reprova', validaGancho("tira o encardido do uniforme") === null);
+confere('"celulite" reprova', validaGancho("celulite que some no espelho") === null);
+confere('"barriga" reprova', validaGancho("segura a barriga na foto") === null);
+confere('"rugas" reprova', validaGancho("menos rugas em uma semana") === null);
+confere('"espinha" reprova', validaGancho("seca a espinha antes do encontro") === null);
+confere(
+  "o mesmo produto dito pelo resultado passa",
+  validaGancho("pele descansada logo de manhã") === "pele descansada logo de manhã",
+);
+confere(
+  '"gordura" passa, porque produto de limpeza tira gordura de fogão',
+  validaGancho("a gordura do fogão saiu sem esfregar") === "a gordura do fogão saiu sem esfregar",
+);
+
 console.log("\na regra 3.4: nada de promessa de preço\n");
 
 confere("dígito reprova, porque número sobre preço ninguém conferiu", validaGancho("LEVA 3 POR NADA") === null);
