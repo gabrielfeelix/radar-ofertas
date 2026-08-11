@@ -198,10 +198,62 @@ const BUSCAS = [
   "perfume malbec boticario", "natura essencial masculino", "natura homem",
   "perfume eudora", "perfume avon", "colonia granado",
   "maison alhambra", "al haramain", "rasasi", "swiss arabian", "afnan",
+  /*
+    BELEZA TINHA TREZE TERMOS, e era o nicho mais desequilibrado do
+    sistema. Medido em 11/08, com o dono perguntando por que so entrava
+    Shopee no canal de beleza:
+
+      catalogo de beleza e perfume, por loja
+        Mercado Livre ....... 913
+        Shopee ............ 3.733     (quatro vezes mais)
+        Amazon ............... 15
+
+      publicacoes do Radar Delas
+        Mercado Livre ....... 123
+        Shopee .............. 775
+
+    NAO E O FILTRO E NAO E A DETECCAO. Nos outros sete canais o Mercado
+    Livre e maioria folgada (Tech 20x0, Casa 24x4, Pet 12x2). O que
+    muda em beleza e a ENTRADA: a Shopee chega por feed em CSV, que
+    despeja o catalogo inteiro dela, e o Mercado Livre chega por busca,
+    que so acha o que alguem escreveu nesta lista. Treze termos contra
+    quarenta de perfume, e o resultado e exatamente essa proporcao.
+
+    E o mesmo diagnostico da D-063, que descobriu o canal de perfume
+    mudo por ter dois termos em 109. La a saida foi ampliar a lista, e a
+    lista de perfume abaixo e o resultado. Aqui e a mesma coisa.
+
+    OS TERMOS SEGUEM AS PERSONAS de `docs/personas-dos-canais.md`, que
+    saiu de mil publicacoes reais: Bia compra skincare e maquiagem e
+    conhece marca nacional; Camila e cacheada e recompra o mesmo produto
+    quando acaba. Marca por nome entra pelo mesmo motivo que entrou em
+    perfume: a busca do ML procura por texto, e e o jeito mais barato de
+    trazer o que a pessoa reconhece.
+
+    Nao ha risco de arrastar produto de outro nicho para ca: desde a
+    migration 24 o nicho vem do `domain_id`, nao de quem achou.
+  */
   // Beleza
   "protetor solar", "hidratante corporal", "serum facial",
   "shampoo", "condicionador", "base maquiagem", "batom", "esmalte",
   "secador de cabelo", "prancha cabelo", "barbeador eletrico", "creme para pentear", "desodorante",
+  // Cabelo, e cacho em especial, que e a persona que recompra
+  "mascara capilar", "leave in", "ativador de cachos", "finalizador cachos",
+  "oleo capilar", "shampoo sem sulfato", "condicionador sem sulfato",
+  "gelatina capilar", "kit cabelo cacheado", "progressiva sem formol",
+  "salon line", "widi care", "brae cosmeticos", "lola cosmetics", "novex cabelo",
+  // Skincare, que e o que a persona mais nova compra por video
+  "protetor solar facial", "hidratante facial", "gel de limpeza facial",
+  "acido hialuronico", "vitamina c facial", "niacinamida", "agua micelar",
+  "sabonete facial", "esfoliante facial", "mascara facial", "protetor solar com cor",
+  "creamy skincare", "principia skincare", "sallve",
+  // Maquiagem
+  "corretivo", "po compacto", "delineador", "mascara de cilios", "blush",
+  "paleta de sombras", "gloss labial", "primer facial", "iluminador facial",
+  "batom liquido matte", "quem disse berenice", "ruby rose maquiagem",
+  // Corpo, banho e unha
+  "sabonete liquido", "oleo corporal", "creme para maos", "creme para os pes",
+  "kit manicure", "cortador de unha", "depilador feminino", "cera depilatoria",
   // Bebê e infantil
   "fralda descartavel", "lenco umedecido", "formula infantil", "mamadeira", "chupeta",
   "carrinho de bebe", "cadeirinha carro bebe", "papinha", "shampoo infantil", "berco portatil",
