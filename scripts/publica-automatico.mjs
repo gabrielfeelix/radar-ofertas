@@ -50,6 +50,7 @@ import {
   podePublicarAgora,
 } from "../lib/ritmo.ts";
 import { diaDoAquecimento, tetoDoDia } from "../lib/aquecimento.ts";
+import { geraGancho } from "../lib/gancho.ts";
 
 /*
   Bot sem data de aquecimento é bot de Telegram, ou um chip cadastrado
@@ -447,12 +448,13 @@ async function melhorPrateleira(db, oferta) {
   const { data: modeloLinhas } = await db
     .from("modelo_mensagem")
     .select(
-      "canal_id, corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, linha_cupom, nota_prefixo, corpo_cupom",
+      "canal_id, corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, linha_cupom, nota_prefixo, corpo_cupom, instrucao_gancho",
     )
     .eq("ativo", true);
 
   const montaModelo = (l) => ({
     corpo: l.corpo,
+    instrucaoGancho: l.instrucao_gancho,
     lastroCom: l.lastro_com,
     lastroSem: l.lastro_sem,
     lastroQueda: l.lastro_queda,
@@ -628,6 +630,8 @@ async function melhorPrateleira(db, oferta) {
   const ehSecundario = (pub) =>
     ramoSecundario.has(pub?.oferta?.anuncio?.categoria_ramo ?? "");
 
+  let ganchosCriados = 0;
+  let ganchosRecusados = 0;
   let reprovadas = 0;
   let publicadas = 0;
   let esperando = 0;
@@ -1339,7 +1343,59 @@ async function melhorPrateleira(db, oferta) {
         .eq("id", pub.id);
     }
 
-    const texto = montaMensagem(modeloDo(canal), {
+    /*
+      O GANCHO, escrito pela IA (migration 64).
+
+      TRÊS PORTAS ANTES DE GASTAR UMA CHAMADA, e a ordem é da mais
+      barata para a mais cara:
+
+        1. o gancho já guardado na publicação, de uma rodada que não
+           chegou a enviar. Sem isto, uma publicação que espera o ritmo
+           três rodadas paga três vezes pela mesma frase;
+        2. `ia_gancho = 0`, que é o freio de mão;
+        3. canal sem `instrucao_gancho`, que é como se escolhe ONDE o
+           gancho vale.
+
+      Os últimos ganchos do canal vão junto, e não é capricho: medido em
+      10/08, pedindo seis seguidos, quatro começaram com "CHEGA DE".
+      Repetição de abertura em canal a trinta posts por dia é carimbo de
+      robô, que é o mesmo mal que a regra 3.11 combate no travessão.
+
+      `geraGancho` nunca levanta erro: sem chave, fora do ar ou com a
+      resposta reprovada na validação, devolve nulo e o post sai como
+      sempre saiu. O gancho é tempero, não ingrediente.
+    */
+    const modeloDesteCanal = modeloDo(canal);
+    let gancho = pub.gancho ?? null;
+
+    if (
+      !gancho &&
+      (par.ia_gancho ?? 1) === 1 &&
+      modeloDesteCanal.instrucaoGancho &&
+      process.env.GEMINI_API_KEY
+    ) {
+      gancho = await geraGancho({
+        titulo: aPublicar.produto?.titulo_canonico ?? "",
+        vozDoCanal: modeloDesteCanal.instrucaoGancho,
+        recentes: ganchosRecentes.get(canal.id) ?? [],
+        chave: process.env.GEMINI_API_KEY,
+      });
+
+      if (gancho) {
+        await db.from("publicacao").update({ gancho }).eq("id", pub.id);
+        // Entra na lista de "não repita" já nesta rodada: o canal
+        // publica várias vezes dentro da mesma execução, e sem isto a
+        // repetição voltaria por dentro dela.
+        const lista = ganchosRecentes.get(canal.id) ?? [];
+        ganchosRecentes.set(canal.id, [gancho, ...lista].slice(0, 15));
+        ganchosCriados++;
+      } else {
+        ganchosRecusados++;
+      }
+    }
+
+    const texto = montaMensagem(modeloDesteCanal, {
+      gancho,
       produto: aPublicar.produto?.titulo_canonico ?? "",
       precoCentavos: precoFinal,
       precoAntesCentavos: referenciaFinal,
@@ -1544,7 +1600,7 @@ async function melhorPrateleira(db, oferta) {
   for (const canal of canaisAtivos) {
     const { data, error } = await db
       .from("publicacao")
-      .select(`id, subid, canal_id, link_afiliado, oferta:oferta_id ( ${SELECAO} )`)
+      .select(`id, subid, canal_id, link_afiliado, gancho, oferta:oferta_id ( ${SELECAO} )`)
       .eq("estado", "pendente")
       .eq("canal_id", canal.id)
       .order("criado_em")
@@ -1628,6 +1684,34 @@ async function melhorPrateleira(db, oferta) {
     um secundário logo de cara, e a proporção de um para quatro viraria
     um para dois no fim do dia.
   */
+  /*
+    OS ÚLTIMOS GANCHOS DE CADA CANAL, para a IA não repetir a abertura.
+
+    Lidos do que JÁ FOI ENVIADO, e não da fila: o que importa é o que
+    quem lê o grupo viu passar. Quinze cobre uns dois dias no ritmo de
+    hoje, o suficiente para a repetição incomodar sem carregar histórico
+    à toa.
+  */
+  const ganchosRecentes = new Map();
+
+  {
+    const { data: ultimos } = await db
+      .from("publicacao")
+      .select("canal_id, gancho")
+      .not("gancho", "is", null)
+      .eq("estado", "enviada")
+      .order("enviada_em", { ascending: false })
+      .limit(200);
+
+    for (const linha of ultimos ?? []) {
+      const lista = ganchosRecentes.get(linha.canal_id) ?? [];
+      if (lista.length < 15) {
+        lista.push(linha.gancho);
+        ganchosRecentes.set(linha.canal_id, lista);
+      }
+    }
+  }
+
   const primariosDesde = new Map();
 
   {
@@ -1802,7 +1886,11 @@ async function melhorPrateleira(db, oferta) {
     `\n${publicadas} publicadas · ${cuponsPublicados} cupons · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
       `${noTeto} no teto do dia · ${adiadosPorProporcao} adiados pela proporção · ` +
       `${semLink} sem link · ${encerradas} encerradas · ${trocas} trocaram de prateleira · ` +
-      `${foraDeHorario} fora do horário do canal`,
+      `${foraDeHorario} fora do horário do canal · ` +
+      // Recusado alto é sinal de prompt escorregando para preço ou
+      // travessão, e sem o contador isso só apareceria como canal sem
+      // gancho, que parece IA desligada.
+      `${ganchosCriados} ganchos escritos, ${ganchosRecusados} recusados`,
   );
   for (const canal of canais ?? []) {
     const saiu = enviadasHoje[canal.id] ?? 0;

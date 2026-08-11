@@ -97,6 +97,14 @@ export type DadosDaMensagem = {
    * degradação e não erro.
    */
   nichoSlug?: string | null;
+  /**
+   * A primeira linha, escrita pela IA sobre este produto (`{gancho}`).
+   *
+   * Opcional de propósito: canal sem voz de gancho cadastrada, IA fora
+   * do ar ou resposta reprovada na validação chegam aqui como ausência,
+   * e a linha some sem deixar buraco. O post continua saindo.
+   */
+  gancho?: string | null;
   /** A série alcançou o mínimo para afirmar mínimo histórico? */
   podeAfirmarMinimo: boolean;
   /**
@@ -215,6 +223,7 @@ export const VARIAVEIS = [
   { chave: "nota", explica: "a sua opinião sobre o produto, escrita na ficha dele. Some quando não há" },
   { chave: "frete", explica: "a linha de frete grátis. Some quando a loja não declara" },
   { chave: "link", explica: "o link com subid, do nosso redirecionador" },
+  { chave: "gancho", explica: "a primeira linha escrita pela IA, sobre este produto. Some quando a IA não responde ou quando o canal não usa gancho" },
 ] as const;
 
 /**
@@ -480,6 +489,20 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
       nossa tabela, não é dado de fora.
     */
     emoji: emojiDoProduto(dados.produto, dados.nichoSlug),
+    /*
+      O GANCHO É ESCAPADO, e isso não é zelo teórico.
+
+      Ele é o único pedaço da mensagem escrito por um modelo de
+      linguagem, ou seja, o único texto que ninguém deste projeto leu
+      antes de publicar. Um `<` solto quebraria o `parse_mode: HTML` do
+      Telegram e a mensagem não sairia. `validaGancho` já recusa `<`,
+      `>` e `#`, e isto é a segunda tranca: as duas custam nada e o
+      caminho tem uma API de terceiro no meio.
+
+      Vazio some junto com a quebra que o cercava, igual à nota e ao
+      frete, então canal sem gancho não fica com buraco no topo.
+    */
+    gancho: dados.gancho ? escapaHtml(dados.gancho) : "",
     vendedor: descreveVendedor(dados),
     /*
       O LINK TAMBÉM É ESCAPADO, e isto só pôde ser feito depois de medir.

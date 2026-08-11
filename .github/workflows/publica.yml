@@ -98,6 +98,13 @@ jobs:
           # dizia `Sem SHOPEE_APP_ID/SECRET` em toda execução.
           SHOPEE_APP_ID: ${{ secrets.SHOPEE_APP_ID }}
           SHOPEE_APP_SECRET: ${{ secrets.SHOPEE_APP_SECRET }}
+          # A IA que escreve a primeira linha do post (migration 64).
+          # SEM ESTA LINHA nenhum gancho é escrito e ninguém é avisado:
+          # o post sai completo, só que sem a linha de cima, e o log diz
+          # "0 ganchos escritos" — que é fácil de confundir com IA
+          # desligada. É o mesmo erro das variáveis do WhatsApp, que em
+          # 10/08 deixaram o Radar Delas mudo com a fila cheia.
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           # `pipefail` porque o `| tee` mascara o código de saída do
           # node: sem ele, o step passa como sucesso mesmo quando o

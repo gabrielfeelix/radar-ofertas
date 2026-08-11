@@ -230,6 +230,20 @@ HTML sem nenhum `og:`, `twitter:` ou `image_src`. Card delas viria vazio,
 que é pior que foto anexada. Isso muda na Fase 2, quando o `og:` passar a
 ser do nosso redirecionador.
 
+**A IA do gancho está ligada só no Radar Delas** (migration 64). Ela
+escreve a primeira linha do post, lendo **só o título** do produto, e
+custa uma chamada por publicação. Para ligar em outro canal, preencha
+`modelo_mensagem.instrucao_gancho` daquele canal e ponha `{gancho}` no
+corpo: nulo significa canal sem gancho e nenhuma chamada é feita. O
+freio geral é o parâmetro `ia_gancho`. **Isto era fora de escopo até a
+Fase 4** e foi derrubado pelo dono em 10/08, com a chave na mão.
+
+Olhe o contador no fim do log: `N ganchos escritos, M recusados`.
+Recusado alto quer dizer que a IA está escorregando para preço ou
+travessão e a validação está segurando, o que é o certo, mas é sinal de
+que o prompt precisa de ajuste. Zero escritos com zero recusados quer
+dizer que a chave não chegou ao Actions.
+
 **Peso de marca em beleza.** Só 4% do que o canal publica é marca que a
 beauty tok reconhece. O mecanismo já existe para perfume (`pesoDaMarca`).
 
