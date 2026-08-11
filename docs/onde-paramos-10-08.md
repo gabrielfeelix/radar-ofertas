@@ -213,8 +213,21 @@ foto anexada, para não encher a galeria de quem lê. As tags `og:` do
 com user-agent de robô de preview. **O que não dá para conferir daqui é
 quem monta o card: o Baileys, dentro da Evolution, na VPS.**
 
-**Olhe o primeiro post de Mercado Livre que sair no grupo.** O sintoma
-diz qual é o problema, se houver:
+**TESTADO NA NOITE DE 10/08, E NÃO FUNCIONOU.** Um post de Mercado Livre
+saiu com `linkPreview: true` e a imagem não apareceu. Palavras do dono:
+*"nao subiu as imagens como pensavamos"*. O parâmetro
+`whatsapp_link_preview` foi zerado na hora, então **o comportamento de
+hoje é o de sempre: foto anexada em todas as lojas**. O código do
+híbrido fica de pé e desligado, e religar é trocar o parâmetro para 1.
+
+Falta saber QUAL dos dois problemas é, e a resposta muda o conserto: se
+não veio card nenhum, é o bug da Evolution (issue #2262) e o caminho é
+montar a miniatura do nosso lado, que é o que o concorrente faz. Se veio
+card sem foto, é o WebP do `og:image` do ML, e aí tem conserto barato.
+**Quem olhou o grupo sabe; está anotado aqui para quem chegar depois
+perguntar isso primeiro.**
+
+A tabela abaixo continua valendo para a próxima tentativa:
 
 | O que você vê | Causa provável | O que fazer |
 |---|---|---|
