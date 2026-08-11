@@ -125,8 +125,28 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
   @media(max-width:919px){.arcos{display:none}}
 
+  /*
+    O TOPO DO HERO É CENTRALIZADO, e é o que o dono pediu: a marca, o
+    título, o subtítulo e o botão, todos no eixo.
+
+    A centralização mora na COLUNA de texto e não na página: no desktop
+    o hero é uma grade de duas colunas, e centralizar a página jogaria o
+    texto por cima do celular da direita. Centralizando a coluna, o
+    bloco fica no eixo do espaço que ele ocupa, nas duas larguras.
+
+    `margin-inline:auto` nos parágrafos é o par obrigatório do
+    `text-align:center`: sem ele o `max-width` prende o texto à
+    esquerda e só as linhas ficam centralizadas dentro de uma caixa
+    torta. É o erro clássico, e ele só aparece quando o texto é curto.
+  */
+  .hero-texto{text-align:center}
+  .hero-texto h1,
+  .hero-texto .sub{margin-inline:auto}
+  /* a prova (as três miniaturas + a frase) anda junto com o resto */
+  .hero-texto .prova-colagem{justify-content:center}
+
   .marca-topo{
-    display:flex;align-items:center;gap:10px;
+    display:flex;align-items:center;justify-content:center;gap:10px;
     margin-bottom:34px;
   }
   .marca-topo svg{width:34px;height:34px}
@@ -261,27 +281,17 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     color:#fff;font-size:11.5px;font-weight:600;
   }
   /*
-    O CABEÇALHO DO GRUPO, CENTRALIZADO (pedido do dono em 11/08).
-
-    A seta de voltar e os ícones de chamada saem do fluxo e vão para as
-    pontas; o que fica no meio é o que importa, que é a foto e o nome do
-    grupo. Sem isso, o bloco central herdaria a largura da seta de um
-    lado e dos dois ícones do outro, e ficaria centralizado por acidente
-    — ou seja, torto assim que qualquer um dos dois mudasse.
-
-    O `padding` lateral reserva o espaço das pontas para o nome não
-    passar por baixo delas quando for comprido.
+    O CABEÇALHO DO GRUPO fica colado na seta, como no WhatsApp de
+    verdade. Chegou a ser centralizado em 11/08 por leitura errada de um
+    pedido meu: o que o dono queria centralizado era o título da página,
+    não isto. No aplicativo real a foto vem logo depois da seta, e imitar
+    o aplicativo é o trabalho inteiro desta parte da página.
   */
   .wa-topo{
-    position:relative;
-    display:flex;align-items:center;justify-content:center;gap:10px;
+    display:flex;align-items:center;gap:10px;
     background:var(--wa-verde);
     color:#fff;
-    padding:8px 58px 12px;
-    text-align:left;
-  }
-  .wa-topo > svg:first-child{
-    position:absolute;left:12px;top:50%;transform:translateY(-40%);
+    padding:8px 12px 12px;
   }
   .wa-topo .avatar{
     width:36px;height:36px;
@@ -308,10 +318,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   }
   .wa-topo .nome{font-size:14px;font-weight:600;line-height:1.2}
   .wa-topo .qtd{font-size:10.5px;opacity:.75;font-weight:400}
-  .wa-topo .icones{
-    position:absolute;right:12px;top:50%;transform:translateY(-40%);
-    display:flex;gap:14px;opacity:.9;
-  }
+  .wa-topo .icones{margin-left:auto;display:flex;gap:14px;opacity:.9}
 
   .chat{
     flex:1;
@@ -430,7 +437,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     .wa-topo{padding:7px 11px 11px;gap:9px}
     .wa-topo .avatar{width:32px;height:32px}
     .wa-topo .nome{font-size:13px;white-space:nowrap}
-    .wa-topo{padding-left:52px;padding-right:52px}
     .wa-topo .qtd{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
     .wa-topo .icones svg:first-child{display:none}
   }
@@ -730,7 +736,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <circle cx="320" cy="320" r="150" stroke="#C48B92" stroke-width="1" opacity=".12"/>
     </svg>
 
-    <div>
+    <div class="hero-texto">
       <div class="marca-topo">
         <svg viewBox="0 0 34 34" fill="none" aria-hidden="true">
           <circle cx="17" cy="17" r="14" stroke="#C48B92" stroke-width="1.5"/>
