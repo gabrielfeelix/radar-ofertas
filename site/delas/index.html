@@ -1292,6 +1292,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   document.addEventListener("click", function (ev) {
     var a = ev.target.closest && ev.target.closest("a.cta");
     if (!a) return;
+
+    /*
+      SÓ EMPILHA SE O CONTÊINER AINDA NÃO CHEGOU, e esta linha é a que
+      impede o Lead de contar dobrado.
+
+      O acionador de Clique em Link continua no contêiner e continua
+      certo: quando o GTM já está carregado, é ele quem registra. Se os
+      dois caminhos disparassem, cada clique viraria duas conversões no
+      GA4, no Google Ads e no Pixel — e relatório que conta a mais é
+      pior que relatório que falta, porque ninguém desconfia dele.
+
+      `google_tag_manager[id]` só existe depois que o contêiner avalia,
+      que é exatamente a fronteira que interessa.
+    */
+    var jaCarregou = window.google_tag_manager && window.google_tag_manager["GTM-KMNTV3D9"];
+    if (jaCarregou) return;
+
     window.dataLayer = window.dataLayer || [];
     window.dataLayer.push({
       event: "cta_clique",
