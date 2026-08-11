@@ -42,6 +42,9 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     --salvia:#87817B;
     --branco:#FFFDFB;
     --wa-verde:#075E54;
+    /* O verde do botão do WhatsApp, que é outro do verde da barra. */
+    --wa-acao:#25D366;
+    --wa-acao-escura:#1EBE5B;
     --wa-papel:#EFE6DB;
   }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -53,7 +56,26 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     font-size:16px;
     line-height:1.6;
     -webkit-font-smoothing:antialiased;
+  }
+  /*
+    O ARRASTO LATERAL NO CELULAR, e ele era real: dava para empurrar a
+    página para o lado e ver o fundo.
+
+    `overflow-x:hidden` estava só no `body`, e isso não basta: quando o
+    elemento que transborda é filho do `body`, o navegador leva a barra
+    para o `html` e o gesto de arrastar continua funcionando. Quem
+    transborda aqui é o celular da direita, que tem `rotate(-2.5deg)` e
+    `84vw` — girar aumenta a caixa que ele ocupa, e a soma passa da
+    largura da tela.
+
+    `clip` em vez de `hidden` porque `hidden` cria contexto de rolagem e
+    quebra `position:sticky` dentro; `clip` corta e não cria. O `hidden`
+    fica de reserva para navegador que não conhece `clip`.
+  */
+  html,body{
+    max-width:100%;
     overflow-x:hidden;
+    overflow-x:clip;
   }
   ::selection{background:var(--rose-po);color:var(--ameixa)}
   img{max-width:100%}
@@ -138,18 +160,24 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     display:inline-flex;
     align-items:center;
     gap:12px;
-    background:var(--ameixa);
-    color:var(--porcelana);
+    /*
+      VERDE DE WHATSAPP, pedido do dono em 11/08. O botão levava a cor
+      da marca (ameixa) e o ícone herdava dela por `currentColor`; agora
+      os dois são o verde do aplicativo com texto e logo brancos, que é
+      o que o dedo já sabe apertar.
+    */
+    background:var(--wa-acao);
+    color:#fff;
     font-size:16px;
     font-weight:600;
     letter-spacing:.02em;
     text-decoration:none;
     padding:18px 34px;
     border-radius:999px;
-    box-shadow:0 12px 32px rgba(110,68,80,.28);
+    box-shadow:0 12px 32px rgba(18,140,80,.28);
     transition:transform .18s ease, box-shadow .18s ease, background .18s ease;
   }
-  .cta:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(110,68,80,.34);background:var(--ameixa-escura)}
+  .cta:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(18,140,80,.34);background:var(--wa-acao-escura)}
   .cta:focus-visible{outline:3px solid var(--malva);outline-offset:3px}
   .cta svg{flex:none}
   .cta-micro{
@@ -232,22 +260,58 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     background:var(--wa-verde);
     color:#fff;font-size:11.5px;font-weight:600;
   }
+  /*
+    O CABEÇALHO DO GRUPO, CENTRALIZADO (pedido do dono em 11/08).
+
+    A seta de voltar e os ícones de chamada saem do fluxo e vão para as
+    pontas; o que fica no meio é o que importa, que é a foto e o nome do
+    grupo. Sem isso, o bloco central herdaria a largura da seta de um
+    lado e dos dois ícones do outro, e ficaria centralizado por acidente
+    — ou seja, torto assim que qualquer um dos dois mudasse.
+
+    O `padding` lateral reserva o espaço das pontas para o nome não
+    passar por baixo delas quando for comprido.
+  */
   .wa-topo{
-    display:flex;align-items:center;gap:10px;
+    position:relative;
+    display:flex;align-items:center;justify-content:center;gap:10px;
     background:var(--wa-verde);
     color:#fff;
-    padding:8px 12px 12px;
+    padding:8px 58px 12px;
+    text-align:left;
+  }
+  .wa-topo > svg:first-child{
+    position:absolute;left:12px;top:50%;transform:translateY(-40%);
   }
   .wa-topo .avatar{
-    width:36px;height:36px;border-radius:50%;
+    width:36px;height:36px;
+    border-radius:50%;
+    /*
+      A FOTO DO GRUPO, e não mais as iniciais "RD".
+      
+      É `radar-delas.png` da raiz, recortada no quadrado central e
+      reduzida a 192px — o avatar é desenhado com 36px, então 192
+      cobre tela de alta densidade e ainda assim o arquivo inteiro
+      cabe em 10 KB. Vai embutida em base64 de propósito: esta página
+      é um arquivo só, e uma imagem solta seria um segundo pedido de
+      rede e um caminho a mais para quebrar na publicação.
+
+      `object-fit:cover` é o que faz o círculo ficar certo: a origem é
+      quadrada, mas se um dia não for, ela preenche em vez de
+      espremer. `flex:none` impede o avatar de ser achatado quando o
+      nome do grupo é comprido.
+    */
+    flex:none;
+    object-fit:cover;
+    display:block;
     background:var(--rose-po);
-    display:grid;place-items:center;
-    font-family:'Playfair Display',serif;
-    font-size:13px;font-weight:600;color:var(--ameixa);
   }
   .wa-topo .nome{font-size:14px;font-weight:600;line-height:1.2}
   .wa-topo .qtd{font-size:10.5px;opacity:.75;font-weight:400}
-  .wa-topo .icones{margin-left:auto;display:flex;gap:14px;opacity:.9}
+  .wa-topo .icones{
+    position:absolute;right:12px;top:50%;transform:translateY(-40%);
+    display:flex;gap:14px;opacity:.9;
+  }
 
   .chat{
     flex:1;
@@ -364,9 +428,10 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     .ilha{width:76px;height:20px;top:19px}
     .status{padding:12px 20px 5px;font-size:11px}
     .wa-topo{padding:7px 11px 11px;gap:9px}
-    .wa-topo .avatar{width:32px;height:32px;font-size:11.5px}
+    .wa-topo .avatar{width:32px;height:32px}
     .wa-topo .nome{font-size:13px;white-space:nowrap}
-    .wa-topo .qtd{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+    .wa-topo{padding-left:52px;padding-right:52px}
+    .wa-topo .qtd{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px}
     .wa-topo .icones svg:first-child{display:none}
   }
 
@@ -577,12 +642,13 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
   .final h2{color:var(--porcelana);margin-bottom:14px}
   .final h2 em{color:var(--rose-po)}
   .final p{max-width:38ch;margin:0 auto 34px;color:rgba(250,245,239,.8);font-size:15.5px}
-  .cta-claro{
-    background:var(--porcelana);
-    color:var(--ameixa);
-    box-shadow:0 10px 30px rgba(0,0,0,.25);
-  }
-  .cta-claro:hover{background:#fff;color:var(--ameixa)}
+  /*
+    O CTA do rodapé era claro porque o fundo ali é escuro. Com o verde
+    ele já contrasta sozinho, e um botão só muda de cor no meio da
+    página se houver motivo — aqui não há. Fica a sombra mais forte,
+    que é o que o fundo escuro pede.
+  */
+  .cta-claro{box-shadow:0 10px 30px rgba(0,0,0,.35)}
 
   /* --------- transparencia + rodape --------- */
   .transparencia{
@@ -716,7 +782,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           </div>
           <div class="wa-topo">
             <svg width="9" height="16" viewBox="0 0 9 16" fill="none"><path d="M8 1 1.5 8 8 15" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <div class="avatar">RD</div>
+            <img class="avatar" src="data:image/webp;base64,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" alt="Foto do grupo Radar Delas" width="36" height="36">
             <div>
               <div class="nome">Radar Delas 🌸</div>
               <div class="qtd">promoções conferidas</div>
