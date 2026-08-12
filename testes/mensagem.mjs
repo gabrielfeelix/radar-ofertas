@@ -173,6 +173,73 @@ confere(
 
 confere("nenhuma chave sobrou por preencher", !/\{[a-z_]+\}/.test(comLastro));
 
+/*
+  A LINHA DE LASTRO NO GATILHO `declarado` (migration 72).
+
+  Até 11/08 `declarado` caía direto na `lastroDeclarado`, vazia por
+  decisão do dono, e a série nunca era consultada. Como 963 de 1000 da
+  fila são `declarado`, a linha de histórico não saía em post nenhum,
+  mesmo com o anúncio lido em quatro dias diferentes.
+
+  Agora a escolha é pelo DADO. E o que autoriza a frase são três
+  condições juntas: dias distintos suficientes, série existente, e o
+  preço de agora sendo o menor que medimos. Cada caso abaixo derruba
+  uma delas, porque é assim que a regra 3.4 é quebrada sem querer.
+*/
+console.log("\nlastro no gatilho declarado, com série nossa\n");
+
+const declarado = { ...dados, gatilho: "declarado", podeAfirmarMinimo: false };
+const modeloD = { ...modelo, lastroDeclarado: "" };
+
+confere(
+  "com 4 dias lidos e sendo o menor que medimos, diz o que observamos",
+  montaMensagem(modeloD, {
+    ...declarado, nossosDiasLidos: 4, nossoMinimoCentavos: 8990,
+  }).includes("Menor preço que observamos desde 14/06/26."),
+);
+confere(
+  "e essa frase NUNCA afirma mínimo histórico",
+  !afirmaMinimoSemLastro(
+    montaMensagem(modeloD, { ...declarado, nossosDiasLidos: 4, nossoMinimoCentavos: 8990 }),
+  ),
+);
+confere(
+  "com 2 dias lidos fica sem linha: duas leituras não são série",
+  !montaMensagem(modeloD, {
+    ...declarado, nossosDiasLidos: 2, nossoMinimoCentavos: 8990,
+  }).includes("observamos"),
+);
+confere(
+  "já vimos mais barato, então fica sem linha, e este é o caso que a 3.4 protege",
+  !montaMensagem(modeloD, {
+    ...declarado, nossosDiasLidos: 9, nossoMinimoCentavos: 7000,
+  }).includes("observamos"),
+);
+confere(
+  "sem série nenhuma, segue como antes: sem linha",
+  !montaMensagem(modeloD, { ...declarado }).includes("observamos"),
+);
+confere(
+  "o piso de dias é configurável, e 3 dias passa quando o piso é 3",
+  montaMensagem(modeloD, {
+    ...declarado, nossosDiasLidos: 3, nossoMinimoCentavos: 8990, diasMinimosParaLastro: 3,
+  }).includes("observamos"),
+);
+confere(
+  "a queda continua ganhando de tudo, mesmo com série longa",
+  montaMensagem(
+    { ...modeloD, lastroQueda: "Baixou {queda}% desde ontem." },
+    { ...dados, gatilho: "queda", podeAfirmarMinimo: false, precoAnteriorCentavos: 12000,
+      nossosDiasLidos: 9, nossoMinimoCentavos: 8990 },
+  ).includes("Baixou"),
+);
+confere(
+  "e os 14 dias continuam mandando: podeAfirmarMinimo vence a série curta",
+  montaMensagem(modeloD, {
+    ...declarado, podeAfirmarMinimo: true, nossosDiasLidos: 4, nossoMinimoCentavos: 8990,
+  }).includes("Menor preço em 30 dias."),
+);
+
 // A chave desconhecida fica visível de propósito: sumir criaria um
 // buraco na mensagem que ninguém percebe até ela ir para o grupo.
 confere(

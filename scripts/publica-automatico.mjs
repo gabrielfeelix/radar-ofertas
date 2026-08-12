@@ -334,6 +334,7 @@ async function main() {
     id, operacao_id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
     preco_anterior_centavos,
     referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em, gatilho,
+    nosso_minimo_centavos, nosso_minimo_desde, nossos_dias_lidos,
     anuncio:anuncio_id (
       id, produto_id, url_original, sku_externo, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
       avaliacao, avaliacao_qtd, reputacao_vendedor, vendas_estimadas, selo_vendedor, frete_gratis,
@@ -1433,7 +1434,21 @@ async function melhorPrateleira(db, oferta) {
       loja: aPublicar.marketplace?.nome ?? "",
       vendedor: aPublicar.loja_oficial ? "Loja oficial" : (aPublicar.vendedor ?? ""),
       janelaDias: oferta.referencia_janela_dias,
-      observadoDesde: oferta.detectada_em.slice(0, 10),
+      /*
+        O `{desde}` é o primeiro dia em que LEMOS o anúncio, e não o dia
+        em que a oferta foi detectada. Os dois divergem sempre: a série
+        começa quando o anúncio entra no catálogo, e a oferta nasce
+        quando o preço cai, dias depois. Dizer "menor preço que
+        observamos desde ontem" com dez dias de leitura seria jogar
+        fora a única coisa que o concorrente não tem.
+
+        `detectada_em` fica de reserva para oferta antiga, de antes da
+        migration 72, que ainda não tem a série gravada.
+      */
+      observadoDesde: oferta.nosso_minimo_desde ?? oferta.detectada_em.slice(0, 10),
+      nossoMinimoCentavos: oferta.nosso_minimo_centavos,
+      nossosDiasLidos: oferta.nossos_dias_lidos,
+      diasMinimosParaLastro: par.dias_minimos_para_lastro,
       // Já vem decidido lá em cima: a troca de prateleira zera, e o
       // preço que subiu desde o feed também (regra 3.4).
       podeAfirmarMinimo,

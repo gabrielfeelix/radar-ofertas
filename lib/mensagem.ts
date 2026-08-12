@@ -108,6 +108,23 @@ export type DadosDaMensagem = {
   /** A série alcançou o mínimo para afirmar mínimo histórico? */
   podeAfirmarMinimo: boolean;
   /**
+   * O MENOR PREÇO QUE NÓS REGISTRAMOS, e desde quando (migration 72).
+   *
+   * Estes três não substituem `podeAfirmarMinimo`: ele guarda os 14
+   * dias da regra 3.4 e continua sendo o único que libera "menor preço
+   * em N dias". Estes liberam a frase mais modesta, que a própria 3.4
+   * manda usar quando a série é curta, e que só é dita quando o preço
+   * de agora É o menor que medimos.
+   *
+   * Vêm opcionais porque a tela de prévia e o publicador manual montam
+   * mensagem sem oferta no banco; ausência vira "sem linha", que é o
+   * comportamento de antes.
+   */
+  nossoMinimoCentavos?: number | null;
+  nossosDiasLidos?: number | null;
+  /** O piso de dias distintos, do parâmetro `dias_minimos_para_lastro`. */
+  diasMinimosParaLastro?: number | null;
+  /**
    * A leitura ANTERIOR nossa, quando existe.
    *
    * É o que vira `{queda}` no lastro, e é o único número da mensagem que
@@ -378,19 +395,64 @@ function arredondaParaBaixo(n: number): string {
   return String(n);
 }
 
+/**
+ * SOMOS O MENOR PREÇO QUE JÁ MEDIMOS neste anúncio?
+ *
+ * As três condições valem juntas, e cada uma tapa um jeito de mentir
+ * sem querer:
+ *
+ *   `dias >= mínimo`   dez leituras num dia só não são série, e a
+ *                      contagem é de DIAS distintos por isso;
+ *   `mínimo != nulo`   sem série não há o que afirmar;
+ *   `agora <= mínimo`  é o que transforma a frase em fato conferível.
+ *                      Sem isto diríamos "menor preço que observamos"
+ *                      de um preço que já vimos mais barato semana
+ *                      passada, que é a regra 3.4 quebrada.
+ */
+function somosOMenorQueMedimos(dados: DadosDaMensagem): boolean {
+  const dias = dados.nossosDiasLidos ?? 0;
+  const minimo = dados.nossoMinimoCentavos;
+  return (
+    dias >= (dados.diasMinimosParaLastro ?? 3) &&
+    minimo != null &&
+    dados.precoCentavos <= minimo
+  );
+}
+
 /** Renderiza o modelo com os dados de uma oferta. */
 export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem): string {
-  // A queda vem primeiro e ignora `podeAfirmarMinimo`: numa oferta de
-  // queda ele é sempre falso, mas depender disso deixaria a regra
-  // valendo por acidente. Aqui ela vale por decisão.
+  /*
+    A LINHA DE LASTRO É ESCOLHIDA PELO DADO, e não mais só pelo gatilho.
+
+    Até 11/08 a escolha era só pelo gatilho, e isso escondia o que a
+    gente sabia: `declarado` caía direto na `lastroDeclarado`, vazia
+    desde a migration 43, sem nunca perguntar se havia série. Como 963
+    de 1000 da fila são `declarado`, a linha de histórico não aparecia
+    em post nenhum, mesmo com o anúncio lido em quatro dias diferentes.
+    O dono cobrou isso com razão: *"se ele já leu quatro dias, ele já
+    sabe que ontem estava um preço maior ou menor, avisa então"*.
+
+    A ordem abaixo é do mais forte para o mais fraco, e não é estética:
+
+      queda        é medição nossa entre duas leituras, e carrega o
+                   número. Vem primeiro mesmo com série longa.
+      podeAfirmar  os 14 dias da regra 3.4. É o único que AFIRMA mínimo
+                   histórico, e continua intocado.
+      medimos      a redação honesta que a própria 3.4 manda usar com
+                   série curta: diz o que observamos, com a data à
+                   vista. É o caso novo.
+      declarado    sem série útil, sobra o que o dono deixou: nada.
+  */
   const molde =
     dados.gatilho === "queda"
       ? modelo.lastroQueda
-      : dados.gatilho === "declarado"
-        ? modelo.lastroDeclarado
-        : dados.podeAfirmarMinimo
-          ? modelo.lastroCom
-          : modelo.lastroSem;
+      : dados.podeAfirmarMinimo
+        ? modelo.lastroCom
+        : somosOMenorQueMedimos(dados)
+          ? modelo.lastroSem
+          : dados.gatilho === "declarado"
+            ? modelo.lastroDeclarado
+            : modelo.lastroSem;
 
   /*
     A QUEDA É A ÚNICA COISA QUE NÓS MEDIMOS.
