@@ -1663,6 +1663,57 @@ async function melhorPrateleira(db, oferta) {
     pendentesDoCanal.set(canal.id, data ?? []);
   }
 
+  const EMPTY_SET = new Set();
+
+  /*
+    OS PRODUTOS QUE CADA CANAL JÁ PUBLICOU, dentro da janela de recompra.
+
+    A janela sai do mesmo parâmetro da comporta de fadiga
+    (`dias_recompra_mesmo_anuncio`), para não haver dois números
+    dizendo "o mesmo produto" com prazos diferentes. Duas fontes de
+    verdade para o mesmo prazo é como se descobre, tarde, que o grupo
+    recebeu o secador duas vezes.
+
+    Paginado porque o PostgREST corta em 1.000 linhas sem avisar que
+    cortou — é o mesmo defeito que já calou metade dos canais uma vez,
+    e aqui ele seria pior: a lista viria curta e a repetição passaria
+    justamente nos canais mais antigos.
+  */
+  const jaPublicadosNoCanal = new Map();
+
+  {
+    const dias = Number(par.dias_recompra_mesmo_anuncio ?? 30);
+    const desde = new Date(Date.now() - dias * 86_400_000).toISOString();
+    let de = 0;
+
+    for (;;) {
+      const { data, error } = await db
+        .from("publicacao")
+        .select("canal_id, oferta:oferta_id ( anuncio:anuncio_id ( produto_id ) )")
+        .eq("estado", "enviada")
+        .gte("enviada_em", desde)
+        .order("enviada_em", { ascending: false })
+        .range(de, de + 999);
+
+      if (error || !data?.length) break;
+
+      for (const linha of data) {
+        const id = linha.oferta?.anuncio?.produto_id;
+        if (!id) continue;
+        const set = jaPublicadosNoCanal.get(linha.canal_id) ?? new Set();
+        set.add(id);
+        jaPublicadosNoCanal.set(linha.canal_id, set);
+      }
+
+      if (data.length < 1000) break;
+      de += 1000;
+    }
+
+    console.log(
+      `histórico de ${dias} dias: ${[...jaPublicadosNoCanal.values()].reduce((s, x) => s + x.size, 0)} produtos já publicados`,
+    );
+  }
+
   /*
     O MESMO FILTRO DA ENTRADA, APLICADO NA SAÍDA.
 
@@ -1681,6 +1732,30 @@ async function melhorPrateleira(db, oferta) {
   function motivoDeNaoServirMais(pub, canal) {
     const produto = pub?.oferta?.anuncio?.produto;
     if (!produto) return null;
+
+    /*
+      O PRODUTO JÁ SAIU NESTE CANAL, e a fila não sabia.
+
+      Medido em 13/08, no proprio grupo: o Secador Taiff Black Íon saiu
+      às 13:12 e de novo às 14:23, e antes dele o Secador Philco saiu às
+      23:02 e 23:54 de 12/08. Sempre o mesmo `produto_id` por duas
+      PRATELEIRAS diferentes do Mercado Livre.
+
+      A migration 73 fechou isso na origem: a comporta de fadiga passou
+      a ser por produto e não por anúncio. Só que ela vale para oferta
+      NOVA, e as 1.599 publicações pendentes destes canais foram criadas
+      todas de uma vez, em 10/08 18:44 — antes da correção existir. A
+      regra nova não retroage sobre fila já formada, exatamente como a
+      de barbearia não retroagia.
+
+      É por isso que a conferência mora aqui e não só lá: a fila
+      represada tem dias de vida, e o que a protege é ser reperguntada
+      na saída, com o que o canal REALMENTE publicou.
+    */
+    const produtoId = pub?.oferta?.anuncio?.produto_id;
+    if (produtoId && (jaPublicadosNoCanal.get(canal.id) ?? EMPTY_SET).has(produtoId)) {
+      return "produto_repetido";
+    }
 
     const nichoId = produto.nicho_id;
     if (!nichoId) return "sem_nicho";
@@ -2113,6 +2188,21 @@ async function melhorPrateleira(db, oferta) {
       // E no chip, que é outra conta: vários canais podem compartilhar
       // o mesmo número.
       contaNoChip(canal);
+
+      /*
+        O produto acabou de sair: entra no histórico já nesta rodada.
+
+        Sem isto, a proteção contra repetição só valeria entre
+        execuções, e o canal publica várias vezes DENTRO da mesma — que
+        é justamente o intervalo em que o secador saiu duas vezes. É a
+        mesma razão de `ganchosRecentes` ser atualizado aqui.
+      */
+      const publicado = item.pub?.oferta?.anuncio?.produto_id;
+      if (publicado) {
+        const set = jaPublicadosNoCanal.get(canal.id) ?? new Set();
+        set.add(publicado);
+        jaPublicadosNoCanal.set(canal.id, set);
+      }
 
       // O cupom não conta como primário: ele não é do ramo nenhum.
       if (item.tipo === "oferta") {
