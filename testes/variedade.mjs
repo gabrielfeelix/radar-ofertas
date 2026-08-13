@@ -64,24 +64,67 @@ const posicao = (id) => variada.findIndex((x) => x.id === id);
 confere("a melhor de pet continua saindo antes da segunda", posicao("a") < posicao("b"));
 confere("e a segunda antes da terceira", posicao("b") < posicao("c"));
 
-console.log("\nfaixa de preço também conta\n");
+console.log("\no eixo manda, e a faixa de preço é preferência\n");
 
-// Mesmo nicho, faixas diferentes: não são "parecidas".
-const faixasDiferentes = [
+/*
+  ESTE BLOCO MUDOU DE CONTRATO EM 13/08, e o caso que o obrigou está no
+  comentário de `intercalaPorVariedade`. Ele afirmava que "mesmo eixo,
+  faixas de preço diferentes" NÃO conta como repetição — e isso era
+  verdade enquanto o eixo era o nicho, que já variava sozinho.
+
+  Quando o eixo virou a família de beleza, essa mesma afirmação
+  produziu **19 skincare nos 40 primeiros posts** da simulação do Radar
+  Delas: sérum de R$ 40 e sérum de R$ 250 eram "diferentes", então nada
+  os impedia de sair colados. Trocava a monocultura de secador por uma
+  de sérum.
+
+  O contrato agora: quem não pode repetir é o EIXO. A faixa de preço
+  continua servindo, mas como desempate na escolha, e não como licença
+  para repetir a família.
+*/
+const mesmoEixoFaixasDiferentes = [
   item("barato1", "pet", 2000),
   item("caro1", "pet", 80000),
   item("barato2", "pet", 2500),
 ];
 confere(
-  "preços muito diferentes não contam como repetição",
-  repeticoesSeguidas(faixasDiferentes) === 0,
+  "mesmo eixo em faixas diferentes AINDA é repetição",
+  repeticoesSeguidas(mesmoEixoFaixasDiferentes) === 2,
 );
 
-// Nichos diferentes, mesma faixa: contam como parecidas, porque
-// competem pelo mesmo bolso no mesmo momento.
 confere(
-  "nichos diferentes na mesma faixa contam como parecidos",
+  "mesmo eixo e mesma faixa também é repetição",
   repeticoesSeguidas([item("x", "pet", 3000), item("y", "pet", 3200)]) === 1,
+);
+
+confere(
+  "eixos diferentes nunca são repetição, mesmo na mesma faixa",
+  repeticoesSeguidas([item("x", "pet", 3000), item("y", "casa", 3200)]) === 0,
+);
+
+// Havendo escolha, a faixa de preço decide entre dois eixos diferentes:
+// depois de um item de R$ 30, sai o de R$ 800 antes do outro de R$ 35.
+const comEscolha = intercalaPorVariedade([
+  item("primeiro", "pet", 3000),
+  item("mesma-faixa", "casa", 3500),
+  item("outra-faixa", "eletronico", 80000),
+]);
+confere(
+  "entre dois eixos novos, prefere o de outra faixa de preço",
+  comEscolha[1].id === "outra-faixa",
+);
+
+// E a família não se repete quando há material para alternar: é o caso
+// do Radar Delas, com skincare em três faixas e uma maquiagem no meio.
+const belezaFaixas = intercalaPorVariedade([
+  item("serum-caro", "beleza|skincare", 25000),
+  item("serum-barato", "beleza|skincare", 4000),
+  item("protetor", "beleza|skincare", 8000),
+  item("gloss", "beleza|maquiagem", 3300),
+]);
+confere(
+  "skincare em três faixas não sai tudo colado quando há um gloss",
+  belezaFaixas[1].grupo === "beleza|maquiagem",
 );
 
 console.log("\ncasos de borda\n");

@@ -63,6 +63,7 @@ const DIA_JA_AQUECIDO = 999;
 import { intercalaPorVariedade, assinaturaDe } from "../lib/variedade.ts";
 import { eixoDeVariedade } from "../lib/familia-de-beleza.ts";
 import { pesoDaMarca } from "../lib/marca-de-perfume.ts";
+import { pesoDaMarcaDeBeleza } from "../lib/marca-de-beleza.ts";
 import { canalAceitaAtributos } from "../lib/canal-aceita.ts";
 import { tipoForaDaBeleza } from "../lib/eletronico-em-beleza.ts";
 
@@ -1639,28 +1640,65 @@ async function melhorPrateleira(db, oferta) {
 
     Consultar POR CANAL resolve os dois lados: cada um recebe a própria
     fatia, e o teto por canal impede que a consulta cresça junto com o
-    represamento. Cem é folga larga — numa rodada o canal mais ativo
-    publicou 60, e a intercalação por variedade só precisa de material
-    suficiente para alternar.
+    represamento.
+
+    E O TETO DE CEM ERA O DEFEITO SEGUINTE, achado em 13/08.
+
+    "Cem é folga larga", dizia esta linha, e a conta parecia fechar: o
+    canal mais ativo publica 60 numa rodada. Ela só vale enquanto a fila
+    ENTRA aos poucos. O Radar Delas nasceu ao contrário: **1.490 das
+    1.544 publicações pendentes dele foram criadas de uma vez**, em
+    10/08 às 18:44, e ordenar por `criado_em` numa fila que compartilha
+    o mesmo instante devolve sempre as mesmas cem — as que o `insert`
+    gravou primeiro, que naquele lote vieram ordenadas por nota, que num
+    catálogo de beleza favorece kit de salão e secador.
+
+    O efeito é o que o dono viu: *"10 SECADORES E 0 WEPINK"*. As cem que
+    o publicador enxergava eram de cabelo, e os 194 produtos de
+    maquiagem e 154 de skincare que estavam na MESMA fila, nas posições
+    de 100 em diante, não existiam para ele. Não era falta de catálogo,
+    não era comporta e não era o revezamento: era a janela.
+
+    Ler a fila inteira devolve ao `intercalaPorVariedade` o material que
+    ele precisa para alternar de verdade, e é barato: 1.544 linhas numa
+    consulta paginada, uma vez por rodada. O que protege a memória não é
+    o teto, é o `TETO_DA_FILA` logo abaixo, que existe para o caso
+    patológico e não para o dia a dia.
   */
-  const PENDENTES_POR_CANAL = Number(process.env.PENDENTES_POR_CANAL ?? 100);
+  const TETO_DA_FILA = Number(process.env.PENDENTES_POR_CANAL ?? 5_000);
 
   const pendentesDoCanal = new Map();
   for (const canal of canaisAtivos) {
-    const { data, error } = await db
-      .from("publicacao")
-      .select(`id, subid, canal_id, link_afiliado, gancho, oferta:oferta_id ( ${SELECAO} )`)
-      .eq("estado", "pendente")
-      .eq("canal_id", canal.id)
-      .order("criado_em")
-      .limit(PENDENTES_POR_CANAL);
+    const fila = [];
+    let erro = null;
 
-    if (error) {
-      console.log(`  ✗ fila de ${canal.nome}: ${error.message}`);
+    // Paginado porque o PostgREST corta em 1.000 linhas sem avisar que
+    // cortou — o mesmo defeito que já calou metade dos canais uma vez.
+    for (let de = 0; de < TETO_DA_FILA; de += 1000) {
+      const ate = Math.min(de + 999, TETO_DA_FILA - 1);
+      const { data, error } = await db
+        .from("publicacao")
+        .select(`id, subid, canal_id, link_afiliado, gancho, oferta:oferta_id ( ${SELECAO} )`)
+        .eq("estado", "pendente")
+        .eq("canal_id", canal.id)
+        .order("criado_em")
+        .range(de, ate);
+
+      if (error) {
+        erro = error;
+        break;
+      }
+
+      fila.push(...(data ?? []));
+      if ((data ?? []).length < ate - de + 1) break;
+    }
+
+    if (erro) {
+      console.log(`  ✗ fila de ${canal.nome}: ${erro.message}`);
       pendentesDoCanal.set(canal.id, []);
       continue;
     }
-    pendentesDoCanal.set(canal.id, data ?? []);
+    pendentesDoCanal.set(canal.id, fila);
   }
 
   const EMPTY_SET = new Set();
@@ -1847,9 +1885,42 @@ async function melhorPrateleira(db, oferta) {
       }
     }
 
-    // As ofertas do canal, intercaladas para não sair oito parecidas em
-    // sequência (o mesmo motivo de `lib/variedade.ts`).
-    const minhas = (pendentesDoCanal.get(canal.id) ?? []).filter((p) => p.oferta?.anuncio);
+    /*
+      As ofertas do canal, intercaladas para não sair oito parecidas em
+      sequência (o mesmo motivo de `lib/variedade.ts`).
+
+      UM PRODUTO OCUPA UMA VAGA, e não cinco. O Mercado Livre cadastra o
+      mesmo item em várias prateleiras, e cada uma virou uma publicação
+      pendente: o "Protetor Solar Em Bastão Sallve" aparecia CINCO vezes
+      na fila do Radar Delas em 13/08.
+
+      Isso não incomodava enquanto a janela era de cem itens, porque as
+      cópias ficavam espalhadas pela fila inteira e o publicador só via
+      um pedaço dela. Lendo a fila toda, elas passaram a competir juntas
+      pelas mesmas vagas, e a simulação da ordem nova pôs o mesmo Sallve
+      cinco vezes nos quarenta primeiros posts.
+
+      A comporta de fadiga não pega isto: ela compara com o que já FOI
+      ENVIADO, e estas cinco ainda não foram. A trava do banco também
+      não, pelo mesmo motivo. O lugar de resolver é aqui, montando a
+      fila, e o critério é o `produto_id`, que é o mesmo que a migration
+      73 usa para dizer "o mesmo produto".
+
+      Fica a PRIMEIRA de cada, que na ordem por `criado_em` é a mais
+      antiga da fila. As outras não são canceladas: elas continuam
+      pendentes e viram a vez do produto no dia em que a janela de
+      recompra reabrir.
+    */
+    const vistos = new Set();
+    const minhas = (pendentesDoCanal.get(canal.id) ?? []).filter((p) => {
+      if (!p.oferta?.anuncio) return false;
+
+      const produtoId = p.oferta.anuncio.produto_id;
+      if (!produtoId) return true;
+      if (vistos.has(produtoId)) return false;
+      vistos.add(produtoId);
+      return true;
+    });
     /*
       MARCA BOA VAI PARA A FRENTE, e não exclui ninguém.
 
@@ -1867,8 +1938,27 @@ async function melhorPrateleira(db, oferta) {
       grupo, senão trocaríamos "oito Amakha seguidas" por "oito Azzaro
       seguidos" — que é o mesmo defeito que `lib/variedade.ts` existe
       para impedir.
+
+      E A LISTA SÓ CONHECIA PERFUME, o que em 13/08 virou o defeito
+      principal do Radar Delas. `pesoDaMarca` é de
+      `lib/marca-de-perfume.ts`: Azzaro, Lattafa, Natura. Dos 348
+      produtos de maquiagem e skincare que estavam na fila do canal de
+      beleza, **três** casavam com ela — Quem Disse Berenice, Kiko
+      Milano, Océane, Ruby Rose, Payot, Cerave, Vichy, Principia e
+      Creamy todos valiam zero. Eles iam para o segundo bloco, atrás de
+      qualquer perfume desconhecido, e é por isso que o dono via *"10
+      secadores e 0 WePink"*.
+
+      `lib/marca-de-beleza.ts` é a lista que faltava, escrita com o
+      mesmo contrato: ordena, não filtra. As duas somam porque um canal
+      pode ter os dois nichos — o Radar Delas tem `beleza` e `perfume`
+      juntos —, e um item que casa nas duas não vale mais que um que
+      casa numa: o que importa aqui é ser reconhecido ou não.
     */
-    const comMarca = (p) => pesoDaMarca(p.oferta?.anuncio?.produto?.titulo_canonico) > 0;
+    const comMarca = (p) => {
+      const titulo = p.oferta?.anuncio?.produto?.titulo_canonico;
+      return pesoDaMarca(titulo) > 0 || pesoDaMarcaDeBeleza(titulo) > 0;
+    };
 
     /*
       O EIXO DO REVEZAMENTO É A FAMÍLIA, e não mais o nicho.

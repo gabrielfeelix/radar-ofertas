@@ -114,6 +114,28 @@ const ELETRONICO = [
   "xbox",
   "nintendo",
   "drone",
+  /*
+    O APARELHO DE ESTÉTICA, achado em 13/08 varrendo a fila do Radar
+    Delas atrás do que o dono chamou de lixão. Estes três estavam lá:
+
+      Kit Ventosas Com Bomba Ventosa Terapia Massoterapia Massagem
+      Aparelho Vaporizador Estética Portátil Cor Branco 110v 220v
+      Massageador Facial Lifting De Pescoço e Rosto LED Vibração
+
+    Eles são o mesmo caso do limpador de AirPods que abre este arquivo:
+    a loja os classifica em beleza e o mapeamento obedece, mas quem
+    entrou num grupo de skincare e maquiagem não entrou para ver
+    aparelho de consultório.
+
+    `massageador` e `vaporizador` são seguros por serem substantivos de
+    aparelho: nenhum cosmético se chama assim. `ventosa` idem — a
+    ventosa de silicone é acessório de massoterapia, não de beleza.
+  */
+  "massageador",
+  "vaporizador",
+  "ventosa",
+  "ventosas",
+  "massoterapia",
 ];
 
 /*
@@ -161,6 +183,19 @@ const BARBEARIA_FORTE = [
   "barbeador",
   "maquina de cortar cabelo",
   "cortador de cabelo",
+  /*
+    "CORTE DE CABELO" ESTAVA FALTANDO, e a fila de 13/08 mostrou por
+    onde passava:
+
+      Máquina KEMEI-709A Corte de Cabelo Profissional Portátil USB
+      Aparador de corte sem fio para homens, profissional Hair Clipper
+
+    A lista tinha `maquina de cortar cabelo` e `maquina de corte`, e o
+    título real não diz nenhum dos dois. `hair clipper` é o nome em
+    inglês, que aparece em anúncio de importado.
+  */
+  "corte de cabelo",
+  "hair clipper",
   "maquina de acabamento",
   "gilete",
   "multigroomer",
@@ -243,6 +278,14 @@ const BARBA_SOZINHA = /\bbarbas?\b/;
   barbearia, porque `cortar cabelo` e `barbear` estão no nível de cima.
 */
 const BARBEARIA_FRACA = [
+  /*
+    `APARADOR` SOZINHO, e ele pode ficar aqui embaixo justamente porque
+    a depilação o desarma três linhas acima. O título que obrigou a
+    encurtar foi "GOKOCO Aparador portátil 3 em 1 Uso seco e molhado",
+    que não casa com nenhuma das expressões inteiras abaixo. Aparador de
+    sobrancelha e caneta depiladora continuam salvos pelo resgate.
+  */
+  "aparador",
   "aparador de pelo",
   "aparador de pelos",
   "aparador cortador",

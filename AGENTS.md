@@ -169,6 +169,55 @@ Ele é designer de UX, sabe o suficiente de banco de dados e produto, mas **não
 
 Atualizado em 10/08/2026.
 
+### 13/08/2026, à noite: o grupo não estava sem catálogo, estava sem ordem
+
+O dono olhou o Radar Delas e disse: *"10 SECADORES E 0 WEPINK... só tem
+bomba"*. As três correções da manhã (revezamento por família, busca
+coreana, fadiga por produto) estavam certas e **não resolveram**, porque
+o problema não era nenhum dos três. A medição contra o banco de produção:
+
+| O que se via | O que era |
+|---|---|
+| "falta produto de beleza no catálogo" | a fila do canal tinha **194 de maquiagem e 154 de skincare** esperando: Quem Disse Berenice, Kiko, Payot Boca Rosa, Océane, Sallve, La Roche, Principia, Creamy |
+| "a curadoria está barrando" | em 7 dias, 40 maquiagens e 35 skincares foram **aprovados** |
+| "o revezamento não funciona" | ele funcionava, e só enxergava cabelo |
+
+**Duas causas, as duas na montagem da fila:**
+
+1. **A janela era de 100, e a fila nasceu em lote.** 1.490 das 1.544
+   publicações pendentes foram criadas no mesmo segundo, em 10/08 18:44.
+   Ordenar por `criado_em` numa fila que compartilha o instante devolve
+   sempre as mesmas cem, que naquele lote vieram por nota, que em beleza
+   favorece kit de salão e secador. Tudo da posição 100 em diante **não
+   existia** para o publicador. O publicador agora lê a fila inteira,
+   paginada.
+2. **"Marca boa vai para a frente" só conhecia perfume.** `pesoDaMarca`
+   é de `lib/marca-de-perfume.ts`, e dos 348 produtos de maquiagem e
+   skincare da fila **três** casavam com ela. Todos caíam no segundo
+   bloco. Agora existe `lib/marca-de-beleza.ts`, com o mesmo contrato de
+   ordenar e nunca filtrar: 280 dos 1.526 são reconhecidos.
+
+**Cabelo ficou de fora da lista de marca de propósito**, e está escrito
+no cabeçalho do arquivo: ele já é 49% da fila, e prioridade serve para
+trazer o que nunca aparece, não para reforçar quem domina.
+
+Três consertos menores saíram junto, todos medidos na mesma varredura:
+o mesmo produto ocupava até **cinco vagas** da fila (o Protetor Sallve),
+porque a fadiga só compara com o que já foi enviado; a faixa de preço
+tornava a assinatura de variedade mais específica e por isso **enfraquecia**
+o revezamento (sérum de R$ 40 e de R$ 250 saíam colados, e a simulação
+deu 19 skincare em 40 posts); e o balde "sem família" tinha 318 itens,
+quase todos de cabelo escrito em nome de marca de salão, que é o que
+cegava a alternância. Ele caiu para 109.
+
+Simulação da fila depois de tudo, nos 40 primeiros posts: **0 secador**,
+14 skincare, 10 maquiagem, 6 cabelo, 5 perfume, 4 corpo.
+
+**O que ficou em aberto:** "Cinta Modeladora" e "Bermuda Modeladora"
+estão no nicho `beleza` e continuam na fila. Elas não são eletrônico nem
+barbearia, que são os dois `TIPO` que o canal exclui, e excluir roupa
+exigiria um valor novo no `canal_atributo` dos dois canais Delas.
+
 ### 10/08/2026: o WhatsApp saiu do papel (D-071, D-072)
 
 Existe VPS (Locaweb, `201.76.56.54`), existe Evolution em

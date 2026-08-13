@@ -82,16 +82,26 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "escova rotativa",
       "escova modeladora",
       "chapinha",
-      "prancha alisadora",
-      "prancha de cabelo",
-      "prancha profissional",
+      "prancha",
+      "alisador",
       "modelador de cachos",
       "modelador de cacho",
+      "modelador de cabelo",
+      "modelador automatico",
       "babyliss",
       "difusor",
       "ondulador",
       "touca termica",
     ],
+    /*
+      ROUPA MODELADORA NÃO É APARELHO DE CABELO, e foi o que "modelador"
+      solto trouxe quando `prancha` e `alisador` foram encurtados em
+      13/08: "Cinta Modeladora Abdominal" e "Bermuda Modeladora Trifil"
+      estavam os dois na fila do canal. `exceto` desarma a família
+      inteira, que é o certo — nenhuma das duas é cabelo de forma
+      nenhuma, e a busca deve seguir adiante.
+    */
+    exceto: ["cinta modelador", "bermuda modelador", "calcinha modelador", "body modelador"],
   },
   {
     familia: "depilacao",
@@ -119,6 +129,7 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "sobrancelha",
       "pinca",
       "curvex",
+      "micropigmentacao",
     ],
     /*
       MÁSCARA DE CÍLIOS É MAQUIAGEM, e é o caso que obrigou `exceto` a
@@ -141,6 +152,8 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "cuticula",
       "alicate",
       "gel builder",
+      "gel construtor",
+      "nails",
       "lixa de unha",
       "acrigel",
     ],
@@ -192,7 +205,22 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "mediheal",
       "sheet mask",
       "mascara de tecido",
+      "cicaplast",
     ],
+    /*
+      SÉRUM CAPILAR NÃO É SKINCARE, e este `exceto` conserta um erro que
+      estava inflando a conta de skincare do canal. Skincare é lida
+      ANTES de `cabelo-quimica` de propósito (a nota logo acima explica
+      por quê), e "serum" é termo dela. Só que "L'Oréal Elseve Collagen
+      Lifter Leave-in Sérum Capilar" e "Braé Divine Sérum Reparador
+      Capilar 60ml" são cabelo, e os dois estavam contados como
+      skincare na fila de 13/08.
+
+      A palavra que decide é sempre a mesma: título de beleza que diz
+      "capilar", "cabelo" ou "fios" está falando de cabelo, seja qual
+      for o resto do nome.
+    */
+    exceto: ["capilar", "cabelo", "para os fios", "dos fios"],
   },
   {
     familia: "maquiagem",
@@ -216,7 +244,15 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "cushion",
       "bronzer",
       "lapis de olho",
+      "lapis olho",
+      "lapis para olhos",
       "lapis labial",
+      "esfumador",
+      "sace lady",
+      "quem disse",
+      "boca rosa",
+      "bruna tavares",
+      "kiko milano",
       "maquiagem",
       "ruby rose",
       "sace lady",
@@ -231,16 +267,37 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
     termos: [
       "shampoo",
       "condicionador",
-      "mascara capilar",
+      "condicinador",
+      /*
+        "CAPILAR" É O TERMO QUE FALTAVA, e sozinho ele resolveu boa
+        parte do balde sem-família de 13/08: "Tônico Capilar",
+        "Densidade Acidificante Capilar", "Óleos Capilar Quartzo Shine",
+        "Perfume Capilar". A lista tinha `oleo capilar` no singular e o
+        título do anúncio dizia "Óleos Capilar" — casar por expressão
+        exata falha em plural, e a palavra que nunca falha é esta.
+      */
+      "capilar",
       "mascara de tratamento",
+      "mascara de nutricao",
+      "mascara de hidratacao",
+      "mascara de reconstrucao",
+      "mascara acidificante",
+      "mascara antifrizz",
+      "mascara matizadora",
+      "mascara para cabelo",
       "leave in",
       "leave-in",
-      "oleo capilar",
       "finalizador",
       "creme para pentear",
       "creme de pentear",
       "ativador de cachos",
-      "gelatina capilar",
+      "gelatina",
+      "geleia seladora",
+      "desembaracante",
+      "hair spray",
+      "spray liso",
+      "antifrizz",
+      "anti frizz",
       "progressiva",
       "matizador",
       "tonalizante",
@@ -253,6 +310,62 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "no poo",
       "perfume capilar",
       "protetor termico",
+      /*
+        A MARCA DE SALÃO, que é o que sobrava sem classificação.
+
+        Depois das correções acima, o balde sem-família da fila do Radar
+        Delas ainda tinha 230 itens, e a varredura deles em 13/08 achou
+        um padrão só: são todos de cabelo, e todos escritos do jeito que
+        o salão escreve. "Máscara Invigo Color Brilliance 500ml",
+        "Infusão 2.0 Acidificante Condicionante", "OSIS Mess Up 100ml",
+        "Kit Redken Extreme Duo", "Rapunzel Lola Cosmetics". Não há
+        substantivo genérico que os alcance: o que eles têm em comum é a
+        MARCA.
+
+        Isto é o oposto do que a lista de `lib/marca-de-beleza.ts` faz, e
+        de propósito. Lá a marca decide a ORDEM e cabelo ficou de fora
+        para não reforçar quem já domina. Aqui ela decide só a FAMÍLIA, e
+        reconhecer o cabelo como cabelo é o que impede que ele reveze
+        consigo mesmo disfarçado de "sem-família" — que é exatamente o
+        defeito que sobrou depois do commit da manhã.
+
+        `mascara` solta pode vir por último aqui porque as três outras
+        máscaras já foram decididas antes: a de cílios em `maquiagem`, a
+        facial e a de argila em `skincare`.
+      */
+      "wella",
+      "cadiveu",
+      "widi care",
+      "brae",
+      "alfaparf",
+      "professionnel",
+      "kerastase",
+      "keune",
+      "truss",
+      "joico",
+      "redken",
+      "schwarzkopf",
+      "bio extratus",
+      "salon line",
+      "felps",
+      "lola cosmetics",
+      "amend",
+      "haskell",
+      "acquaflora",
+      "k.pro",
+      "belkit",
+      "phytomanga",
+      "elseve",
+      "inoar",
+      "forever liss",
+      "novex",
+      "skala",
+      "seda",
+      "pantene",
+      "tresemme",
+      "igora",
+      "nutrindo os fios",
+      "mascara",
     ],
   },
   {
@@ -279,6 +392,12 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "sabonete",
       "esfoliante corporal",
       "manteiga corporal",
+      "creme corporal",
+      "ureia",
+      "redutor de medidas",
+      "celulite",
+      "estrias",
+      "talco",
       "banho",
       "hidratante",
       "locao",
@@ -294,7 +413,11 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "necessaire",
       "maleta",
       "pente",
-      "escova de cabelo",
+      // Sem "de cabelo": o título real é "Escova Profissional de Cabelo
+      // ENLACE" e "Escova Flex de Fitagem", e nenhum dos dois contém a
+      // expressão inteira. A escova ELÉTRICA já foi capturada lá em
+      // cima, em `cabelo-eletro`, que é lida primeiro.
+      "escova",
       "touca",
       "faixa de cabelo",
       "bobs",

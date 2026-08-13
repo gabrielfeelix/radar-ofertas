@@ -48,6 +48,11 @@ function assinatura(item: ItemComVariedade): string {
   return `${item.grupo ?? "sem-nicho"}|${faixa(item.precoCentavos)}`;
 }
 
+/** Só o eixo principal, sem a faixa de preço. Ver `intercalaPorVariedade`. */
+function eixo(item: ItemComVariedade): string {
+  return item.grupo ?? "sem-nicho";
+}
+
 /**
  * A assinatura de um item, para quem precisa guardar a última publicada.
  *
@@ -67,6 +72,27 @@ export function assinaturaDe(item: ItemComVariedade): string {
  * relativa por nota **dentro** de cada assinatura — a melhor oferta de
  * pet continua saindo antes da segunda melhor de pet — e só intercala
  * entre assinaturas.
+ *
+ * A ESCOLHA É EM DOIS PASSOS, E A FAIXA DE PREÇO É O SEGUNDO DELES.
+ * Este é o conserto de 13/08, e ele nasceu de um efeito que só apareceu
+ * quando o eixo deixou de ser o nicho e passou a ser a família
+ * (`lib/familia-de-beleza.ts`). A assinatura é `eixo|faixa`, então
+ * "skincare de R$ 40" e "skincare de R$ 250" são assinaturas
+ * DIFERENTES: o teste de "diferente da última" passava, e a simulação
+ * da fila do Radar Delas devolveu **19 skincare nos 40 primeiros
+ * posts** — a monocultura de secador trocada por uma de sérum.
+ *
+ * O defeito estava na direção da regra. A faixa de preço torna a
+ * assinatura MAIS específica, e assinatura mais específica enfraquece o
+ * revezamento em vez de reforçá-lo. Ela nunca incomodou enquanto o eixo
+ * era o nicho, porque aí o eixo já variava sozinho.
+ *
+ * Então: o que não pode repetir é o EIXO, e a faixa de preço entra como
+ * preferência. Primeiro procura item de outro eixo E outra faixa;
+ * depois, item de outro eixo; e só então o que sobrou. O propósito
+ * original da faixa continua servido — duas compras por impulso de R$
+ * 20 não saem coladas quando há alternativa — sem que ela possa desfazer
+ * o revezamento principal.
  *
  * Não tenta ser ótimo. Uma fila que é toda do mesmo nicho continua
  * toda do mesmo nicho, porque não há o que intercalar, e forçar
@@ -93,16 +119,28 @@ export function intercalaPorVariedade<T extends ItemComVariedade>(
 
   const restantes = [...itens];
   const ordenados: T[] = [];
-  let ultima: string | null = ultimaPublicada;
+  /*
+    A assinatura é `eixo|faixa`, e as duas partes são lidas separadas: o
+    eixo é tudo antes do último `|` (ele mesmo pode conter `|`, como em
+    `beleza|skincare`), e a faixa é o último pedaço.
+  */
+  let ultimoEixo: string | null = ultimaPublicada?.split("|").slice(0, -1).join("|") ?? null;
+  let ultimaFaixa: string | null = ultimaPublicada?.split("|").at(-1) ?? null;
 
   while (restantes.length > 0) {
-    let escolhido = restantes.findIndex((item) => assinatura(item) !== ultima);
+    // O melhor: outro eixo e outra faixa de preço.
+    let escolhido = restantes.findIndex(
+      (item) => eixo(item) !== ultimoEixo && faixa(item.precoCentavos) !== ultimaFaixa,
+    );
+    // O suficiente: outro eixo, mesmo que a faixa se repita.
+    if (escolhido === -1) escolhido = restantes.findIndex((item) => eixo(item) !== ultimoEixo);
     // Só sobrou do mesmo tipo: segue a ordem original em vez de travar.
     if (escolhido === -1) escolhido = 0;
 
     const [item] = restantes.splice(escolhido, 1);
     ordenados.push(item);
-    ultima = assinatura(item);
+    ultimoEixo = eixo(item);
+    ultimaFaixa = faixa(item.precoCentavos);
   }
 
   return ordenados;
@@ -119,7 +157,11 @@ export function intercalaPorVariedade<T extends ItemComVariedade>(
 export function repeticoesSeguidas(itens: ItemComVariedade[]): number {
   let repetidos = 0;
   for (let i = 1; i < itens.length; i += 1) {
-    if (assinatura(itens[i]) === assinatura(itens[i - 1])) repetidos += 1;
+    // Pelo EIXO, e não pela assinatura inteira: é o eixo que o
+    // revezamento promete não repetir, então é ele que a tela deve
+    // contar. Contando pela assinatura, "dois skincare seguidos em
+    // faixas de preço diferentes" apareceria como fila variada.
+    if (eixo(itens[i]) === eixo(itens[i - 1])) repetidos += 1;
   }
   return repetidos;
 }

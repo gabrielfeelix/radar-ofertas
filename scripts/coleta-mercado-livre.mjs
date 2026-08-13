@@ -251,6 +251,25 @@ const BUSCAS = [
   "corretivo", "po compacto", "delineador", "mascara de cilios", "blush",
   "paleta de sombras", "gloss labial", "primer facial", "iluminador facial",
   "batom liquido matte", "quem disse berenice", "ruby rose maquiagem",
+  /*
+    A MARCA DE INFLUENCIADORA, e o dono pediu uma delas pelo nome em
+    13/08: *"não tem um produto da WePink ali, meu Deus do céu... eu não
+    estou falando isso para ter WePink, estou falando para ter MARCAS
+    BOAS"*.
+
+    E o catálogo dava razão: dos 4.447 produtos de beleza, **um** era
+    WePink. Tracta, Adcos e The Ordinary tinham zero. É o mesmo defeito
+    que a lista coreana tapou de manhã, e pelo mesmo motivo: a busca do
+    Mercado Livre procura por texto, e marca que não está escrita aqui
+    não existe para nós.
+
+    Elas vêm por último dentro de maquiagem porque são complemento da
+    lista genérica acima, e não substituição dela.
+  */
+  "wepink", "boca rosa beauty", "bruna tavares", "mari maria makeup",
+  "franciny ehlke", "tracta maquiagem", "vult maquiagem", "dailus",
+  "oceane maquiagem", "simple organic", "adcos", "the ordinary",
+  "payot skincare", "kiko milano",
   // Corpo, banho e unha
   "sabonete liquido", "oleo corporal", "creme para maos", "creme para os pes",
   "kit manicure", "cortador de unha", "depilador feminino", "cera depilatoria",
