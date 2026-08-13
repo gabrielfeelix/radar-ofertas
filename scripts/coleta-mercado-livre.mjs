@@ -254,6 +254,43 @@ const BUSCAS = [
   // Corpo, banho e unha
   "sabonete liquido", "oleo corporal", "creme para maos", "creme para os pes",
   "kit manicure", "cortador de unha", "depilador feminino", "cera depilatoria",
+  /*
+    COREANO E O RECOMPRAVEL BARATO, pedido do dono em 13/08 olhando o
+    grupo do WhatsApp:
+
+      *"nao estao enviando coisas legais tipo mascara facial coreana,
+      produtos coreanos... as vezes um gloss, as vezes hidratante,
+      protetor, coisa que mulher gosta e COMPRA VARIAS VEZES, nao so
+      eletronico"*
+
+    E o catalogo dava razao a ele: nas 60 ultimas publicacoes do canal
+    nao havia UM produto coreano, e a lista de beleza acima nao tinha
+    nenhum termo que os achasse. K-beauty no Brasil e vendida pelo nome
+    da marca -- ninguem anuncia "creme coreano", anuncia "COSRX" --, e a
+    busca do ML procura por texto. Sem o nome da marca na lista, o
+    produto nao existe para nos.
+
+    A ORDEM NAO E ALFABETICA: as marcas vem primeiro porque sao o que
+    realmente traz catalogo, e os termos genericos depois, para pegar o
+    vendedor que anuncia sem marca nenhuma.
+
+    O consumivel barato entra pela mesma porta e pelo mesmo motivo. O
+    revezamento (`lib/familia-de-beleza.ts`) so consegue alternar o que
+    ENTROU: fila de quatro ofertas nao reveza nada, por melhor que seja
+    o algoritmo. Ordem e entrada sao dois problemas, e este arquivo e o
+    segundo.
+  */
+  // K-beauty, por marca
+  "cosrx", "some by mi", "beauty of joseon", "anua", "skin1004", "mediheal",
+  "laneige", "innisfree", "missha", "torriden", "round lab", "isntree",
+  // K-beauty, por termo
+  "skincare coreano", "cosmetico coreano", "mascara facial coreana",
+  "mascara de tecido facial", "protetor solar coreano", "essencia facial",
+  // O recomprável barato, que é o que a persona compra várias vezes
+  "gloss labial hidratante", "lip oil", "balm labial", "hidratante labial",
+  "protetor solar facial toque seco", "hidratante facial gel",
+  "sabonete intimo", "creme hidratante corporal 400ml", "kit skincare",
+  "mascara facial hidratante", "esfoliante labial",
   // Bebê e infantil
   "fralda descartavel", "lenco umedecido", "formula infantil", "mamadeira", "chupeta",
   "carrinho de bebe", "cadeirinha carro bebe", "papinha", "shampoo infantil", "berco portatil",
