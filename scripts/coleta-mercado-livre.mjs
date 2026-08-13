@@ -310,6 +310,47 @@ const BUSCAS = [
   "protetor solar facial toque seco", "hidratante facial gel",
   "sabonete intimo", "creme hidratante corporal 400ml", "kit skincare",
   "mascara facial hidratante", "esfoliante labial",
+  /*
+    O ACHADO DO MOMENTO, pesquisado em 13/08 a pedido do dono: *"pesquise
+    produtos que estão mais falados, alguns achados do momento, coisa que
+    está em alta... não aqueles que influenciador é pago pra falar"*.
+
+    A pesquisa está registrada em `docs/tendencias-beleza-13-08.md`, com
+    as fontes. O que ela mudou nesta lista, e o critério de cada bloco:
+
+    K-BEAUTY POR MARCA E POR INGREDIENTE. A lista da manhã tinha doze
+    marcas; a pesquisa acrescentou as que a imprensa brasileira cita como
+    já desembarcadas (Medicube, Abib, Purito, Tocobo, Numbuzin) e as de
+    MAQUIAGEM coreana, que eram um buraco inteiro: TIRTIR, 3CE e CLIO. E
+    entrou o INGREDIENTE, que é como o vendedor sem marca anuncia:
+    ninguém procura "COSRX" quando não conhece a marca, procura "sérum de
+    mucina de caracol".
+
+    A MARCA VIRAL BRASILEIRA. Sheglam chegou ao Brasil em 2026 com blush
+    líquido e gloss a partir de R$ 29,90 e é o nome que mais aparece em
+    conteúdo não pago da Geração Z. ELF entra pelo mesmo motivo, com o
+    primer e o beauty wand.
+
+    O FORMATO EM ALTA, que é mais durável que a marca: lip tint e lip
+    stain (o acabamento natural que substituiu o batom matte), blush
+    líquido e em bastão (a técnica de blush puxado até a mandíbula é a
+    make mais replicada de 2026), protetor solar em bastão e com cor, e
+    o adesivo de espinha, que é achado de menos de R$ 20.
+
+    O QUE FICOU DE FORA, de propósito: suplemento e bebida de beleza
+    ("k-wellness"), que a pesquisa achou em alta mas é `saude` e não
+    `beleza`, e cairia em canal nenhum.
+  */
+  // K-beauty, o resto das marcas e o ingrediente
+  "medicube", "abib", "purito", "tocobo", "numbuzin", "tirtir", "3ce", "clio",
+  "mucina de caracol", "snail mucin", "centella asiatica", "creme cica",
+  "essencia facial coreana", "adesivo para espinha", "pimple patch",
+  // A marca viral que chegou ao Brasil
+  "sheglam", "elf cosmetics", "elf primer",
+  // O formato em alta, que dura mais que a marca
+  "lip tint", "lip stain", "blush liquido", "blush em bastao", "blush cremoso",
+  "protetor solar em bastao", "lip balm com cor", "gloss volumoso",
+  "primer hidratante", "po translucido efeito blur",
   // Bebê e infantil
   "fralda descartavel", "lenco umedecido", "formula infantil", "mamadeira", "chupeta",
   "carrinho de bebe", "cadeirinha carro bebe", "papinha", "shampoo infantil", "berco portatil",

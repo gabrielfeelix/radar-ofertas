@@ -63,7 +63,7 @@ const DIA_JA_AQUECIDO = 999;
 import { intercalaPorVariedade, assinaturaDe } from "../lib/variedade.ts";
 import { eixoDeVariedade } from "../lib/familia-de-beleza.ts";
 import { pesoDaMarca } from "../lib/marca-de-perfume.ts";
-import { pesoDaMarcaDeBeleza } from "../lib/marca-de-beleza.ts";
+import { pesoDaMarcaDeBeleza, marcaDeBeleza } from "../lib/marca-de-beleza.ts";
 import { canalAceitaAtributos } from "../lib/canal-aceita.ts";
 import { tipoForaDaBeleza } from "../lib/eletronico-em-beleza.ts";
 
@@ -1410,10 +1410,27 @@ async function melhorPrateleira(db, oferta) {
       modeloDesteCanal.instrucaoGancho &&
       process.env.GEMINI_API_KEY
     ) {
+      /*
+        O ÚNICO FATO QUE A IA PODE AFIRMAR HOJE, e ele vem da nossa
+        lista, não do modelo. Pedido do dono em 13/08: *"se for algo
+        coreano, é legal a gente destacar que é coreano"*.
+
+        Nenhum título de COSRX contém a palavra "coreano", e a instrução
+        do gancho proíbe inventar característica. Quem sabe que a marca é
+        coreana é `lib/marca-de-beleza.ts`. Por isso o fato é apurado
+        aqui e entregue conferido: é a mesma disciplina da regra 3.4 com
+        preço, onde a IA só pode dizer o que nós medimos.
+      */
+      const destaque =
+        marcaDeBeleza(aPublicar.produto?.titulo_canonico).faixa === "coreana"
+          ? "é um produto de beleza coreano (K-beauty), que é o que está em alta agora"
+          : null;
+
       gancho = await geraGancho({
         titulo: aPublicar.produto?.titulo_canonico ?? "",
         vozDoCanal: modeloDesteCanal.instrucaoGancho,
         recentes: ganchosRecentes.get(canal.id) ?? [],
+        destaque,
         chave: process.env.GEMINI_API_KEY,
       });
 

@@ -67,6 +67,48 @@ export const TIPO_ELETRONICO = "eletronico";
  */
 export const TIPO_BARBEARIA = "barbearia";
 
+/**
+ * O terceiro valor: roupa.
+ *
+ * POR QUE ELE PRECISOU EXISTIR. Varrendo a fila do Radar Delas em
+ * 13/08, atrás do que o dono chamou de lixão, sobraram dois itens que
+ * nenhuma das duas regras acima alcançava:
+ *
+ *   Cinta Modeladora Abdominal Feminina Esbelt 404 Emborrachada
+ *   Bermuda Modeladora Trifil Diminui Barriga Levanta Bumbum
+ *
+ * Eles não são eletrônico e não são barbearia, que eram os dois `TIPO`
+ * que o canal excluía. São roupa, e chegaram ao nicho `beleza` pela
+ * mesma porta de sempre: a loja os classifica em "cuidados pessoais"
+ * porque prometem modelar o corpo.
+ *
+ * Palavras do dono, autorizando: *"eu nao quero cinta nem bermuda"*.
+ *
+ * A LISTA É CURTA E LITERAL, pela regra deste arquivo inteiro: falso
+ * positivo aqui apaga oferta boa em silêncio. `cinta` sozinha ficou de
+ * fora porque existe cinta de cabelo; `modeladora` sozinha ficou de
+ * fora porque existe escova modeladora, que é produto-alvo do canal.
+ * O que decide é a peça de roupa pelo nome.
+ */
+export const TIPO_VESTUARIO = "vestuario";
+
+const VESTUARIO = [
+  "cinta modeladora",
+  "cinta abdominal",
+  "cinta pos parto",
+  "cinta pos-parto",
+  "bermuda",
+  "calcinha",
+  "sutia",
+  "body modelador",
+  "macacao modelador",
+  "short modelador",
+  "shorts modelador",
+  "meia calca",
+  "legging",
+  "pijama",
+];
+
 function normaliza(texto: string): string {
   return texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 }
@@ -374,6 +416,15 @@ export function ehEletronicoEmBeleza(titulo: string | null | undefined): boolean
 export function tipoForaDaBeleza(titulo: string | null | undefined): string | null {
   if (!titulo) return null;
   const t = normaliza(titulo);
+
+  /*
+    A roupa decide primeiro de todas, e é a mais fácil das três: nenhum
+    cosmético se chama bermuda. Vem antes da barbearia porque "cinta
+    modeladora masculina" existe e, se caísse em barbearia, o motivo
+    gravado no log estaria errado — e é pelo log que se descobre depois
+    por que uma oferta nunca saiu.
+  */
+  if (VESTUARIO.some((m) => t.includes(m))) return TIPO_VESTUARIO;
 
   // Barbear e cortar cabelo decidem sozinhos, e nada os desarma.
   if (BARBEARIA_FORTE.some((m) => t.includes(m))) return TIPO_BARBEARIA;

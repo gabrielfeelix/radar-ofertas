@@ -94,12 +94,32 @@ confere(
   familiaDeBeleza("Máscara De Cílios Volume Extremo à Prova D'água") === "maquiagem",
 );
 
-console.log("\no coreano, que é o que o dono pediu por nome\n");
+console.log("\no coreano, que virou família própria em 13/08 à noite\n");
 
-confere("marca coreana entra por skincare", familiaDeBeleza("COSRX Snail Mucin 96 Essence") === "skincare");
+/*
+  ELE ERA `skincare` ATÉ A NOITE DE 13/08, e a mudança tem motivo de
+  fila: dentro de skincare, que é a segunda maior família do canal, o
+  coreano nunca ganha vez. O revezamento dá uma vaga por família a cada
+  volta, e um COSRX competindo com 145 séruns brasileiros sai por
+  sorteio. Com família própria ele tem a própria vaga, que é o mesmo
+  mecanismo que tirou o secador da monocultura.
+*/
+confere("marca coreana é k-beauty", familiaDeBeleza("COSRX Snail Mucin 96 Essence") === "k-beauty");
 confere(
   "e o genérico também",
-  familiaDeBeleza("Máscara Facial Coreana Hidratante 10 unidades") === "skincare",
+  familiaDeBeleza("Máscara Facial Coreana Hidratante 10 unidades") === "k-beauty",
+);
+confere(
+  "o ingrediente sozinho basta, porque é como o vendedor sem marca anuncia",
+  familiaDeBeleza("Sérum Facial com Mucina de Caracol 30ml") === "k-beauty",
+);
+confere(
+  "maquiagem coreana também, e ela era um buraco inteiro",
+  familiaDeBeleza("TIRTIR Mask Fit Red Cushion Base Coreana 18g") === "k-beauty",
+);
+confere(
+  "e o skincare brasileiro continua sendo skincare",
+  familiaDeBeleza("Principia Sérum Vitamina C-10") === "skincare",
 );
 
 console.log("\nas bordas\n");

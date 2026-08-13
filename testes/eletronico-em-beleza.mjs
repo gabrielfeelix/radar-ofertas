@@ -9,7 +9,7 @@
  * A regra do teste é a mesma do `USO`: **na dúvida, deixa passar**.
  * Falso positivo aqui apaga oferta boa em silêncio, e ninguém descobre.
  */
-import { ehEletronicoEmBeleza, atributosComTipo, tipoForaDaBeleza, TIPO_ELETRONICO, TIPO_BARBEARIA } from "../lib/eletronico-em-beleza.ts";
+import { ehEletronicoEmBeleza, atributosComTipo, tipoForaDaBeleza, TIPO_ELETRONICO, TIPO_BARBEARIA, TIPO_VESTUARIO } from "../lib/eletronico-em-beleza.ts";
 
 let passou = 0, falhou = 0;
 const confere = (n, ok) => { if (ok) { passou++; console.log(`✓ ${n}`); } else { falhou++; console.log(`✗ ${n}`); } };
@@ -194,6 +194,34 @@ confere(
 confere(
   "depilador feminino continua passando",
   tipoForaDaBeleza("Aparelho Para Depilar Gillette Venus Sensitive") !== TIPO_BARBEARIA,
+);
+
+// -------------------------------------------------------------
+// Roupa, que era o que sobrava na fila depois das outras duas
+// -------------------------------------------------------------
+
+console.log("\nroupa não é beleza\n");
+
+for (const t of [
+  "Cinta Modeladora Abdominal Feminina Esbelt 404 Emborrachada Cotton",
+  "Bermuda Modeladora Trifil Diminui Barriga Levanta Bumbum Cor Bege",
+]) {
+  confere(`é vestuário: "${t.slice(0, 44)}"`, tipoForaDaBeleza(t) === TIPO_VESTUARIO);
+}
+
+// E o que a lista NÃO pode ter levado junto: as duas palavras curtas
+// que existem dos dois lados.
+confere(
+  "escova modeladora continua sendo beleza",
+  tipoForaDaBeleza("Escova Modeladora Rotativa Philco 1300w") !== TIPO_VESTUARIO,
+);
+confere(
+  "modelador de cachos continua sendo beleza",
+  tipoForaDaBeleza("Modelador De Cachos Mondial Bivolt 25mm") !== TIPO_VESTUARIO,
+);
+confere(
+  "faixa de cabelo continua sendo beleza",
+  tipoForaDaBeleza("Faixa De Cabelo Turbante Para Skincare") !== TIPO_VESTUARIO,
 );
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);

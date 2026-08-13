@@ -375,6 +375,28 @@ type Pedido = {
    * mal que a regra 3.11 combate no travessão.
    */
   recentes?: string[];
+  /**
+   * Um fato conferido sobre o produto, que a IA pode usar sem inventar.
+   *
+   * POR QUE ISTO EXISTE. Pedido do dono em 13/08: *"se for algo coreano,
+   * é legal a gente destacar que é coreano... a IA no texto ela pode
+   * falar, produto coreano de alguma coisa"*.
+   *
+   * E ela NÃO PODIA, e a proibição estava certa. `INSTRUCAO_BASE` diz
+   * "não invente característica que o título não garante", e o título de
+   * um COSRX diz "COSRX Advanced Snail 96 Mucin Power Essence" — nada
+   * ali contém a palavra coreano. Quem sabe que a marca é coreana é a
+   * lista de `lib/marca-de-beleza.ts`, não o modelo de linguagem.
+   *
+   * Então o fato entra por aqui, apurado do nosso lado, e o prompt o
+   * apresenta como CONFERIDO. É a mesma disciplina da regra 3.4 com
+   * preço: o que a IA pode afirmar é o que nós verificamos, e o resto
+   * continua proibido.
+   *
+   * Nulo é o caso normal. A imensa maioria dos posts não tem destaque
+   * nenhum, e o gancho sai como sempre saiu.
+   */
+  destaque?: string | null;
   chave: string;
   modelo?: string;
 };
@@ -388,7 +410,7 @@ type Pedido = {
  * sem gancho continua sendo um post bom.
  */
 export async function geraGancho(pedido: Pedido): Promise<string | null> {
-  const { titulo, vozDoCanal, recentes = [], chave, modelo = MODELO_PADRAO } = pedido;
+  const { titulo, vozDoCanal, recentes = [], destaque, chave, modelo = MODELO_PADRAO } = pedido;
   if (!chave || !titulo || !vozDoCanal) return null;
 
   const evitar = recentes.filter(Boolean).slice(0, 15);
@@ -397,6 +419,21 @@ export async function geraGancho(pedido: Pedido): Promise<string | null> {
     (evitar.length
       ? `\n\nJÁ FOI USADO NOS ÚLTIMOS POSTS DESTE GRUPO, não repita a abertura nem a piada:\n${evitar.map((g) => `- ${g}`).join("\n")}`
       : "");
+
+  /*
+    O FATO CONFERIDO VAI NA MENSAGEM DO PRODUTO, e não na instrução do
+    sistema. A instrução é a mesma em todo post do canal e fica em cache;
+    o fato muda de produto para produto e é dele que o modelo precisa
+    perto do título.
+
+    Ele é apresentado como PERMISSÃO e não como ordem. Mandar dizer
+    "coreano" em todo post coreano criaria o carimbo que a lista de
+    `recentes` existe para evitar, e três posts seguidos abrindo com
+    "coreaninho que" soariam pior que nenhum.
+  */
+  const conteudo = destaque
+    ? `Produto: ${titulo}\n\nFATO CONFERIDO POR NÓS SOBRE ESTE PRODUTO: ${destaque}\nVocê PODE usar esse fato no gancho, porque nós o verificamos e ele não é invenção. Use quando ele for a parte interessante do produto, e ignore quando não for.`
+    : `Produto: ${titulo}`;
 
   for (let tentativa = 0; tentativa < 2; tentativa++) {
     try {
@@ -407,7 +444,7 @@ export async function geraGancho(pedido: Pedido): Promise<string | null> {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: instrucao }] },
-            contents: [{ role: "user", parts: [{ text: `Produto: ${titulo}` }] }],
+            contents: [{ role: "user", parts: [{ text: conteudo }] }],
             /*
               `temperature` alta porque o produto aqui é a graça, não a
               precisão: a parte que precisa estar certa (preço, loja,

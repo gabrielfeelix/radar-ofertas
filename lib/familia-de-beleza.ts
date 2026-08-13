@@ -159,6 +159,69 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
     ],
   },
   {
+    /*
+      K-BEAUTY TEM FAMÍLIA PRÓPRIA, e não é preciosismo.
+
+      Ela morava dentro de `skincare` desde a manhã de 13/08, e ali ela
+      NUNCA GANHA VEZ: skincare é a segunda maior família do canal, e o
+      revezamento entrega uma vaga por rodada à família inteira. Um
+      COSRX entrando num balde de 145 sérruns brasileiros sai uma vez a
+      cada tanto, por sorteio.
+
+      Com família própria ele passa a ter a PRÓPRIA vaga no rodízio, que
+      é o mesmo mecanismo que tirou o secador da monocultura. O dono
+      pediu isso em 13/08 pensando no grupo, não no código: *"esses
+      produtinhos coreanos... se for alguma coisa meio uau, é legal a
+      gente destacar que é coreano"*.
+
+      A lista sai da pesquisa do mesmo dia, e as marcas são as que a
+      imprensa de beleza brasileira lista como as que chegaram aqui:
+      COSRX, Beauty of Joseon, SKIN1004, Medicube, Anua, Round Lab,
+      Abib, Innisfree, mais as de maquiagem TIRTIR, 3CE e CLIO. Os
+      ingredientes entram junto porque é assim que o vendedor sem marca
+      anuncia: "sérum de mucina de caracol" vende sem dizer a marca.
+
+      Vem ANTES de skincare porque quase todo produto daqui também é
+      skincare, e a família mais específica tem que decidir primeiro.
+    */
+    familia: "k-beauty",
+    termos: [
+      "coreano",
+      "coreana",
+      "k-beauty",
+      "kbeauty",
+      "cosrx",
+      "some by mi",
+      "beauty of joseon",
+      "anua",
+      "skin1004",
+      "mediheal",
+      "medicube",
+      "laneige",
+      "innisfree",
+      "missha",
+      "torriden",
+      "round lab",
+      "isntree",
+      "purito",
+      "tocobo",
+      "numbuzin",
+      "abib",
+      "tirtir",
+      "3ce",
+      "etude house",
+      // O ingrediente, que é como o anúncio sem marca escreve.
+      "mucina de caracol",
+      "snail mucin",
+      "centella asiatica",
+      "cica creme",
+      "sheet mask",
+      "mascara de tecido",
+      "essencia facial",
+      "glass skin",
+    ],
+  },
+  {
     // Skincare vem antes de maquiagem porque "base" e "po" são palavras
     // curtas de maquiagem que aparecem dentro de frase de skincare.
     familia: "skincare",
@@ -192,20 +255,9 @@ const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> 
       "principia",
       "sallve",
       "creamy",
-      // K-beauty, que é o que o dono pediu por nome em 13/08 e que o
-      // catálogo ainda quase não tem. Ver a lista de buscas em
-      // `scripts/coleta-mercado-livre.mjs`.
-      "coreano",
-      "coreana",
-      "cosrx",
-      "some by mi",
-      "beauty of joseon",
-      "anua",
-      "skin1004",
-      "mediheal",
-      "sheet mask",
-      "mascara de tecido",
       "cicaplast",
+      // O coreano saiu daqui em 13/08 à noite e virou família própria,
+      // logo acima. O porquê está lá.
     ],
     /*
       SÉRUM CAPILAR NÃO É SKINCARE, e este `exceto` conserta um erro que
