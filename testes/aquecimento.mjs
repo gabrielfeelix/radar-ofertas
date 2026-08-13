@@ -38,12 +38,16 @@ confere(
 
 console.log("\na curva, que é decisão do dono\n");
 
-confere("dia 1: 3 por hora x 24 = 72", tetoDoDia(1, 150) === 72);
-confere("dia 2 continua em 72", tetoDoDia(2, 150) === 72);
-confere("dia 5 é o último de 72", tetoDoDia(5, 150) === 72);
-confere("dia 6 sobe para 5 por hora, 120", tetoDoDia(6, 150) === 120);
+// A curva começa em 5 por hora desde 13/08, a pedido do dono. O degrau
+// de 3 deixou de existir: o que era o dia 6 passou a ser o dia 1.
+confere("dia 1: 5 por hora x 24 = 120", tetoDoDia(1, 150) === 120);
+confere("dia 2 continua em 120", tetoDoDia(2, 150) === 120);
+confere("dia 10 é o último de 5 por hora", tetoDoDia(10, 150) === 120);
 confere("dia 11 sobe para 10 por hora, e o teto do chip corta em 150", tetoDoDia(11, 150) === 150);
-confere("a janela do canal multiplica: 3 por hora em 9 horas são 27", tetoDoDia(1, 150, 9) === 27);
+confere("a janela do canal multiplica: 5 por hora em 9 horas são 45", tetoDoDia(1, 150, 9) === 45);
+// A janela real do Radar Delas no WhatsApp é das 9h às 21h.
+confere("as 13 horas do Radar Delas cabem em 65 posts", tetoDoDia(1, 150, 13) === 65);
+confere("nenhum dia da rampa fica abaixo de 5 por hora", porHoraDoDia(1) === 5);
 confere("dia 15 libera o teto cheio", tetoDoDia(15, 150) === 150);
 confere("e depois continua o teto cheio", tetoDoDia(400, 150) === 150);
 
@@ -68,6 +72,13 @@ confere("dia negativo não publica nada", tetoDoDia(-5, 150) === 0);
 // cadastrado com teto de 12 não manda 30 no dia 5.
 confere("teto cheio baixo limita a curva", tetoDoDia(5, 12) === 12);
 confere("e limita também no primeiro degrau", tetoDoDia(1, 6) === 6);
+
+/*
+  A rampa continua sendo rampa: subir o primeiro degrau para 5 não pode
+  ter apagado a subida até o ritmo de operação. Se um dia alguém achatar
+  a curva inteira num valor só, isto avisa.
+*/
+confere("a curva ainda sobe do dia 1 ao dia 15", tetoDoDia(15, 500) > tetoDoDia(1, 500));
 
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);

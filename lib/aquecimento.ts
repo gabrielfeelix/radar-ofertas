@@ -23,8 +23,8 @@ import { diaEmSaoPaulo } from "./ritmo.ts";
 /**
  * A curva, decidida pelo dono em 10/08/2026.
  *
- * Os quatro primeiros dias sobem de cinco em cinco; do 5º ao 14º fica
- * em 30; do 15º em diante vale o teto do chip.
+ * Ela é em POSTS POR HORA: 5 até o dia 10, 10 até o dia 14, e do 15º em
+ * diante vale o teto do chip.
  */
 /*
   A CURVA FOI REESCRITA EM 11/08, A PEDIDO DIRETO DO DONO.
@@ -52,8 +52,29 @@ import { diaEmSaoPaulo } from "./ritmo.ts";
   cima de tudo, e o `horarios_permitidos` continua sendo quem impede o
   grupo de tocar de madrugada.
 */
+/*
+  O PRIMEIRO DEGRAU SUBIU DE 3 PARA 5 EM 13/08, A PEDIDO DIRETO DO DONO:
+
+    *"quero que mude outra regra: tá pra 3 anúncios por hora, quero 5
+    por hora agora, pra aquecer mais o número"*
+
+  O chip estava no dia 4 dos cinco de 3/h. O degrau de 5/h já existia
+  logo abaixo, e o pedido é para antecipá-lo — não para inventar um
+  ritmo novo: o que era dia 6 vira dia 1, e a curva daqui para a frente
+  é a mesma que já estava escrita.
+
+  E os dois primeiros degraus viram UM SÓ, em vez de virarem dois com o
+  mesmo valor. Um degrau de 5/h até o dia 5 seguido de outro de 5/h até
+  o dia 10 seria uma linha que não muda nada e que o próximo leitor
+  precisaria conferir para descobrir isso.
+
+  O QUE NÃO MUDA: continua havendo rampa (5 até o dia 10, 10 até o 14,
+  teto cheio depois), o `bot.envios_dia_max` continua sendo teto duro,
+  e o `horarios_permitidos` continua fechando a madrugada. No Radar
+  Delas, cuja janela é das 9h às 21h, 5/h dão ~65 posts no dia contra os
+  72 do `posts_por_dia_max` — o teto do canal não passa a ser o freio.
+*/
 const RAMPA_POR_HORA: Array<{ ateODia: number; porHora: number }> = [
-  { ateODia: 5, porHora: 3 },
   { ateODia: 10, porHora: 5 },
   { ateODia: 14, porHora: 10 },
 ];
