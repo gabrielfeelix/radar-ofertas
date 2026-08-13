@@ -64,6 +64,7 @@ import { intercalaPorVariedade, assinaturaDe } from "../lib/variedade.ts";
 import { eixoDeVariedade } from "../lib/familia-de-beleza.ts";
 import { pesoDaMarca } from "../lib/marca-de-perfume.ts";
 import { canalAceitaAtributos } from "../lib/canal-aceita.ts";
+import { tipoForaDaBeleza } from "../lib/eletronico-em-beleza.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.CHAVE;
@@ -658,6 +659,8 @@ async function melhorPrateleira(db, oferta) {
   let noTeto = 0;
   let cuponsPublicados = 0;
   let adiadosPorProporcao = 0;
+  /* Publicações que a fila trazia e a reconferência da saída barrou. */
+  let canceladasNaSaida = 0;
   let foraDeHorario = 0;
   /* Quais canais já entraram na conta de "fora do horário" nesta rodada. */
   const foraDeHorarioContado = new Set();
@@ -1660,6 +1663,56 @@ async function melhorPrateleira(db, oferta) {
     pendentesDoCanal.set(canal.id, data ?? []);
   }
 
+  /*
+    O MESMO FILTRO DA ENTRADA, APLICADO NA SAÍDA.
+
+    Chama exatamente as funções que o laço das ofertas novas usa —
+    `canalAceitaAtributos` e a lista de nichos do canal —, e não uma
+    cópia delas. Duas implementações da mesma regra divergem, e a
+    divergência aqui é um post no canal errado.
+
+    O TÍTULO TAMBÉM É CONSULTADO, e não só os atributos gravados. Quem
+    entrou no catálogo antes de a regra existir pode nunca ter sido
+    marcado: a marcação acontece na coleta e no `remarca-atributos`, e
+    entre uma coisa e outra a fila anda. `tipoForaDaBeleza` lê o título
+    na hora, então um produto sem `TIPO` gravado ainda é barrado se o
+    nome dele disser o que ele é.
+  */
+  function motivoDeNaoServirMais(pub, canal) {
+    const produto = pub?.oferta?.anuncio?.produto;
+    if (!produto) return null;
+
+    const nichoId = produto.nicho_id;
+    if (!nichoId) return "sem_nicho";
+
+    if (!(canal.canal_nicho ?? []).some((cn) => cn.nicho_id === nichoId)) {
+      return "nicho_fora_do_canal";
+    }
+
+    /*
+      O título vale como atributo quando não há atributo. Não
+      sobrescreve o que já existe, pela mesma regra de
+      `atributosComTipo`: se alguém marcou à mão, a mão ganha.
+    */
+    const atributos = { ...(produto.atributos ?? {}) };
+    if (!atributos.TIPO) {
+      const doTitulo = tipoForaDaBeleza(produto.titulo_canonico);
+      if (doTitulo) atributos.TIPO = doTitulo;
+    }
+
+    const passa = canalAceitaAtributos(
+      (canal.canal_atributo ?? []).map((f) => ({
+        ...f,
+        exigeAtributo: f.exige_atributo,
+        nichoId: f.nicho_id,
+      })),
+      atributos,
+      nichoId,
+    );
+
+    return passa ? null : "filtro_de_atributo";
+  }
+
   /** A assinatura de variedade de uma publicação, do jeito que a fila a vê. */
   const assinaturaDaPublicacao = (pub) =>
     assinaturaDe({
@@ -1998,6 +2051,55 @@ async function melhorPrateleira(db, oferta) {
 
     const [item] = fila.splice(indice, 1);
 
+    /*
+      A ÚLTIMA CONFERÊNCIA, IMEDIATAMENTE ANTES DE SAIR.
+
+      ISTO NASCEU DE UM POST QUE NÃO PODIA TER SAÍDO. Em 13/08, às
+      10:32, o grupo de mulheres recebeu:
+
+        Navalha Profissional Retrátil P/ Desfiar Cabo Inox P/ Barba
+
+      E o produto ESTAVA marcado: `atributos.TIPO = "barbearia"`. E o
+      canal ESTAVA filtrando: `canal_atributo` exclui `barbearia` e
+      `eletronico` nos dois Radar Delas. As duas metades certas, e o
+      post saiu assim mesmo.
+
+      A CAUSA É QUANDO O FILTRO RODAVA. Ele roda uma vez só, no momento
+      em que a publicação NASCE, lá no laço das ofertas novas. Depois
+      disso a linha vira `pendente` e nunca mais é perguntada. Esta
+      publicação nasceu em **10/08 18:44** e saiu em **13/08 13:32** —
+      no meio, em 12/08, a regra de barbearia foi criada. A regra nova
+      não alcançava a fila velha.
+
+      E a fila velha é grande: 2.808 publicações pendentes, 1.599 delas
+      nos dois canais de beleza, algumas represadas há dias. Toda regra
+      que criarmos daqui para a frente teria o mesmo furo, e o sintoma
+      seria sempre este: a regra parece não funcionar, mas ela funciona
+      — só não retroage.
+
+      Reconferir na SAÍDA conserta o passado e o futuro de uma vez.
+      Quando o veredito mudou, a publicação é CANCELADA e não enviada:
+      cancelar é barato e o post errado não tem volta. Ela não é
+      apagada, para o cancelamento ficar auditável.
+
+      Custo: nenhuma chamada de rede a mais. Nicho, atributos e canal já
+      estão todos em memória nesta altura.
+    */
+    if (item.tipo === "oferta") {
+      const barrado = motivoDeNaoServirMais(item.pub, canal);
+      if (barrado) {
+        await db
+          .from("publicacao")
+          .update({ estado: "cancelada", cancelada_em: new Date().toISOString() })
+          .eq("id", item.pub.id);
+        console.log(
+          `  ⛔ ${canal.nome}: ${item.pub.oferta?.anuncio?.produto?.titulo_canonico?.slice(0, 46)} — ${barrado} na saída`,
+        );
+        canceladasNaSaida += 1;
+        continue;
+      }
+    }
+
     const saiu =
       item.tipo === "cupom" ? await enviaCupom(item.cupom, canal) : await enviaOferta(item.pub, canal);
 
@@ -2026,6 +2128,7 @@ async function melhorPrateleira(db, oferta) {
   console.log(
     `\n${publicadas} publicadas · ${cuponsPublicados} cupons · ${reprovadas} reprovadas · ${esperando} esperando o ritmo · ` +
       `${noTeto} no teto do dia · ${adiadosPorProporcao} adiados pela proporção · ` +
+      `${canceladasNaSaida} barradas na saída · ` +
       `${semLink} sem link · ${encerradas} encerradas · ${trocas} trocaram de prateleira · ` +
       `${foraDeHorario} fora do horário do canal · ` +
       // Recusado alto é sinal de prompt escorregando para preço ou

@@ -166,7 +166,60 @@ const BARBEARIA_FORTE = [
   "multigroomer",
   "barba e cabelo",
   "aparador de barba",
+  /*
+    O QUE FALTAVA, e o que faltou custou um post. Em 13/08, às 10:32, o
+    grupo de mulheres recebeu:
+
+      Navalha Profissional Retrátil P/ Desfiar Cabo Inox P/ Barba
+
+    Ele passou por uma distância de duas letras. `barbear` estava na
+    lista; `barba` não. "P/ Barba" não casa com "barbear", então a
+    decisão caiu para `BARBEARIA_FRACA`, onde `navalha` mora — e ali o
+    veredito era barbearia de qualquer jeito. (A causa de o post ter
+    saído mesmo assim está em `scripts/publica-automatico.mjs`, na
+    reconferência da saída: o produto ESTAVA marcado, e a fila é que
+    era velha. Mas a lista também estava frouxa, e as duas coisas
+    precisavam de conserto.)
+
+    Palavras do dono: *"ISSO NÃO PODE ACONTECER JAMAIS, revise pra não
+    ir NENHUM produto masc, máquina de barbear, máquina de cortar
+    cabelo, barbeador, pós-barba, nada disso"*.
+
+    Pós-barba e after shave entram aqui e não em `BARBEARIA_FRACA` de
+    propósito: não existe pós-barba de mulher, e não há depilação que os
+    desarme.
+  */
+  "pos barba",
+  "pos-barba",
+  "posbarba",
+  "after shave",
+  "aftershave",
+  "shaving",
+  "shave gel",
+  "espuma de barbear",
+  "creme de barbear",
+  "oleo para barba",
+  "balm de barba",
+  "escova de barba",
+  "pente de barba",
+  "kit barba",
+  "modelador de barba",
 ];
+
+/*
+  `BARBA` SOZINHA, com fronteira de palavra.
+
+  Ela precisa de regex e não de `includes` porque `barba` mora dentro de
+  palavras que não têm nada com isso: `barbante`, `barbatana`,
+  `ruibarbo`, e o nome próprio `Bárbara`, que normalizado vira
+  `barbara`. Marca de cosmético chamada Bárbara existe, e derrubá-la
+  seria o falso positivo que apaga oferta boa em silêncio — exatamente o
+  que o resto deste arquivo passa o tempo todo evitando.
+
+  Com a fronteira, "P/ Barba", "para barba" e "barbas" casam, e
+  "barbante" não.
+*/
+const BARBA_SOZINHA = /\bbarbas?\b/;
 
 /*
   O SINAL FRACO, e é ele que a depilação desarma.
@@ -281,6 +334,7 @@ export function tipoForaDaBeleza(titulo: string | null | undefined): string | nu
 
   // Barbear e cortar cabelo decidem sozinhos, e nada os desarma.
   if (BARBEARIA_FORTE.some((m) => t.includes(m))) return TIPO_BARBEARIA;
+  if (BARBA_SOZINHA.test(t)) return TIPO_BARBEARIA;
   // Depilação desarma o sinal fraco, que a barbearia e ela dividem.
   if (DEPILACAO.some((m) => t.includes(m))) return null;
   if (BARBEARIA_FRACA.some((m) => t.includes(m))) return TIPO_BARBEARIA;

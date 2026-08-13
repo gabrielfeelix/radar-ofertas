@@ -145,6 +145,57 @@ confere(
   atributosComTipo("Limpador De fone AirPods", { TIPO: "beleza" }) === null,
 );
 
+
+/*
+  O POST DE 13/08 QUE NÃO PODIA TER SAÍDO, e a família dele.
+
+  "Navalha Profissional Retrátil P/ Desfiar Cabo Inox P/ Barba" chegou
+  ao grupo de mulheres às 10:32. Palavras do dono: *"ISSO NÃO PODE
+  ACONTECER JAMAIS, revise pra não ir NENHUM produto masc, máquina de
+  barbear, máquina de cortar cabelo, barbeador, pós-barba, nada
+  disso"*.
+*/
+console.log("\nnada de masculino no grupo de mulheres (13/08)\n");
+
+for (const t of [
+  "Navalha Profissional Retrátil P/ Desfiar Cabo Inox P/ Barba",
+  "Loção Pós Barba Refrescante 100ml",
+  "After Shave Balm Hidratante Masculino",
+  "Kit Barba Óleo e Balm Para Barba Cheia",
+  "Espuma de Barbear Nivea Men 200ml",
+  "Máquina De Cortar Cabelo Profissional Sem Fio",
+  "Barbeador Elétrico Recarregável À Prova D'água",
+  "Pente De Barba Madeira Antiestático",
+]) {
+  confere(`barbearia: "${t.slice(0, 44)}"`, tipoForaDaBeleza(t) === TIPO_BARBEARIA);
+}
+
+/*
+  E a fronteira de palavra, que é o que impede `barba` de derrubar
+  produto de mulher. Falso positivo aqui APAGA oferta em silêncio, que é
+  o erro caro deste arquivo.
+*/
+console.log("\ne 'barba' não pode casar dentro de outra palavra\n");
+
+for (const t of [
+  "Barbante Colorido Para Artesanato 200g",
+  "Bárbara Cosméticos Hidratante Facial 50g",
+  "Xarope De Ruibarbo Natural",
+]) {
+  confere(`não é barbearia: "${t.slice(0, 44)}"`, tipoForaDaBeleza(t) !== TIPO_BARBEARIA);
+}
+
+// Depilação continua sendo beleza, e o novo sinal não pode ter mudado
+// isso: a persona do canal tira sobrancelha e buço.
+confere(
+  "navalha de sobrancelha continua passando",
+  tipoForaDaBeleza("Ricca Navalha Para Sobrancelha Colors (1 Unidade)") === null,
+);
+confere(
+  "depilador feminino continua passando",
+  tipoForaDaBeleza("Aparelho Para Depilar Gillette Venus Sensitive") !== TIPO_BARBEARIA,
+);
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
