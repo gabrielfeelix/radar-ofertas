@@ -16,6 +16,7 @@ import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { formataReais } from "@/lib/dinheiro";
 import { montaMensagem, type ModeloDeMensagem } from "@/lib/mensagem";
 import { intercalaPorVariedade, repeticoesSeguidas } from "@/lib/variedade";
+import { eixoDeVariedade } from "@/lib/familia-de-beleza";
 import { modeloGlobal } from "@/lib/modelo";
 import { vagasDoCanal, type Canal } from "@/lib/distribuicao";
 import { publicacoesDaFila, type Publicacao } from "@/lib/publicacoes";
@@ -286,14 +287,24 @@ function GrupoDoCanal({
 
     Nada é descartado: só muda a ordem em que sai.
   */
+  /*
+    O EIXO É A FAMÍLIA DO PRODUTO, e não só o nicho. Num canal de nicho
+    único o nicho é constante e não há o que intercalar — ver
+    `lib/familia-de-beleza.ts`. A tela usa o mesmo eixo do publicador
+    automático de propósito: se as duas ordens divergissem, a prévia
+    daqui deixaria de descrever o que o grupo vai receber.
+  */
   const paraVariedade = itens.map((p) => ({
-    grupo: p.nicho,
+    grupo: eixoDeVariedade(p.nicho, p.produto),
     precoCentavos: p.precoNaFilaCentavos,
     publicacao: p,
   }));
   const emOrdem = intercalaPorVariedade(paraVariedade).map((x) => x.publicacao);
   const aindaRepetidas = repeticoesSeguidas(
-    emOrdem.slice(0, cabemHoje).map((p) => ({ grupo: p.nicho, precoCentavos: p.precoNaFilaCentavos })),
+    emOrdem.slice(0, cabemHoje).map((p) => ({
+      grupo: eixoDeVariedade(p.nicho, p.produto),
+      precoCentavos: p.precoNaFilaCentavos,
+    })),
   );
 
   return (

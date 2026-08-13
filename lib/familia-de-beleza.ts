@@ -1,0 +1,349 @@
+/**
+ * A família do produto de beleza, para a fila revezar de verdade.
+ *
+ * POR QUE ISTO EXISTE. Em 13/08 o dono olhou o grupo do WhatsApp e
+ * descreveu o que via:
+ *
+ *   *"tem muita coisa cara, não estão enviando coisas legais tipo
+ *   máscara facial coreana, produtos coreanos... não tem muita coisa
+ *   legal, só secador, produto caro. É BOM QUE TENHA CARO E TEM QUE TER
+ *   SIM, mas tem que revezar: às vezes um gloss, às vezes hidratante,
+ *   protetor, coisa que mulher gosta e COMPRA VÁRIAS VEZES."*
+ *
+ * E as últimas sessenta publicações do canal dão razão a ele:
+ *
+ *   08-13 13:12  R$ 231  Secador De Cabelos Taiff Black Íon 2000w
+ *   08-13 12:49  R$ 691  Kit Wella Professionals Invigo Nutri-Enrich
+ *   08-13 12:24  R$ 229  Escova Secadora Alisadora Volumizadora Philco
+ *   08-12 23:54  R$ 399  Secador Philco psc3500 4 Em 1
+ *   08-12 23:02  R$ 379  Secador Philco psc3500 4 Em 1     (o MESMO)
+ *
+ * A INTERCALAÇÃO JÁ EXISTIA E NÃO ESTAVA FAZENDO NADA, e este arquivo é
+ * a razão. `lib/variedade.ts` reveza por `grupo`, e quem chamava passava
+ * `produto.nicho_id`. Num canal de nicho único — e o Radar Delas é
+ * inteirinho `beleza` — esse grupo é CONSTANTE. A assinatura virava só
+ * a faixa de preço, e três secadores de R$ 229, R$ 231 e R$ 399 caem em
+ * duas faixas: nada a revezar, sai tudo em fila.
+ *
+ * O eixo certo dentro de um canal de nicho único não é o nicho, é o que
+ * a pessoa entende por "outra coisa": secador não é sérum, gloss não é
+ * shampoo. É isso que este arquivo devolve.
+ *
+ * ISTO NÃO É CURADORIA E NÃO PODE VIRAR, pela mesma regra que
+ * `lib/variedade.ts` já carrega: a família só decide a ORDEM. Nada é
+ * descartado, nada muda de nota, e o conjunto publicado no fim do dia é
+ * exatamente o mesmo. Secador continua saindo — o dono foi explícito
+ * ("é bom que tenha caro e tem que ter sim") —, só para de sair três
+ * seguidos.
+ *
+ * POR ISSO A LISTA AQUI É GENEROSA, e é a diferença exata para
+ * `lib/eletronico-em-beleza.ts`, que é literal e covarde de propósito.
+ * Lá o falso positivo APAGA uma oferta em silêncio, e o custo é alto.
+ * Aqui o falso positivo só troca a posição de um post na fila: chutar
+ * "maquiagem" para um produto de skincare custa uma alternância errada,
+ * e nunca um post perdido. Errar barato permite ser abrangente.
+ */
+
+function normaliza(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+/**
+ * As famílias, e a ORDEM DELAS É A REGRA.
+ *
+ * Cada título casa com a primeira família cuja lista bater, então o mais
+ * específico vem primeiro. As armadilhas que ditaram esta ordem:
+ *
+ *   "mascara"   sozinha é de cílios, facial ou capilar — três famílias
+ *               diferentes. Só a expressão inteira decide, nunca a
+ *               palavra.
+ *   "escova"    é secadora (aparelho), de cabelo (acessório) ou de
+ *               dente. `escova secadora` vem antes de `escova`.
+ *   "sabonete"  é de rosto ou de banho, e o rosto vem antes.
+ *   "oleo"      é capilar, corporal ou essencial. `oleo capilar` antes
+ *               de `oleo corporal`, e nenhum dos dois é `oleo` puro.
+ *
+ * A APARELHAGEM DE CABELO É A PRIMEIRA de todas, e não por acaso: ela é
+ * a família que estava monopolizando o grupo, e é a que mais tem outro
+ * nome no título ("escova rotativa", "modelador", "prancha"). Separá-la
+ * cedo é o que faz o revezamento aparecer.
+ */
+const FAMILIAS: Array<{ familia: string; termos: string[]; exceto?: string[] }> = [
+  {
+    // O aparelho caro, que é o que estava saindo em sequência.
+    familia: "cabelo-eletro",
+    termos: [
+      "secador",
+      "escova secadora",
+      "escova alisadora",
+      "escova rotativa",
+      "escova modeladora",
+      "chapinha",
+      "prancha alisadora",
+      "prancha de cabelo",
+      "prancha profissional",
+      "modelador de cachos",
+      "modelador de cacho",
+      "babyliss",
+      "difusor",
+      "ondulador",
+      "touca termica",
+    ],
+  },
+  {
+    familia: "depilacao",
+    termos: [
+      "depilad",
+      "depilat",
+      "depilac",
+      "depilar",
+      "epilador",
+      "cera quente",
+      "lamina de barbear",
+      "navalha",
+      "gilete",
+      "barbeador",
+      "aparador de pelo",
+    ],
+  },
+  {
+    familia: "cilios-sobrancelha",
+    termos: [
+      "cilios",
+      "cilios posticos",
+      "extensao de cilios",
+      "henna",
+      "sobrancelha",
+      "pinca",
+      "curvex",
+    ],
+    /*
+      MÁSCARA DE CÍLIOS É MAQUIAGEM, e é o caso que obrigou `exceto` a
+      existir. "cílios" está aqui porque cílios postiço e extensão são
+      outra prateleira e outro momento de compra; mas rímel é
+      maquiagem de todo dia, e ele carrega a palavra "cílios" no nome.
+      Sem esta linha, todo rímel do canal era classificado como
+      alongamento de cílios.
+    */
+    exceto: ["mascara de cilios", "mascara para cilios", "rimel"],
+  },
+  {
+    familia: "unha",
+    termos: [
+      "esmalte",
+      "unha",
+      "unhas",
+      "manicure",
+      "pedicur",
+      "cuticula",
+      "alicate",
+      "gel builder",
+      "lixa de unha",
+      "acrigel",
+    ],
+  },
+  {
+    // Skincare vem antes de maquiagem porque "base" e "po" são palavras
+    // curtas de maquiagem que aparecem dentro de frase de skincare.
+    familia: "skincare",
+    termos: [
+      "serum",
+      "hidratante facial",
+      "locao facial",
+      "creme facial",
+      "protetor solar",
+      "filtro solar",
+      "acido hialuronico",
+      "acido salicilico",
+      "acido glicolico",
+      "niacinamida",
+      "vitamina c",
+      "retinol",
+      "agua micelar",
+      "sabonete facial",
+      "gel de limpeza",
+      "esfoliante facial",
+      "mascara facial",
+      "mascara de argila",
+      "tonico facial",
+      "hidratante para o rosto",
+      "antirrugas",
+      "antienvelhecimento",
+      "skincare",
+      "area dos olhos",
+      "creme para olheiras",
+      "cerave",
+      "principia",
+      "sallve",
+      "creamy",
+      // K-beauty, que é o que o dono pediu por nome em 13/08 e que o
+      // catálogo ainda quase não tem. Ver a lista de buscas em
+      // `scripts/coleta-mercado-livre.mjs`.
+      "coreano",
+      "coreana",
+      "cosrx",
+      "some by mi",
+      "beauty of joseon",
+      "anua",
+      "skin1004",
+      "mediheal",
+      "sheet mask",
+      "mascara de tecido",
+    ],
+  },
+  {
+    familia: "maquiagem",
+    termos: [
+      "batom",
+      "gloss",
+      "base liquida",
+      "base matte",
+      "corretivo",
+      "po compacto",
+      "po solto",
+      "blush",
+      "iluminador",
+      "delineador",
+      "sombra",
+      "paleta",
+      "primer",
+      "mascara de cilios",
+      "rimel",
+      "contorno",
+      "cushion",
+      "bronzer",
+      "lapis de olho",
+      "lapis labial",
+      "maquiagem",
+      "ruby rose",
+      "sace lady",
+      "oceane",
+      "payot",
+      "mari maria",
+    ],
+  },
+  {
+    // O consumível de cabelo, que é o que a persona recompra.
+    familia: "cabelo-quimica",
+    termos: [
+      "shampoo",
+      "condicionador",
+      "mascara capilar",
+      "mascara de tratamento",
+      "leave in",
+      "leave-in",
+      "oleo capilar",
+      "finalizador",
+      "creme para pentear",
+      "creme de pentear",
+      "ativador de cachos",
+      "gelatina capilar",
+      "progressiva",
+      "matizador",
+      "tonalizante",
+      "coloracao",
+      "tintura",
+      "reconstrutor",
+      "cronograma capilar",
+      "antiqueda",
+      "low poo",
+      "no poo",
+      "perfume capilar",
+      "protetor termico",
+    ],
+  },
+  {
+    familia: "perfumaria",
+    termos: [
+      "perfume",
+      "body splash",
+      "colonia",
+      "eau de parfum",
+      "eau de toilette",
+      "deo colonia",
+      "desodorante",
+    ],
+  },
+  {
+    familia: "corpo-banho",
+    termos: [
+      "hidratante corporal",
+      "locao corporal",
+      "oleo corporal",
+      "creme para maos",
+      "creme para as maos",
+      "creme para os pes",
+      "sabonete",
+      "esfoliante corporal",
+      "manteiga corporal",
+      "banho",
+      "hidratante",
+      "locao",
+    ],
+  },
+  {
+    // Por último porque é o que sobra: pincel, espelho, necessaire.
+    familia: "acessorio",
+    termos: [
+      "pincel",
+      "esponja",
+      "espelho",
+      "necessaire",
+      "maleta",
+      "pente",
+      "escova de cabelo",
+      "touca",
+      "faixa de cabelo",
+      "bobs",
+      "modelador de bob",
+      "organizador de maquiagem",
+    ],
+  },
+];
+
+/**
+ * A qual família de beleza este título pertence, ou `null`.
+ *
+ * `null` não é erro: é título que nenhuma lista reconheceu, e quem
+ * chama trata todos os `null` como uma família só ("sem-familia"). O
+ * pior que acontece é o produto desconhecido revezar com outro produto
+ * desconhecido, que é o comportamento de antes.
+ */
+export function familiaDeBeleza(titulo: string | null | undefined): string | null {
+  if (!titulo) return null;
+  const t = normaliza(titulo);
+
+  for (const { familia, termos, exceto } of FAMILIAS) {
+    // `exceto` desarma a família inteira, e não só o termo que casou:
+    // um rímel não é cílios postiço nem de longe, então a família
+    // toda está errada para ele e a busca deve seguir adiante.
+    if (exceto?.some((termo) => t.includes(termo))) continue;
+    if (termos.some((termo) => t.includes(termo))) return familia;
+  }
+  return null;
+}
+
+/**
+ * O eixo de revezamento de uma publicação, seja qual for o nicho.
+ *
+ * Canal de nicho único (beleza) reveza por família; canal que mistura
+ * nichos continua revezando por nicho, que é o que sempre funcionou lá.
+ * Passar os dois juntos é o que faz a mesma função servir aos nove
+ * canais sem `if` de canal espalhado pelo publicador.
+ *
+ * O nicho entra na chave mesmo quando há família porque família é texto
+ * livre do título: "sabonete" existe em beleza e em pet, e sem o nicho
+ * na chave um shampoo de cachorro revezaria com um shampoo de gente
+ * como se fossem a mesma coisa.
+ */
+export function eixoDeVariedade(
+  nichoId: string | null | undefined,
+  titulo: string | null | undefined,
+): string {
+  const nicho = nichoId ?? "sem-nicho";
+  const familia = familiaDeBeleza(titulo);
+  return familia ? `${nicho}|${familia}` : nicho;
+}

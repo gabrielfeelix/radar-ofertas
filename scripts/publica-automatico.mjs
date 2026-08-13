@@ -60,7 +60,8 @@ import { geraGancho } from "../lib/gancho.ts";
   calaria um canal que já funcionava.
 */
 const DIA_JA_AQUECIDO = 999;
-import { intercalaPorVariedade } from "../lib/variedade.ts";
+import { intercalaPorVariedade, assinaturaDe } from "../lib/variedade.ts";
+import { eixoDeVariedade } from "../lib/familia-de-beleza.ts";
 import { pesoDaMarca } from "../lib/marca-de-perfume.ts";
 import { canalAceitaAtributos } from "../lib/canal-aceita.ts";
 
@@ -429,7 +430,7 @@ async function melhorPrateleira(db, oferta) {
   */
   const ordenadas = intercalaPorVariedade(
     (novas ?? []).map((o) => ({
-      grupo: o.anuncio?.produto?.nicho_id ?? null,
+      grupo: eixoDeVariedade(o.anuncio?.produto?.nicho_id, o.anuncio?.produto?.titulo_canonico),
       precoCentavos: o.preco_atual_centavos,
       oferta: o,
     })),
@@ -1659,6 +1660,43 @@ async function melhorPrateleira(db, oferta) {
     pendentesDoCanal.set(canal.id, data ?? []);
   }
 
+  /** A assinatura de variedade de uma publicação, do jeito que a fila a vê. */
+  const assinaturaDaPublicacao = (pub) =>
+    assinaturaDe({
+      grupo: eixoDeVariedade(
+        pub?.oferta?.anuncio?.produto?.nicho_id,
+        pub?.oferta?.anuncio?.produto?.titulo_canonico,
+      ),
+      precoCentavos: pub?.oferta?.preco_atual_centavos ?? 0,
+    });
+
+  /*
+    O ÚLTIMO POST DE CADA CANAL, para o revezamento não recomeçar do zero.
+
+    Lido do que JÁ FOI ENVIADO, pelo mesmo motivo dos ganchos recentes
+    logo acima: o que importa é o que quem lê o grupo viu passar, e não o
+    que esta execução montou. Sem isto, cada rodada horária escolhe o
+    primeiro post sem saber o que veio antes dela.
+  */
+  const ultimaAssinaturaDoCanal = new Map();
+
+  {
+    const { data: ultimos } = await db
+      .from("publicacao")
+      .select(
+        `canal_id, oferta:oferta_id ( preco_atual_centavos, anuncio:anuncio_id ( produto:produto_id ( titulo_canonico, nicho_id ) ) )`,
+      )
+      .eq("estado", "enviada")
+      .order("enviada_em", { ascending: false })
+      .limit(200);
+
+    for (const linha of ultimos ?? []) {
+      if (ultimaAssinaturaDoCanal.has(linha.canal_id)) continue;
+      if (!linha.oferta?.anuncio) continue;
+      ultimaAssinaturaDoCanal.set(linha.canal_id, assinaturaDaPublicacao(linha));
+    }
+  }
+
   const filaDoCanal = new Map();
 
   for (const canal of canaisAtivos) {
@@ -1703,18 +1741,52 @@ async function melhorPrateleira(db, oferta) {
       para impedir.
     */
     const comMarca = (p) => pesoDaMarca(p.oferta?.anuncio?.produto?.titulo_canonico) > 0;
-    const paraFila = (lista) =>
+
+    /*
+      O EIXO DO REVEZAMENTO É A FAMÍLIA, e não mais o nicho.
+
+      Era `nicho_id`, e num canal de nicho único isso é uma CONSTANTE: o
+      Radar Delas é inteirinho `beleza`, então a assinatura virava só a
+      faixa de preço e não havia nada a alternar. O resultado foi o que
+      o dono descreveu em 13/08 olhando o grupo — *"só secador, produto
+      caro... tem que revezar, às vezes um gloss, às vezes hidratante"* —
+      e as sessenta últimas publicações confirmam: secador, kit de salão,
+      escova secadora, secador, secador.
+
+      `lib/familia-de-beleza.ts` separa aparelho de cabelo, skincare,
+      maquiagem, cabelo de consumo, corpo, unha e o resto. Continua sendo
+      só ORDEM: nada é descartado, e o secador continua saindo, porque o
+      dono foi explícito que ele deve sair.
+    */
+    const paraFila = (lista, semente) =>
       intercalaPorVariedade(
         lista.map((p) => ({
-          grupo: p.oferta?.anuncio?.produto?.nicho_id ?? null,
+          grupo: eixoDeVariedade(
+            p.oferta?.anuncio?.produto?.nicho_id,
+            p.oferta?.anuncio?.produto?.titulo_canonico,
+          ),
           precoCentavos: p.oferta?.preco_atual_centavos ?? 0,
           pub: p,
         })),
+        semente,
       ).map((x) => ({ tipo: "oferta", pub: x.pub }));
 
+    /*
+      A SEMENTE É O QUE O CANAL PUBLICOU POR ÚLTIMO, e é ela que faz o
+      revezamento sobreviver à virada de rodada. Sem isso a fila é
+      montada do zero de hora em hora e o primeiro post da rodada nova
+      pode repetir a família do último da rodada velha — que foi o que
+      pôs dois secadores Philco em sequência em 12/08.
+    */
+    const semente = ultimaAssinaturaDoCanal.get(canal.id) ?? null;
+
+    const daMarca = paraFila(minhas.filter(comMarca), semente);
     const emOrdem = [
-      ...paraFila(minhas.filter(comMarca)),
-      ...paraFila(minhas.filter((p) => !comMarca(p))),
+      ...daMarca,
+      ...paraFila(
+        minhas.filter((p) => !comMarca(p)),
+        daMarca.length > 0 ? assinaturaDaPublicacao(daMarca[daMarca.length - 1].pub) : semente,
+      ),
     ];
 
     fila.push(...emOrdem);

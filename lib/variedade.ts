@@ -49,6 +49,16 @@ function assinatura(item: ItemComVariedade): string {
 }
 
 /**
+ * A assinatura de um item, para quem precisa guardar a última publicada.
+ *
+ * Existe porque o revezamento não pode começar do zero a cada rodada.
+ * Ver `intercalaPorVariedade`.
+ */
+export function assinaturaDe(item: ItemComVariedade): string {
+  return assinatura(item);
+}
+
+/**
  * Reordena para que itens parecidos não saiam em sequência.
  *
  * O algoritmo é ganancioso e simples de propósito: a cada passo pega o
@@ -61,13 +71,29 @@ function assinatura(item: ItemComVariedade): string {
  * Não tenta ser ótimo. Uma fila que é toda do mesmo nicho continua
  * toda do mesmo nicho, porque não há o que intercalar, e forçar
  * qualquer outra coisa seria mentir sobre o que existe.
+ *
+ * `ultimaPublicada` É A MEMÓRIA ENTRE RODADAS, e sem ela metade do
+ * revezamento não acontecia. O publicador roda de hora em hora e monta
+ * a fila do zero; a intercalação sabia o que ela mesma tinha acabado de
+ * pôr na frente, mas não sabia o que o canal PUBLICOU na rodada
+ * anterior. O primeiro post de cada rodada era, então, um sorteio — e
+ * quando o catálogo do dia é dominado por uma família, o sorteio dá
+ * sempre nela. Foi assim que o Radar Delas abriu 12/08 e 13/08 com
+ * secador nas duas.
+ *
+ * Quem chama passa a assinatura do último post ENVIADO daquele canal, e
+ * o revezamento continua de onde parou. Sem o argumento, o
+ * comportamento é o de antes.
  */
-export function intercalaPorVariedade<T extends ItemComVariedade>(itens: T[]): T[] {
-  if (itens.length <= 2) return [...itens];
+export function intercalaPorVariedade<T extends ItemComVariedade>(
+  itens: T[],
+  ultimaPublicada: string | null = null,
+): T[] {
+  if (itens.length <= 1) return [...itens];
 
   const restantes = [...itens];
   const ordenados: T[] = [];
-  let ultima: string | null = null;
+  let ultima: string | null = ultimaPublicada;
 
   while (restantes.length > 0) {
     let escolhido = restantes.findIndex((item) => assinatura(item) !== ultima);
