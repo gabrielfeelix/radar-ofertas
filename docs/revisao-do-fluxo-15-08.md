@@ -189,11 +189,59 @@ O que se ganha é o que o dono descreveu: **antes de publicar, o sistema olha
 se tem mais barato do outro lado da rua.** E o que se ganha de brinde é a
 resposta honesta quando não tem: o post passa a poder dizer que conferimos.
 
-**O que eu mediria antes de construir.** Pegar 30 ofertas aprovadas de
-beleza, procurar cada uma à mão na Shopee e na Amazon, e contar em quantas
-existe mais barato e por quanto. Se for 5%, isto é otimização; se for 40%,
-como a impressão do dono sugere, é a coisa mais importante do roadmap.
-**Nenhum caminho acima merece código antes desse número existir.**
+### A medição, feita em 15/08, e ela corrige a recomendação acima
+
+`scripts/mede-preco-cruzado.mjs` compara ofertas de beleza aprovadas do
+Mercado Livre contra o catálogo da Shopee que **já está no nosso banco**.
+Não precisou de API: os 27.977 anúncios estavam lá, o que nunca aconteceu
+foi compará-los.
+
+Sobre 60 ofertas, com casamento por marca, proporção de palavras e
+quantidades idênticas:
+
+| Medida | Valor |
+|---|---|
+| Ofertas lidas | 60 |
+| Com par plausível na Shopee | 22 |
+| Em que a Shopee estava mais barata | 14 (64% das comparáveis) |
+
+**E o número não vale, e o motivo é o achado que importa.** Conferindo os
+14 pares à mão:
+
+| Nossa oferta | Par que o script achou | Real? |
+|---|---|---|
+| Secador Taiff Style 2000w | Secador Taiff Style Profissional | **sim** |
+| Chapinha Lizze Extreme | Chapinha Titanium Care Lena | não, outra marca |
+| Aparador Mondial Supergroom BG-10 | Aparador Mondial Classic TR-01 | não, outro modelo |
+| Taiff Curves 25mm | MAIMEITE Modelador "Taiff Curves" | não, marca chinesa usando o nome |
+| Kit Brae Stages 3 itens | Brae Stages leave-in avulso | não, kit contra unidade |
+
+A primeira versão do script era pior e **eu quase reportei o número dela**:
+ela dava 71% casando *"Protetor solar Sallve 90FPS"* com *"Arroz Prego
+Quadro Óculos"*, e o comentário que eu mesmo escrevi afirmava que aquilo
+era um piso conservador. Não era: era ruído. Ficou registrado no cabeçalho
+do script.
+
+**O que isso muda, e é uma correção do que recomendei acima:** casar
+produto por TÍTULO não é confiável o suficiente para automatizar. Os dois
+erros que sobram depois de todo aperto são os caros:
+
+- **modelo diferente da mesma marca** (Supergroom BG-10 contra Classic TR-01)
+- **oportunista usando o nome alheio** (a MAIMEITE vendendo "Modelador Taiff Curves")
+
+Publicar qualquer um dos dois como "achamos mais barato" é pior do que não
+comparar: o canal manda a pessoa comprar outra coisa.
+
+**Então a busca ativa continua sendo o caminho, com uma trava a mais:** o
+par só vale se **marca e modelo** baterem, e modelo é código
+(`BG-10`, `TR-01`, `KM-TX1`), não palavra. Quando o título não tem código,
+a comparação não acontece, e não acontecer é o desfecho certo.
+
+**O número honesto ainda não existe.** Dos 60, um par confirmado à mão. A
+amostra precisa ser maior e a conferência precisa ser humana, e é trabalho
+do dono ou de quem operar: rodar `pnpm tsx scripts/mede-preco-cruzado.mjs 200`,
+olhar a lista e riscar os falsos. **Nenhum código de cross-marketplace
+merece ser escrito antes disso.**
 
 ---
 
