@@ -53,17 +53,40 @@ const RESERVA: ModeloDeMensagem = {
     `montaMensagem` colapsa as quebras que sobram.
   */
   lastroQueda: "Baixou {queda}% desde a leitura de ontem.",
+  // As três faixas de 15/08. Elas TÊM que acompanhar a migration
+  // 20260815120000, e o aviso no topo deste arquivo é literal: esta
+  // cópia já divergiu do banco uma vez, em 10/08.
+  lastroMes: "🔥 Menor preço do último mês",
+  lastroSemana: "📉 Menor preço da semana",
+  lastroHoje: "⚡ Baixou de novo hoje",
   lastroDeclarado: "",
   linhaFrete: "🚚 Frete grátis",
   lastroSem: "Menor preço que observamos desde {desde}.",
 };
 
+/*
+  UMA STRING LITERAL SÓ, e não uma concatenação.
+
+  O supabase-js lê este texto em tempo de TIPO para saber o formato da
+  linha. Partido em duas com `+`, o literal deixa de ser literal, a
+  inferência cai para `GenericStringError` e o `as ModeloLido` vira
+  erro de compilação. Custou uma volta em 15/08.
+*/
 const CAMPOS =
-  "corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo";
+  "corpo, lastro_com, lastro_sem, lastro_queda, lastro_declarado, linha_frete, nota_prefixo, lastro_mes, lastro_semana, lastro_hoje";
 
 type ModeloLido = Pick<
   ModeloMensagemLinha,
-  "corpo" | "lastro_com" | "lastro_sem" | "lastro_queda" | "lastro_declarado" | "linha_frete" | "nota_prefixo"
+  | "corpo"
+  | "lastro_com"
+  | "lastro_sem"
+  | "lastro_queda"
+  | "lastro_declarado"
+  | "linha_frete"
+  | "nota_prefixo"
+  | "lastro_mes"
+  | "lastro_semana"
+  | "lastro_hoje"
 >;
 
 /** Uma linha do banco vira o formato que `montaMensagem` espera. */
@@ -76,6 +99,9 @@ function montaModelo(linha: ModeloLido): ModeloDeMensagem {
     lastroDeclarado: linha.lastro_declarado,
     linhaFrete: linha.linha_frete,
     notaPrefixo: linha.nota_prefixo,
+    lastroMes: linha.lastro_mes ?? undefined,
+    lastroSemana: linha.lastro_semana ?? undefined,
+    lastroHoje: linha.lastro_hoje ?? undefined,
   };
 }
 

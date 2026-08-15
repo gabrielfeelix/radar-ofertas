@@ -175,3 +175,42 @@ confere("produto sem atributos não quebra", Object.keys(atributosDe({})).length
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
+
+console.log("\nos ids de quantidade, corrigidos em 15/08\n");
+
+/*
+  O TESTE QUE FALTAVA, e a ausência dele é por que o defeito durou.
+
+  `PACKAGE_UNITS` e `VOLUME` não existem no Mercado Livre, medido sobre
+  1.000 produtos de produção: os reais são `UNITS_PER_PACK` e
+  `UNITS_PER_PACKAGE`. Com o id errado, `normaliza(undefined)` devolvia
+  vazio, o filtro descartava, e a chave saía sem a trava. Sem erro, sem
+  log, e com sachê de ração fundindo com caixa de doze.
+*/
+const sache = {
+  BRAND: "Friskies", LINE: "Cordeiro ao Molho", UNIT_WEIGHT: "85 g", UNITS_PER_PACK: "1",
+};
+const caixa = {
+  BRAND: "Friskies", LINE: "Cordeiro ao Molho", UNIT_WEIGHT: "85 g", UNITS_PER_PACK: "12",
+};
+confere(
+  "sachê avulso e caixa de doze NÃO são o mesmo produto",
+  chaveDeIdentidade(sache, "MLB-CAT_FOODS", "Ração Úmida Friskies 85g")
+    !== chaveDeIdentidade(caixa, "MLB-CAT_FOODS", "Ração Úmida Friskies 85g"),
+);
+confere(
+  "com o mesmo número de unidades, voltam a ser o mesmo",
+  chaveDeIdentidade(sache, "MLB-CAT_FOODS", "Ração Úmida Friskies 85g")
+    === chaveDeIdentidade({ ...sache }, "MLB-CAT_FOODS", "Ração Úmida Friskies 85g"),
+);
+
+const lampada1 = { BRAND: "FLC", MODEL: "Bulbo E27", UNIT_WEIGHT: "9 w", UNITS_PER_PACKAGE: "1" };
+const lampada5 = { BRAND: "FLC", MODEL: "Bulbo E27", UNIT_WEIGHT: "9 w", UNITS_PER_PACKAGE: "5" };
+confere(
+  "UNITS_PER_PACKAGE também separa avulso de kit",
+  chaveDeIdentidade(lampada1, "MLB-LAMPS", "Lâmpada Led")
+    !== chaveDeIdentidade(lampada5, "MLB-LAMPS", "Lâmpada Led"),
+);
+
+console.log(`\n${passou} passaram, ${falhou} falharam`);
+if (falhou) process.exit(1);

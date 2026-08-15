@@ -69,6 +69,33 @@ const COMPOEM = [
   "VOLUME",
   "UNIT_VOLUME",
   "FLAVOR",
+  /*
+    OS IDS DE QUANTIDADE ESTAVAM ERRADOS, e a trava contra "unidade
+    versus kit" nunca rodou por causa disso.
+
+    MEDIDO EM 15/08, sobre 1.000 produtos do catálogo com atributos:
+    `PACKAGE_UNITS` aparece ZERO vezes e `VOLUME` aparece ZERO vezes.
+    Os ids que o Mercado Livre usa de verdade são `UNITS_PER_PACK`
+    (372 ocorrências) e `UNITS_PER_PACKAGE` (128).
+
+    É a mesma armadilha que o `AGENTS.md` documenta para domínio
+    (*"Não adivinhe nome de domínio do ML. MLB-PET_TOYS e MLB-COOKWARE
+    não existem"*), acontecendo com atributo. Id inventado não dá erro:
+    `normaliza(undefined)` devolve string vazia, o `filter(Boolean)` a
+    descarta, e a chave sai sem a trava, calada.
+
+    O estrago está na view `economia_por_identidade`: 47 das 681
+    identidades com mais de um catálogo (6%) tinham o menor preço
+    abaixo de 30% do maior, que é a assinatura de sachê fundido com
+    caixa. Casos reais: Ração Friskies a R$ 2,49 e a R$ 82,00; lâmpada
+    avulsa a R$ 2,99 e kit a R$ 78,90.
+
+    `PACKAGE_UNITS` e `VOLUME` ficam na lista mesmo valendo zero hoje:
+    custam nada e o ML muda id de categoria para categoria.
+  */
+  "UNITS_PER_PACK",
+  "UNITS_PER_PACKAGE",
+  "PACKS_NUMBER",
   "PACKAGE_UNITS",
   "CAPACITY",
   /*

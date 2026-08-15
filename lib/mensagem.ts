@@ -22,12 +22,24 @@ import { emojiDoProduto } from "./emoji-do-produto.ts";
  * não existe, em vez de escolher entre dizer a verdade e não dizer.
  */
 
+import { faixaDoLastro, type FaixaDeLastro } from "./lastro.ts";
+
 export type ModeloDeMensagem = {
   corpo: string;
   /** O que abre a linha da nota. Sai junto quando não há nota. */
   notaPrefixo?: string;
   lastroCom: string;
   lastroSem: string;
+  /*
+    As três faixas que entraram em 15/08, com a migration de mesma data.
+
+    Opcionais porque `modeloGlobal()` pode vir de um banco anterior a
+    ela, e canal mudo é pior que canal com a linha antiga: quando
+    faltam, `montaMensagem` cai no `lastroSem`, que sempre existiu.
+  */
+  lastroMes?: string;
+  lastroSemana?: string;
+  lastroHoje?: string;
   /**
    * O terceiro caso: a oferta que nasceu de uma queda de hoje, não da
    * série. Ela não fala de histórico nenhum — fala do que aconteceu
@@ -107,6 +119,15 @@ export type DadosDaMensagem = {
   gancho?: string | null;
   /** A série alcançou o mínimo para afirmar mínimo histórico? */
   podeAfirmarMinimo: boolean;
+  /**
+   * Quantos dias tem a nossa série deste anúncio (`oferta.dias_de_serie`).
+   *
+   * É quem escolhe a linha de lastro desde 15/08, por
+   * `faixaDoLastro`. Opcional porque a prévia da tela de modelos monta
+   * mensagem sem oferta nenhuma; ausente, a faixa é "nenhuma" e o post
+   * sai sem linha de histórico, que é o desfecho seguro.
+   */
+  diasDeSerie?: number | null;
   /**
    * O MENOR PREÇO QUE NÓS REGISTRAMOS, e desde quando (migration 72).
    *
@@ -420,6 +441,38 @@ function somosOMenorQueMedimos(dados: DadosDaMensagem): boolean {
 }
 
 /** Renderiza o modelo com os dados de uma oferta. */
+/**
+ * O texto de cada faixa, com a regra 3.4 como freio.
+ *
+ * `historico` só usa `lastroCom` quando o motor também autorizou. Com
+ * 30 dias de série e a bandeira baixa, cai para o mês: série longa não
+ * é o mesmo que poder afirmar mínimo, e quem decide isso continua
+ * sendo `avalia_anuncios`.
+ */
+function moldeDaFaixa(
+  modelo: ModeloDeMensagem,
+  faixa: FaixaDeLastro,
+  podeAfirmarMinimo: boolean,
+): string | undefined {
+  switch (faixa) {
+    case "queda":
+      return modelo.lastroQueda;
+    case "historico":
+      return podeAfirmarMinimo ? modelo.lastroCom : (modelo.lastroMes ?? modelo.lastroSem);
+    case "mes":
+      return modelo.lastroMes ?? modelo.lastroSem;
+    case "semana":
+      return modelo.lastroSemana ?? modelo.lastroSem;
+    case "hoje":
+      return modelo.lastroHoje ?? modelo.lastroSem;
+    case "dias":
+    case "ontem":
+      return modelo.lastroSem;
+    case "nenhuma":
+      return modelo.lastroDeclarado;
+  }
+}
+
 export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem): string {
   /*
     A LINHA DE LASTRO É ESCOLHIDA PELO DADO, e não mais só pelo gatilho.
@@ -443,16 +496,6 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
                    vista. É o caso novo.
       declarado    sem série útil, sobra o que o dono deixou: nada.
   */
-  const molde =
-    dados.gatilho === "queda"
-      ? modelo.lastroQueda
-      : dados.podeAfirmarMinimo
-        ? modelo.lastroCom
-        : somosOMenorQueMedimos(dados)
-          ? modelo.lastroSem
-          : dados.gatilho === "declarado"
-            ? modelo.lastroDeclarado
-            : modelo.lastroSem;
 
   /*
     A QUEDA É A ÚNICA COISA QUE NÓS MEDIMOS.
@@ -470,6 +513,49 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
           ((dados.precoAnteriorCentavos - dados.precoCentavos) / dados.precoAnteriorCentavos) * 100,
         )
       : null;
+
+  /*
+    A ESCOLHA PASSOU A SER PELA IDADE DA SÉRIE (15/08).
+
+    Antes ela era `podeAfirmarMinimo` ou nada, e o resultado medido é
+    que a linha de histórico não saía em post NENHUM: das 1.000 ofertas
+    mais recentes, zero tinham os 14 dias que a bandeira exige. O post
+    caía sempre na mesma redação genérica.
+
+    `faixaDoLastro` sempre devolve algo verdadeiro, e o texto de cada
+    faixa é do dono, no banco. `podeAfirmarMinimo` continua sendo o
+    FREIO e não o gatilho: mesmo com 30 dias de série, se o motor disse
+    que não dá para afirmar mínimo, a linha cai para a do mês. É a
+    regra 3.4 sobrevivendo à mudança.
+  */
+  /*
+    A FAIXA POR IDADE DA SÉRIE SÓ MANDA QUANDO A IDADE EXISTE.
+
+    Escrever isto como substituição da lógica antiga foi erro meu, e os
+    testes pegaram: sete casos que passavam `podeAfirmarMinimo` sem
+    `diasDeSerie` caíram na faixa "nenhuma" e perderam a linha. A
+    prévia da tela de modelos e qualquer oferta anterior à migration
+    estão exatamente nessa situação.
+
+    Então são dois regimes, e o antigo continua sendo o padrão seguro.
+  */
+  const molde =
+    dados.diasDeSerie === null || dados.diasDeSerie === undefined
+      ? // O regime de sempre, para quem não traz a idade da série.
+        dados.gatilho === "queda"
+        ? modelo.lastroQueda
+        : dados.podeAfirmarMinimo
+          ? modelo.lastroCom
+          : somosOMenorQueMedimos(dados)
+            ? modelo.lastroSem
+            : dados.gatilho === "declarado"
+              ? modelo.lastroDeclarado
+              : modelo.lastroSem
+      : // O regime de 15/08: a idade da série escolhe a linha, e
+        // `podeAfirmarMinimo` deixa de ser gatilho e vira freio.
+        (moldeDaFaixa(modelo, faixaDoLastro(dados.diasDeSerie, quedaPct), dados.podeAfirmarMinimo) ??
+          modelo.lastroSem ??
+          "");
 
   /*
     Sem o número, a linha da queda não sai.

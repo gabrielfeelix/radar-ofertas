@@ -620,3 +620,77 @@ confere(
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");
+
+console.log("\nas faixas de lastro por idade da série (15/08)\n");
+
+const modeloDeFaixa = {
+  corpo: "{produto}\n\n{lastro}\nDe <s>{preco_antes}</s> por <b>{preco}</b>",
+  lastroCom: "🔥 <b>Menor valor histórico!</b>",
+  lastroMes: "🔥 <b>Menor preço do último mês</b>",
+  lastroSemana: "📉 <b>Menor preço da semana</b>",
+  lastroSem: "📉 <b>Menor preço em dias</b>",
+  lastroQueda: "⚡ <b>Baixou {queda}% desde ontem</b>",
+  lastroHoje: "⚡ <b>Baixou de novo hoje</b>",
+  lastroDeclarado: "",
+  linhaFrete: "",
+};
+const baseFaixa = {
+  produto: "Blush Cremoso",
+  precoCentavos: 1649,
+  precoAntesCentavos: 2109,
+  precoAnteriorCentavos: null,
+  descontoPct: 22,
+  loja: "Mercado Livre",
+  link: "https://meli.la/x",
+  vendedor: "Loja",
+  janelaDias: 14,
+  observadoDesde: "2026-08-01",
+  gatilho: "declarado",
+  podeAfirmarMinimo: false,
+};
+
+confere(
+  "30 dias com bandeira do motor afirma histórico",
+  montaMensagem(modeloDeFaixa, { ...baseFaixa, diasDeSerie: 30, podeAfirmarMinimo: true })
+    .includes("Menor valor histórico"),
+);
+confere(
+  "30 dias SEM a bandeira do motor não afirma histórico (regra 3.4 é o freio)",
+  !montaMensagem(modeloDeFaixa, { ...baseFaixa, diasDeSerie: 30 }).includes("Menor valor histórico"),
+);
+confere(
+  "20 dias fala do mês",
+  montaMensagem(modeloDeFaixa, { ...baseFaixa, diasDeSerie: 20 }).includes("último mês"),
+);
+confere(
+  "8 dias fala da semana",
+  montaMensagem(modeloDeFaixa, { ...baseFaixa, diasDeSerie: 8 }).includes("Menor preço da semana"),
+);
+confere(
+  "3 dias não afirma mínimo em lugar nenhum",
+  !afirmaMinimoSemLastro(montaMensagem(modeloDeFaixa, { ...baseFaixa, diasDeSerie: 3 })),
+);
+confere(
+  "nenhuma faixa deixa data no texto, que era o pedido do dono",
+  !/\d{2}\/\d{2}/.test(montaMensagem(modeloDeFaixa, { ...baseFaixa, diasDeSerie: 3 })),
+);
+confere(
+  "queda medida vence a idade da série",
+  montaMensagem(modeloDeFaixa, {
+    ...baseFaixa, diasDeSerie: 30, podeAfirmarMinimo: true, precoAnteriorCentavos: 2200, gatilho: "queda",
+  }).includes("Baixou"),
+);
+confere(
+  "sem dias de série o post sai sem linha de histórico",
+  !montaMensagem(modeloDeFaixa, { ...baseFaixa, diasDeSerie: null }).includes("Menor preço"),
+);
+confere(
+  "modelo antigo, sem as colunas novas, cai no lastro_sem e não quebra",
+  montaMensagem(
+    { ...modeloDeFaixa, lastroMes: undefined, lastroSemana: undefined, lastroHoje: undefined },
+    { ...baseFaixa, diasDeSerie: 20 },
+  ).includes("Menor preço em dias"),
+);
+
+console.log(`\n${passou} passaram, ${falhou} falharam`);
+if (falhou) process.exit(1);

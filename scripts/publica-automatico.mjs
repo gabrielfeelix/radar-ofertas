@@ -336,7 +336,7 @@ async function main() {
   const SELECAO = `
     id, operacao_id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
     preco_anterior_centavos,
-    referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em, gatilho,
+    referencia_janela_dias, dias_de_serie, desconto_pct, pode_afirmar_minimo, detectada_em, gatilho,
     nosso_minimo_centavos, nosso_minimo_desde, nossos_dias_lidos,
     anuncio:anuncio_id (
       id, produto_id, url_original, sku_externo, vendedor, imagem_url, imagem_obtida_em, loja_oficial,
@@ -1456,6 +1456,7 @@ async function melhorPrateleira(db, oferta) {
       loja: aPublicar.marketplace?.nome ?? "",
       vendedor: aPublicar.loja_oficial ? "Loja oficial" : (aPublicar.vendedor ?? ""),
       janelaDias: oferta.referencia_janela_dias,
+      diasDeSerie: oferta.dias_de_serie,
       /*
         O `{desde}` é o primeiro dia em que LEMOS o anúncio, e não o dia
         em que a oferta foi detectada. Os dois divergem sempre: a série

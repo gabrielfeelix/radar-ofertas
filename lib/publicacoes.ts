@@ -162,6 +162,8 @@ type LinhaDePublicacao = {
     preco_atual_centavos: number;
     preco_referencia_centavos: number;
     referencia_janela_dias: number;
+    /** A idade da nossa série. Escolhe a linha de lastro (15/08). */
+    dias_de_serie: number | null;
     desconto_pct: number;
     pode_afirmar_minimo: boolean;
     detectada_em: string;
@@ -185,7 +187,7 @@ const SELECAO = `
   link_afiliado,
   oferta:oferta_id (
     id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
-    referencia_janela_dias, desconto_pct, pode_afirmar_minimo, detectada_em,
+    referencia_janela_dias, dias_de_serie, desconto_pct, pode_afirmar_minimo, detectada_em,
     anuncio:anuncio_id (
       url_original, vendedor, imagem_url, imagem_obtida_em,
       marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ),
@@ -305,6 +307,7 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
         loja: anuncio?.marketplace?.nome ?? "loja",
         vendedor: anuncio?.vendedor ?? "",
         janelaDias: oferta.referencia_janela_dias,
+        diasDeSerie: oferta.dias_de_serie,
         observadoDesde: oferta.detectada_em.slice(0, 10),
         podeAfirmarMinimo: oferta.pode_afirmar_minimo,
         notaDoCurador: anuncio?.produto?.nota_curador ?? null,

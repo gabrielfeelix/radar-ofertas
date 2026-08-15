@@ -505,6 +505,17 @@ export type ModeloMensagemLinha = {
   lastro_queda: string;
   /** Usado quando quem afirma o desconto é a loja. TEM que atribuir a ela. */
   lastro_declarado: string;
+  /*
+    AS TRÊS FAIXAS DE TEMPO, migration 20260815120000.
+
+    A escolha entre elas é de `lib/lastro.ts` e não do banco: aqui mora
+    o TEXTO, que é do dono e ele troca pelo painel. `lastro_mes` cobre
+    de 14 a 29 dias de série, `lastro_semana` de 7 a 13, e
+    `lastro_hoje` o preço que caiu de novo no mesmo dia.
+  */
+  lastro_mes: string;
+  lastro_semana: string;
+  lastro_hoje: string;
   /** O que `{frete}` vira quando a loja declara frete grátis. Some quando não. */
   linha_frete: string;
   /** A linha do cupom dentro do post da oferta. Some quando não há cupom (migration 64). */
