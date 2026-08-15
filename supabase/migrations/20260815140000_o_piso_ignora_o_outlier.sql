@@ -40,6 +40,21 @@
 -- continua sendo quem julga.
 -- -------------------------------------------------------------
 
+-- DERRUBA A VERSÃO DE DOIS ARGUMENTOS ANTES DE CRIAR A DE TRÊS.
+--
+-- `create or replace` com assinatura diferente NÃO substitui: cria uma
+-- SOBRECARGA, e as duas passam a existir. Com defaults nos dois lados,
+-- uma chamada de um argumento só (que é como o publicador chama) fica
+-- ambígua e o Postgres recusa em tempo de execução. O canal ficaria
+-- mudo, e o erro só apareceria na hora de publicar.
+--
+-- É a mesma armadilha que o `AGENTS.md` documenta para
+-- `canal_aceita_atributos`, que tem duas versões vivas e cuja versão
+-- de dois argumentos ignora todo filtro com escopo de nicho sem dar
+-- erro nenhum. Aqui ela foi pega na primeira tentativa de aplicar,
+-- porque o `comment on function` recusou o nome ambíguo.
+drop function if exists public.melhor_anuncio_do_produto(uuid, numeric);
+
 create or replace function public.melhor_anuncio_do_produto(
   p_produto_id uuid,
   p_tolerancia_pct numeric default 5,
@@ -79,7 +94,7 @@ as $$
    limit 1;
 $$;
 
-comment on function public.melhor_anuncio_do_produto is
+comment on function public.melhor_anuncio_do_produto(uuid, numeric, numeric) is
   'De todas as prateleiras do mesmo produto, a melhor compra agora. Descarta o anúncio absurdo perante os pares antes de fixar o piso: sem isso, um item errado dentro da identidade faz o melhor virar o pior. Dentro da tolerância, vendedor melhor ganha.';
 
 grant execute on function public.melhor_anuncio_do_produto(uuid, numeric, numeric) to service_role;
