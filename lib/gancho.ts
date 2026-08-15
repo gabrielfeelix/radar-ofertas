@@ -59,6 +59,12 @@
  * o post sai como sempre saiu. O gancho é tempero, não ingrediente.
  */
 
+import {
+  TODOS_OS_EXEMPLOS,
+  sorteiaModo,
+  type ModoDeDescricao,
+} from "./modos-de-descricao.ts";
+
 /**
  * O modelo, e a troca de 11/08 foi por COTA, não por qualidade.
  *
@@ -87,11 +93,43 @@ export const MODELO_PADRAO = "gemini-3.5-flash-lite";
 /**
  * O teto de tamanho.
  *
- * Oito palavras é o que a instrução pede; 60 caracteres é a margem que
- * aceita palavra comprida sem deixar passar um parágrafo. Gancho que
- * ocupa duas linhas no celular deixa de ser gancho e vira introdução.
+ * Era 60, quando isto era uma linha de impacto ACIMA do produto. Em
+ * 15/08 virou a descrição, que fica abaixo do título e tem uma ou duas
+ * frases, e 140 é o que cabe sem virar parágrafo. Acima disso o post
+ * deixa de ter a compactação que o dono aprovou.
  */
-const MAX_CARACTERES = 60;
+const MAX_CARACTERES = 140;
+
+/**
+ * O TIQUE DE RELÓGIO, medido pelo dono em 15/08.
+ *
+ * Ele apontou sem olhar o código: *"ele sempre coloca uma temporização
+ * das coisas"*. A medição confirmou pior do que ele descreveu: seis das
+ * dez descrições de beleza ancoravam em hora do dia, e duas eram cópia
+ * literal dos exemplos que o próprio prompt dava.
+ *
+ * A CAUSA ESTAVA NOS NOSSOS EXEMPLOS, que ancoravam três vezes em
+ * relógio (`antes do café esfriar`, `sobrevive ao almoço`, `descansada
+ * de manhã`). É a segunda vez que este mecanismo pega: em 11/08 foi a
+ * caixa alta dos exemplos. Modelo de linguagem copia o registro dos
+ * exemplos antes de obedecer à instrução, e a única defesa que funciona
+ * é recusar na saída.
+ *
+ * `hora` fica de fora da lista de propósito: "na hora de sair" é
+ * português normal e não marca duração.
+ */
+const TIQUE_DE_RELOGIO =
+  /\b(caf[ée]|almo[çc]o|jantar|manh[ãa]|madrugada|alarme|dia inteiro|o dia todo|semana toda|\d+\s*h(?:oras?)?)\b/i;
+
+/**
+ * O CARIMBO DE LUGAR, medido na mesma rodada.
+ *
+ * Com produtos de música, quatro de dez fechavam a frase no cômodo:
+ * `na sala`, `pela casa`, `em qualquer canto da sala`. Troca o assunto,
+ * mantém a forma. Só pega como FECHO de frase, porque "a bagunça da pia
+ * não sobreviveu" usa lugar e é boa.
+ */
+const CARIMBO_DE_LUGAR = /\b(n[ao] sala|pela casa|em qualquer canto( da \w+)?)\s*$/i;
 
 /**
  * As palavras que denunciam promessa de preço.
@@ -189,13 +227,23 @@ const CONSTRUCOES_GASTAS: RegExp[] = [
   // Vocativo de canal de promoção. Ninguém fala assim no próprio grupo.
   /\bamigas?\b/i,
   /\bmeninas\b/i,
-  /^gente[,!\s]/i,
   /gente do c[ée]u/i,
   // Urgência inventada. Nós não sabemos o estoque de ninguém.
   /\bcorre\b/i,
   /[úu]ltimas unidades/i,
+  /*
+    `amei` e `gente,` SAÍRAM DA LISTA em 15/08, por decisão do dono.
+
+    Elas entraram como vício de canal de promoção genérico, e levaram
+    junto o jeito de falar que ele quer: as duas frases que ele mais
+    elogiou no teste daquele dia (*"esse blush eu amei"*, *"gente, esse
+    gloss é viciante"*) eram recusadas por elas, e ele só não viu isso
+    porque as cinco do teste foram escritas à mão.
+
+    `amigas`, `meninas`, `corre`, `imperdível`, `socorro`, `arrasou` e
+    `top` FICAM: são de locutor de propaganda, não de pessoa no grupo.
+  */
   // Gíria datada e superlativo de anúncio.
-  /\bamei\b/i,
   /\barras(ou|o)\b/i,
   /\bimperd[íi]vel\b/i,
   /\bsocorro\b/i,
@@ -207,72 +255,60 @@ const CONSTRUCOES_GASTAS: RegExp[] = [
   /voc[êe] precisa/i,
 ];
 
-export const INSTRUCAO_BASE = `Você escreve a PRIMEIRA LINHA de um post de promoção num grupo de WhatsApp ou Telegram.
+/**
+ * A INSTRUÇÃO, e ela agora recebe UM MODO SÓ.
+ *
+ * A versão anterior listava seis modos, dizia qual era "o mais usado" e
+ * pedia variedade. A medição de 15/08 mostrou o resultado: dez produtos
+ * de beleza, dez descrições no mesmo modo, duas delas cópia literal dos
+ * exemplos. Pedir variedade a um modelo de linguagem não produz
+ * variedade; sortear no código produz.
+ *
+ * Os cinquenta modos vivem em `lib/modos-de-descricao.ts`. Aqui entra o
+ * sorteado, com os dois exemplos DELE e de mais nenhum.
+ */
+export function montaInstrucao(modo: ModoDeDescricao): string {
+  return `Você escreve a DESCRIÇÃO de um produto num post de promoção de um grupo de WhatsApp.
 
-Essa linha é um gancho: é o que faz a pessoa parar de rolar a tela. Ela vem ANTES do nome do produto e do preço, que já aparecem logo abaixo.
+Ela vem logo abaixo do nome do produto, e acima do preço. É uma pessoa do grupo comentando o produto, não uma loja anunciando.
+
+O SEU MODO DE HOJE: ${modo.instrucao}
+
+Assim, e note que são só a FORMA, não para copiar:
+  ${modo.exemplos[0]}
+  ${modo.exemplos[1]}
 
 O REGISTRO
-- Escreva em minúscula, como quem digita rápido no grupo.
-- De 3 a 8 palavras. Curto.
-- Fale como uma pessoa de verdade mandando mensagem, nunca como loja e nunca como locutor de propaganda.
-- Fale do BENEFÍCIO ou da cena da vida real, não da ficha técnica.
-- No máximo um emoji, e só quando ele disser o que a palavra não disse. A maioria dos ganchos não leva emoji nenhum.
-
-OS SEIS MODOS. Escolha UM e varie entre um post e o seguinte.
-
-1. A CENA REAL, e é o modo mais usado. Nomeia o momento da vida em que o produto entra. Sem piada.
-   cabelo seco antes do café esfriar
-   pra não perder mais brinco na gaveta
-   o xixi fora do lugar acabou
-   veste e sai, sem discussão
-
-2. O VEREDITO SECO. Opinião curta de quem já usou.
-   esse segura o cacho na chuva
-   batom que sobrevive ao almoço
-   cabo que não morre em um mês
-
-3. A CONFIDÊNCIA. Alguém contando uma descoberta.
-   achei sem procurar e vim avisar
-   tô usando faz um mês, vim contar
-
-4. O EXAGERO HONESTO, e é aqui que mora o humor. Exagera a CENA, nunca o produto.
-   guardei os sapatos e virei outra pessoa
-   meu banheiro finalmente parece de gente
-   a bagunça da pia não sobreviveu
-
-5. A PROVOCAÇÃO CURTA.
-   seu secador atual não faz isso
-   seu fone tá pedindo aposentadoria
-
-6. O SOCO EM MAIÚSCULA. Uma palavra só em caixa alta, o resto em minúscula.
-   cabelo seco em MINUTOS
-   essa gaveta ficou DECENTE
-
-A GRAÇA É NA MEDIDA. Um gancho em cada três pode ser engraçado; o resto é só útil. Piada em todo post cansa mais rápido que post sem piada nenhuma.
+- Minúscula, como quem digita rápido no grupo.
+- De 6 a 20 palavras. Uma frase, duas no máximo.
+- No máximo um emoji, e a maioria não leva nenhum.
+- Fale do que o produto É ou FAZ. Nunca do preço.
+- Só afirme característica que o título do produto garanta.
 
 NUNCA
+- Não repita os exemplos acima. Eles mostram o jeito, não o texto.
+- Não ancore em hora do dia nem em duração. Nada de "antes do café", "durante o almoço", "dura o dia inteiro", "12h de duração", "de manhã", "a semana toda". Isso virou o nosso carimbo e é o que mais denuncia texto de máquina.
+- Não feche a frase no cômodo da casa. Nada de "na sala", "pela casa", "em qualquer canto da sala".
 - Não diga preço, valor, porcentagem, desconto, "barato", "promoção", "oferta" nem "metade do preço". Os números vêm logo abaixo, e inventar número sobre preço queima o grupo.
+- Não diga quantidade, nem em algarismo nem por extenso. Nada de "duas peças", "três meses", "dez passos". O título já diz, e errar a conta queima o grupo do mesmo jeito que errar o preço.
 - Não use travessão. Use vírgula ou dois pontos.
-- Não use hashtag, aspas, link nem ponto final.
-- Não diga quantidade, nem em algarismo nem por extenso. Nada de "sessenta pacotinhos", "duas peças", "três meses". O título já diz, e errar a conta queima o grupo do mesmo jeito que errar o preço.
-- Não invente característica que o título não garante.
-- Nada de grosseria nem de escatologia. NADA DE NOJEIRA: não fale de craca, meleca, catarro, gosma, sebo, encardido, fedor nem de sujeira acumulada. O produto pode limpar sujeira; o gancho fala do resultado limpo, nunca da sujeira em detalhe.
-- NADA SOBRE O CORPO DE QUEM LÊ. Não mencione celulite, estria, flacidez, papada, barriga, ruga, espinha, cravo nem preenchimento. Um creme antirruga vira "pele descansada de manhã", nunca "adeus rugas". Apontar defeito em quem lê expulsa a pessoa do grupo, e ela sai sem avisar.
-- O exagero é da CENA, e a cena exagerada não é a cena suja. "guardei os sapatos e virei outra pessoa" é exagero; "tira a craca do fone" é nojeira.
+- Não use hashtag, aspas, link nem marcação.
+- Nada de grosseria nem de escatologia. NADA DE NOJEIRA: não fale de craca, meleca, catarro, gosma, sebo, encardido, fedor nem de sujeira acumulada. O produto pode limpar sujeira; a descrição fala do resultado limpo, nunca da sujeira em detalhe.
+- NADA SOBRE O CORPO DE QUEM LÊ. Não mencione celulite, estria, flacidez, papada, barriga, ruga, espinha, cravo nem preenchimento. Um creme antirruga vira "pele descansada", nunca "adeus rugas". Apontar defeito em quem lê expulsa a pessoa do grupo, e ela sai sem avisar.
 - Não comece com "chega de". Já virou carimbo nosso.
-- Nada de vocativo: nada de "amiga", "amigas", "meninas", "gente".
-- Nada destas palavras: amei, arrasou, top, imperdível, corre, socorro, luxo, maravilhoso, incrível.
-- Nada de trocadilho forçado, de rima, nem de frase de embalagem ("seu cabelo vai agradecer", "você precisa disso na sua vida").
-- Nada de urgência inventada ("corre que tá acabando", "últimas unidades").
+- Nada de vocativo de propaganda: nada de "amigas", "meninas", "gente do céu".
+- Nada destas palavras: arrasou, top, imperdível, corre, socorro, luxo, maravilhoso, incrível.
+- Nada de urgência inventada ("corre que tá acabando", "últimas unidades"). Não sabemos o estoque de ninguém.
 
 O QUE SOA VELHO, e é exatamente o que não imitar:
   CHEGA DE VIRAR CAMARÃO NO SOL ☀️
   DURA MAIS QUE MUITO RELACIONAMENTO 💋
   AMIGAS, CORRE QUE EU ACHEI
-  SOCORRO QUE COISA LINDA 😍😍
   SEU CABELO VAI AGRADECER
+  maquiagem que dura o dia inteiro sem borrar
 
-Responda SÓ com a linha, nada mais.`;
+Responda SÓ com a descrição, nada mais.`;
+}
 
 /**
  * Limpa e aprova o que o modelo devolveu.
@@ -337,6 +373,28 @@ export function validaGancho(bruto: string | null | undefined): string | null {
   // gancho; publicar custa o canal parecer os outros oitenta.
   if (CONSTRUCOES_GASTAS.some((padrao) => padrao.test(t))) return null;
 
+  // Os dois tiques medidos em 15/08. O de relógio o dono apontou de
+  // fora; o de lugar apareceu na mesma varredura, com outro nicho.
+  if (TIQUE_DE_RELOGIO.test(t)) return null;
+  if (CARIMBO_DE_LUGAR.test(t)) return null;
+
+  /*
+    CÓPIA LITERAL DO EXEMPLO, o defeito mais gritante de 15/08.
+
+    Pedimos `batom que sobrevive ao almoço` como exemplo e o modelo
+    devolveu `batom que sobrevive ao almoço`, palavra por palavra, num
+    produto diferente. Não havia nada olhando para isso, e é o modo de
+    falha mais fácil de um prompt com exemplos: na dúvida, o modelo
+    repete o que viu.
+
+    A comparação ignora acento, caixa e pontuação, porque a cópia
+    costuma vir com uma vírgula a mais.
+    */
+  const nu = (s: string) =>
+    s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9 ]/g, "").trim();
+  const limpo = nu(t);
+  if (TODOS_OS_EXEMPLOS.some((ex) => nu(ex) === limpo)) return null;
+
   // Nojeira e comentário sobre o corpo de quem lê. Recusar custa um
   // post sem gancho; publicar custa a pessoa, e ela sai sem avisar.
   if (NOJEIRA_OU_CORPO.some((padrao) => padrao.test(t))) return null;
@@ -382,7 +440,7 @@ type Pedido = {
    * é legal a gente destacar que é coreano... a IA no texto ela pode
    * falar, produto coreano de alguma coisa"*.
    *
-   * E ela NÃO PODIA, e a proibição estava certa. `INSTRUCAO_BASE` diz
+   * E ela NÃO PODIA, e a proibição estava certa. A instrução diz
    * "não invente característica que o título não garante", e o título de
    * um COSRX diz "COSRX Advanced Snail 96 Mucin Power Essence" — nada
    * ali contém a palavra coreano. Quem sabe que a marca é coreana é a
@@ -399,6 +457,13 @@ type Pedido = {
   destaque?: string | null;
   chave: string;
   modelo?: string;
+  /**
+   * A fonte de aleatoriedade do sorteio de modo.
+   *
+   * Existe para o teste ser determinístico. Em produção fica indefinida
+   * e `sorteiaModo` usa `Math.random`.
+   */
+  aleatorio?: () => number;
 };
 
 /**
@@ -410,12 +475,23 @@ type Pedido = {
  * sem gancho continua sendo um post bom.
  */
 export async function geraGancho(pedido: Pedido): Promise<string | null> {
-  const { titulo, vozDoCanal, recentes = [], destaque, chave, modelo = MODELO_PADRAO } = pedido;
+  const { titulo, vozDoCanal, recentes = [], destaque, chave, modelo = MODELO_PADRAO, aleatorio } = pedido;
   if (!chave || !titulo || !vozDoCanal) return null;
+
+  /*
+    O MODO É SORTEADO AQUI, e é a correção de 15/08.
+
+    Enquanto a escolha era do modelo, ele usava sempre a mesma: dez
+    produtos, dez descrições no modo "cena real". Sorteando fora e
+    mandando um só, ele não tem o que escolher. A instrução deixa de
+    ser a mesma em todo post do canal, o que custa o cache do prompt e
+    compra a variedade, que é o que o dono pediu.
+  */
+  const modoDeHoje = sorteiaModo(aleatorio, titulo);
 
   const evitar = recentes.filter(Boolean).slice(0, 15);
   const instrucao =
-    `${INSTRUCAO_BASE}\n\nO GRUPO DE HOJE\n${vozDoCanal}` +
+    `${montaInstrucao(modoDeHoje)}\n\nO GRUPO DE HOJE\n${vozDoCanal}` +
     (evitar.length
       ? `\n\nJÁ FOI USADO NOS ÚLTIMOS POSTS DESTE GRUPO, não repita a abertura nem a piada:\n${evitar.map((g) => `- ${g}`).join("\n")}`
       : "");

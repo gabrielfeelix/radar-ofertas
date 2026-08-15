@@ -70,7 +70,16 @@ confere('"amiga" reprova, é vocativo de canal de promoção', validaGancho("ach
 confere('"meninas" reprova', validaGancho("meninas, esse aqui salva o dia") === null);
 confere('"corre" reprova, é urgência que não medimos', validaGancho("corre que eu achei isso") === null);
 confere('"socorro" reprova', validaGancho("socorro que coisa linda") === null);
-confere('"amei" reprova', validaGancho("amei demais esse gloss") === null);
+/*
+  `amei` PASSOU A PASSAR em 15/08, e o teste inverteu de propósito.
+
+  Ele entrou na blocklist em 11/08 como superlativo de anúncio. Em
+  15/08 o dono aprovou cinco descrições escritas à mão, e uma delas
+  era *"esse blush eu amei"*: a lista estava barrando justamente o
+  registro que ele quer. `arrasou`, `top` e `imperdível` continuam
+  barrados, porque são de locutor e não de pessoa.
+*/
+confere('"amei" agora passa, é como o dono fala', validaGancho("esse blush eu amei, esfuma com o dedo") !== null);
 confere('"imperdível" reprova', validaGancho("achado imperdível do dia") === null);
 confere('"vai agradecer" reprova, é frase de embalagem', validaGancho("seu cabelo vai agradecer") === null);
 confere('"você precisa" reprova', validaGancho("você precisa disso na sua vida") === null);
@@ -174,9 +183,34 @@ confere("vazio", validaGancho("") === null);
 confere("nulo", validaGancho(null) === null);
 confere("indefinido", validaGancho(undefined) === null);
 confere("uma palavra só é etiqueta, não gancho", validaGancho("LINDO") === null);
+/*
+  O TETO SUBIU DE 60 PARA 140 em 15/08.
+
+  Enquanto isto era uma linha de impacto acima do produto, 60 era o
+  certo. Virou a descrição de uma ou duas frases abaixo do título, e
+  uma frase de oitenta caracteres passou a ser o normal, não o excesso.
+*/
 confere(
-  "texto comprido demais reprova, gancho de duas linhas não é gancho",
-  validaGancho("esse produto aqui é realmente muito bom para quem quer cuidar da pele todo dia") === null,
+  "duas frases cabem no teto novo",
+  validaGancho("esfuma com o dedo e não marca poro, e ainda fica natural") !== null,
+);
+/*
+  E ESTA CONTINUA REPROVANDO, o que é uma tensão viva e não um descuido.
+
+  *"já comprei dois tons"* estava na descrição do blush que o dono
+  aprovou em 15/08, e `NUMERO_POR_EXTENSO` a recusa por causa do "dois".
+  A regra existe porque um "sessenta pacotinhos" inventado escapou em
+  11/08, e ela não sabe distinguir número sobre a COMPRA de número sobre
+  o PRODUTO. Fica recusando: o custo é uma frase boa a menos, e afrouxar
+  custaria a única defesa que temos contra quantidade inventada.
+*/
+confere(
+  "número por extenso continua reprovando, mesmo em frase boa",
+  validaGancho("esfuma com o dedo e já comprei dois tons") === null,
+);
+confere(
+  "acima de 140 continua reprovando, aí vira parágrafo",
+  validaGancho("a".repeat(60) + " " + "b".repeat(90)) === null,
 );
 confere("hashtag reprova, colidiria com o #publi da regra 3.10", validaGancho("achado do dia #beleza") === null);
 confere("HTML reprova, quebraria o parse_mode do Telegram", validaGancho("olha <b>isso</b>") === null);
