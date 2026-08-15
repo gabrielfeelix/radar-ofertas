@@ -170,7 +170,17 @@ está certa. IA aqui inverteria isso.
 2. Pôr uma **trava de outlier** em `melhor_anuncio_do_produto`: descartar do
    piso o anúncio que estiver abaixo de uma fração do mediano do grupo. Hoje
    o mínimo manda sozinho.
-3. Rodar a identidade sobre os 32 mil produtos que não têm chave.
+3. ~~Rodar a identidade sobre os 32 mil produtos que não têm chave.~~
+   **Riscado na mesma tarde, e o motivo interessa.** Olhando só os
+   anúncios ATIVOS sem identidade, eles são 5.714 da Shopee, 170 da
+   Amazon e **116 do Mercado Livre**. Ou seja: o ML já está praticamente
+   todo indexado, e os 32 mil são produtos velhos e inativos. Rodar a
+   identidade neles não produziria comparação nenhuma, porque a Shopee
+   não tem atributo para compor chave. **O trabalho real é dar atributo
+   à Shopee** (a Open API, aprovada em 03/08, entrega o que o feed CSV
+   não entrega), e aí a identidade passa a funcionar sozinha do outro
+   lado. Isso é o item que destrava o cross-marketplace, e não a
+   varredura.
 
 **Depois, o cross-marketplace, e o caminho mais honesto é a busca ativa.**
 
