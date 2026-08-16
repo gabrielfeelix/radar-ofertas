@@ -815,10 +815,38 @@ export const EXEMPLO: Omit<DadosDaMensagem, "podeAfirmarMinimo"> = {
 };
 
 function preenche(texto: string, valores: Record<string, string>): string {
+  /*
+    LINHA QUE ERA SÓ UM PLACEHOLDER VAZIO SOME INTEIRA, com a quebra.
+
+    O colapso de quebras que existe mais abaixo transforma três ou mais
+    em duas, e isso resolve o buraco GRANDE. Não resolve o pequeno: uma
+    linha só de `{cupom}` vazia, no meio de um bloco colado, vira
+    exatamente UMA quebra a mais, que é o parágrafo, e o bloco se
+    descola.
+
+    Foi o que aconteceu com o formato novo, em 16/08: lastro, preço,
+    cupom e estrela deviam sair grudados, e sem cupom a estrela caía
+    para outro parágrafo. O bloco colado é a coisa que o dono mais
+    elogiou no formato (*"você juntou, ficou mais gostoso de ler"*), e
+    ela dependia de um cupom existir.
+
+    Só vale para a linha que é EXCLUSIVAMENTE um placeholder. Linha com
+    texto do dono em volta continua saindo como ele escreveu, mesmo que
+    o placeholder no meio dela fique vazio.
+  */
+  const semLinhasOrfas = texto
+    .split("\n")
+    .filter((linha) => {
+      const m = linha.trim().match(/^\{(\w+)\}$/);
+      if (!m) return true;
+      return !(m[1] in valores) || valores[m[1]].trim() !== "";
+    })
+    .join("\n");
+
   // Só troca chave conhecida: `{qualquer_coisa}` digitado por engano
   // fica visível no texto, em vez de sumir e virar um buraco na
   // mensagem que ninguém percebe até ela ir para o grupo.
-  return texto.replace(/\{(\w+)\}/g, (inteiro, chave: string) =>
+  return semLinhasOrfas.replace(/\{(\w+)\}/g, (inteiro, chave: string) =>
     chave in valores ? valores[chave] : inteiro,
   );
 }
