@@ -1457,6 +1457,8 @@ async function melhorPrateleira(db, oferta) {
       vendedor: aPublicar.loja_oficial ? "Loja oficial" : (aPublicar.vendedor ?? ""),
       janelaDias: oferta.referencia_janela_dias,
       diasDeSerie: oferta.dias_de_serie,
+      avaliacao: aPublicar?.avaliacao ?? null,
+      avaliacaoQtd: aPublicar?.avaliacao_qtd ?? null,
       /*
         O `{desde}` é o primeiro dia em que LEMOS o anúncio, e não o dia
         em que a oferta foi detectada. Os dois divergem sempre: a série

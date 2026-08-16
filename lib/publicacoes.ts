@@ -172,6 +172,9 @@ type LinhaDePublicacao = {
       vendedor: string | null;
       imagem_url: string | null;
       imagem_obtida_em: string | null;
+      /** A estrela da loja e quantos votaram. Viram `{estrelas}` (16/08). */
+      avaliacao: number | null;
+      avaliacao_qtd: number | null;
       marketplace: { nome: string; slug: string; cache_preco_max_horas: number | null } | null;
       produto: {
         titulo_canonico: string;
@@ -189,7 +192,7 @@ const SELECAO = `
     id, anuncio_id, preco_atual_centavos, preco_referencia_centavos,
     referencia_janela_dias, dias_de_serie, desconto_pct, pode_afirmar_minimo, detectada_em,
     anuncio:anuncio_id (
-      url_original, vendedor, imagem_url, imagem_obtida_em,
+      url_original, vendedor, imagem_url, imagem_obtida_em, avaliacao, avaliacao_qtd,
       marketplace:marketplace_id ( nome, slug, cache_preco_max_horas ),
       produto:produto_id ( titulo_canonico, nota_curador, nicho:nicho_id ( slug ) )
     )
@@ -308,6 +311,8 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
         vendedor: anuncio?.vendedor ?? "",
         janelaDias: oferta.referencia_janela_dias,
         diasDeSerie: oferta.dias_de_serie,
+        avaliacao: anuncio?.avaliacao ?? null,
+        avaliacaoQtd: anuncio?.avaliacao_qtd ?? null,
         observadoDesde: oferta.detectada_em.slice(0, 10),
         podeAfirmarMinimo: oferta.pode_afirmar_minimo,
         notaDoCurador: anuncio?.produto?.nota_curador ?? null,

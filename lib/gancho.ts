@@ -274,14 +274,16 @@ Ela vem logo abaixo do nome do produto, e acima do preço. É uma pessoa do grup
 
 O SEU MODO DE HOJE: ${modo.instrucao}
 
+Desenvolva. Diga o QUE e diga o PORQUÊ: "esfuma com o dedo" é metade, "esfuma com o dedo e não marca poro, dá pra corrigir depois de aplicar" é inteiro.
+
 Assim, e note que são só a FORMA, não para copiar:
   ${modo.exemplos[0]}
   ${modo.exemplos[1]}
 
 O REGISTRO
 - Minúscula, como quem digita rápido no grupo.
-- De 6 a 20 palavras. Uma frase, duas no máximo.
-- No máximo um emoji, e a maioria não leva nenhum.
+- De 12 a 25 palavras, e não menos que doze. Uma frase longa ou duas curtas. Descrição de seis palavras não convence ninguém: dê o detalhe que faz a pessoa querer.
+- Um emoji no fim, quando a frase pedir. Não force, mas não fuja: a maioria das boas leva um.
 - Fale do que o produto É ou FAZ. Nunca do preço.
 - Só afirme característica que o título do produto garanta.
 
@@ -407,8 +409,20 @@ export function validaGancho(bruto: string | null | undefined): string | null {
   // 3.11 é dura demais para arriscar.
   if (/[—–]/.test(t)) return null;
 
-  // Uma palavra só não é gancho, é etiqueta.
-  if (t.split(" ").filter(Boolean).length < 2) return null;
+  /*
+    O PISO DE PALAVRAS SUBIU DE 2 PARA 6, em 16/08.
+
+    Enquanto isto era uma linha de impacto, duas palavras bastavam. Como
+    descrição, não basta: o dono comparou o post automático com o
+    escrito à mão e o diagnóstico foi *"muito pequeno, não tem o apelo"*.
+    O que saía era `olheiras sumiram sem precisar de corretivo`, seis
+    palavras, contra `esse blush eu amei, esfuma com o dedo e dá cara de
+    descansada, já comprei dois tons`.
+
+    Seis é o piso, e a instrução pede doze: o piso recusa o desastre, a
+    instrução persegue o bom.
+  */
+  if (t.split(" ").filter(Boolean).length < 6) return null;
 
   return t;
 }

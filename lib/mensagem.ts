@@ -129,6 +129,22 @@ export type DadosDaMensagem = {
    */
   diasDeSerie?: number | null;
   /**
+   * A NOTA DA LOJA E QUANTAS PESSOAS AVALIARAM, e elas são novas em
+   * 16/08 porque nunca existiram como placeholder.
+   *
+   * O ERRO QUE ISTO CONSERTA foi meu, ao desenhar o formato novo em
+   * 15/08: escrevi `⭐ {nota} ({avaliacoes} avaliações)` no corpo
+   * achando que `{nota}` era a estrela do anúncio. Não é: `{nota}` é a
+   * NOTA DO CURADOR, texto escrito à mão que quase nenhum produto tem,
+   * e `{avaliacoes}` não existia. O post do canal saiu sem estrela
+   * nenhuma, e o dono viu na hora.
+   *
+   * O dado sempre esteve lá: 37.114 dos 41.500 anúncios ativos têm
+   * avaliação, 89% do catálogo. Faltava o caminho até a mensagem.
+   */
+  avaliacao?: number | null;
+  avaliacaoQtd?: number | null;
+  /**
    * O MENOR PREÇO QUE NÓS REGISTRAMOS, e desde quando (migration 72).
    *
    * Estes três não substituem `podeAfirmarMinimo`: ele guarda os 14
@@ -595,6 +611,21 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
   const frete = dados.freteGratis ? (modelo.linhaFrete ?? "🚚 Frete grátis") : "";
 
   /*
+    A LINHA DA ESTRELA, e ela some inteira quando não há avaliação.
+
+    Nota sem quantidade não vale: "⭐ 5.0" com um voto é pior que nada,
+    porque a pessoa confere e perde a confiança nos outros números. Por
+    isso a linha exige as DUAS coisas, e some junto quando falta uma.
+
+    O separador de milhar é o brasileiro, e não é frescura: "4737" ao
+    lado de "4.6" se lê como um número só na rolagem.
+  */
+  const estrelas =
+    dados.avaliacao && dados.avaliacao > 0 && dados.avaliacaoQtd && dados.avaliacaoQtd > 0
+      ? `⭐ ${dados.avaliacao.toFixed(1).replace(".", ",")} (${dados.avaliacaoQtd.toLocaleString("pt-BR")} avaliações)`
+      : "";
+
+  /*
     A LINHA DO CUPOM, e ela some junto com o cupom.
 
     O código vem de texto colhido de canal alheio, que é a entrada menos
@@ -624,6 +655,7 @@ export function montaMensagem(modelo: ModeloDeMensagem, dados: DadosDaMensagem):
     // do dono. O que é dado de fora vai escapado (ver `escapaHtml`).
     frete,
     nota,
+    estrelas,
     cupom,
     lastro,
     produto: escapaHtml(dados.produto),
