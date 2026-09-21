@@ -131,9 +131,42 @@ jobs:
             #
             # Por `PGOPTIONS` e não por um `-c "set ..."` solto: o SET
             # imprime o próprio nome, e ele saía colado na resposta.
-            resposta=$(PGOPTIONS="-c statement_timeout=120s" \
+            # 120s NÃO BASTAVA MAIS, e a causa é o catálogo ter crescido.
+            #
+            # Medido em 21/09, no log do run #623: `detecta_quedas`
+            # respondeu `{"avaliados":65,"aprovados":65}` e
+            # `detecta_declarados` morreu aos dois minutos cravados, em
+            # `avalia_anuncios`. Não é função travada: é função que
+            # percorre 68 mil anúncios onde antes percorria alguns
+            # milhares. O limite foi escolhido para um catálogo que não
+            # existe mais.
+            #
+            # Isso vinha acontecendo desde 25/08, três a quatro vezes por
+            # dia, 303 execuções falhadas — o e-mail diário de falha.
+            #
+            # 600s é o mesmo teto que a rotina diária já usa para a
+            # `manutencao_diaria`, que é a função mais pesada do sistema.
+            # O freio continua existindo, pelo motivo da D-015: sem
+            # limite nenhum, função travada rodaria até o teto do job.
+            resposta=$(PGOPTIONS="-c statement_timeout=600s" \
               psql "$DB" --no-psqlrc -v ON_ERROR_STOP=1 -A -t \
-              -c "select row_to_json(t) from public.$funcao() t")
+              -c "select row_to_json(t) from public.$funcao() t") || {
+              # UMA DETECÇÃO QUE MORRE NÃO DERRUBA MAIS O JOB.
+              #
+              # O comentário no alto deste passo já dizia que o estrago
+              # do `set -e` é maior que a detecção perdida, e mesmo assim
+              # era o que acontecia: o timeout de `detecta_declarados`
+              # matava o job e a colheita de cupom e a reserva do
+              # publicador, que vêm depois, nem começavam. Conferido nos
+              # steps do run #623, os dois `skipped`.
+              #
+              # `detecta_quedas` é o sinal forte e roda primeiro, então
+              # perder `detecta_declarados` custa o desconto declarado
+              # daquela rodada — e não a rodada inteira.
+              echo "$funcao: FALHOU (segue para o próximo passo)"
+              echo "- \`$funcao\` ⚠️ falhou" >> "$GITHUB_STEP_SUMMARY"
+              continue
+            }
             echo "$funcao: $resposta"
             echo "- \`$funcao\` $resposta" >> "$GITHUB_STEP_SUMMARY"
           done
