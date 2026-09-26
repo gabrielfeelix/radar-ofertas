@@ -227,6 +227,8 @@ export type CanalLinha = {
    * contado por número, não por canal.
    */
   bot_id: string | null;
+  /** A etiqueta do ML (D-045). O publicador exige uma em todo canal. */
+  etiqueta_afiliado: string | null;
   membros_estimados: number | null;
   /** O orçamento do dia. É o que vira "vagas hoje" na aprovação. */
   posts_por_dia_max: number;
@@ -237,6 +239,33 @@ export type CanalLinha = {
   operador_id: string | null;
   ativo: boolean;
   ultima_publicacao_em: string | null;
+  criado_em: string;
+  atualizado_em: string;
+};
+
+/** Quem traz a audiência. Sem conta própria, recebe por repasse (D-001). */
+export type ParceiroLinha = {
+  id: string;
+  operacao_id: string;
+  nome: string;
+  contato: string | null;
+  chave_pix: string | null;
+  tipo: string;
+  ativo: boolean;
+  criado_em: string;
+  atualizado_em: string;
+};
+
+/**
+ * O ID de afiliado do parceiro numa loja (D-074). Com alguma linha, os
+ * canais dele só publicam nas lojas que têm linha aqui.
+ */
+export type ParceiroAfiliadoLinha = {
+  id: string;
+  operacao_id: string;
+  parceiro_id: string;
+  marketplace_id: string;
+  afiliado_id: string;
   criado_em: string;
   atualizado_em: string;
 };
@@ -679,6 +708,11 @@ export type Banco = {
         "operacao_id" | "nome" | "plataforma" | "identificador" | "variavel_do_segredo"
       >;
       canal: Tabela<CanalLinha, "operacao_id" | "nome" | "plataforma">;
+      parceiro: Tabela<ParceiroLinha, "operacao_id" | "nome">;
+      parceiro_afiliado: Tabela<
+        ParceiroAfiliadoLinha,
+        "operacao_id" | "parceiro_id" | "marketplace_id" | "afiliado_id"
+      >;
       canal_nicho: Tabela<CanalNichoLinha, "canal_id" | "nicho_id">;
       canal_atributo: Tabela<CanalAtributoLinha, "operacao_id" | "canal_id" | "atributo" | "valores">;
       cupom: Tabela<CupomLinha, "operacao_id" | "marketplace_id" | "codigo" | "tipo" | "valor">;

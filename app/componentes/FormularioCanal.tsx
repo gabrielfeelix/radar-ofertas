@@ -33,6 +33,8 @@ export function FormularioCanal({
   canal,
   nichos,
   bots = [],
+  parceiros = [],
+  grupos = [],
 }: {
   canal?: Canal;
   /** Os nichos que existem no banco. Sem eles o canal não roteia nada. */
@@ -43,6 +45,10 @@ export function FormularioCanal({
    * isso em vez de mostrar um seletor vazio sem explicação.
    */
   bots?: { id: string; nome: string; plataforma: string; identificador: string }[];
+  /** Quem pode ser dono do canal além de você (D-074). */
+  parceiros?: { id: string; nome: string }[];
+  /** Os grupos em que os chips estão, lidos ao vivo da Evolution. */
+  grupos?: { jid: string; nome: string }[];
 }) {
   const [resultado, acao, salvando] = useActionState<ResultadoCanal | null, FormData>(
     salvaCanal,
@@ -156,16 +162,39 @@ export function FormularioCanal({
         <>
           <Campo
             rotulo="Grupo no WhatsApp"
-            dica="O JID do grupo, copiado do painel da Evolution. Termina em @g.us."
+            dica={
+              grupos.length > 0
+                ? "Escolha na lista: são os grupos em que o chip já está. Não achou? Ponha o chip no grupo e recarregue a página."
+                : "O JID do grupo, copiado do painel da Evolution. Termina em @g.us. (A lista automática não carregou: a Evolution não respondeu.)"
+            }
             erro={erroDe("whatsapp_grupo")}
           >
-            <input
-              name="whatsapp_grupo_id"
-              type="text"
-              defaultValue={canal?.whatsappGrupoId ?? ""}
-              placeholder="120363000000000000@g.us"
-              className={classeDeCampo}
-            />
+            {grupos.length > 0 ? (
+              <select
+                name="whatsapp_grupo_id"
+                defaultValue={canal?.whatsappGrupoId ?? ""}
+                className={classeDeCampo}
+              >
+                <option value="">Escolha o grupo</option>
+                {/* O grupo gravado continua na lista mesmo se o chip saiu dele. */}
+                {canal?.whatsappGrupoId && !grupos.some((g) => g.jid === canal.whatsappGrupoId) && (
+                  <option value={canal.whatsappGrupoId}>{canal.whatsappGrupoId} (o chip não está mais nele)</option>
+                )}
+                {grupos.map((g) => (
+                  <option key={g.jid} value={g.jid}>
+                    {g.nome}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                name="whatsapp_grupo_id"
+                type="text"
+                defaultValue={canal?.whatsappGrupoId ?? ""}
+                placeholder="120363000000000000@g.us"
+                className={classeDeCampo}
+              />
+            )}
           </Campo>
 
           <Campo
@@ -285,20 +314,29 @@ export function FormularioCanal({
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Campo rotulo="Parceiro" dica="Quem traz a audiência. Pode ser você.">
-          <input
-            name="parceiro"
-            type="text"
-            defaultValue={canal?.parceiro ?? "você"}
-            className={classeDeCampo}
-          />
+        <Campo
+          rotulo="De quem é o grupo"
+          dica="Com parceiro, os links saem com o ID de afiliado DELE, só nas lojas em que ele tem conta. Cadastre em Parceiros."
+        >
+          <select name="parceiro_id" defaultValue={canal?.parceiroId ?? ""} className={classeDeCampo}>
+            <option value="">Você (links com o seu ID)</option>
+            {parceiros.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nome} (links com o ID dele)
+              </option>
+            ))}
+          </select>
         </Campo>
 
-        <Campo rotulo="Operador" dica="Quem publica todo dia. Pode ser a mesma pessoa.">
+        <Campo
+          rotulo="Etiqueta do Mercado Livre"
+          dica="Precisa estar cadastrada na sua Central de Afiliados do ML. Em canal novo, vazio vira o nome sem espaço. Em canal existente, vazio mantém a atual."
+        >
           <input
-            name="operador"
+            name="etiqueta"
             type="text"
-            defaultValue={canal?.operador ?? "você"}
+            defaultValue={canal?.etiqueta ?? ""}
+            placeholder="radarpet"
             className={classeDeCampo}
           />
         </Campo>

@@ -3299,3 +3299,62 @@ lê. O que é segredo continua fora do Git.
 `559506894966522` — nesse caso o certo é o contrário, e basta trocar a
 constante `Pixel do Facebook` no contêiner, sem tocar na LP. É a primeira
 coisa a conferir no Gerenciador de Eventos.
+
+---
+
+## D-074 · O parceiro recebe na própria conta de afiliado, e loja sem conta dele não sai no grupo dele
+
+**Data:** 2026-09-26
+
+O primeiro parceiro, o Breno, abriu um grupo de pet no WhatsApp com o
+nosso chip e pediu que a comissão caísse na conta **dele**. A D-001
+dizia o contrário: todo link com o ID do dono e repasse por fora. Ela
+continua valendo para quem não tem conta cadastrada; o parceiro com
+conta sai dela.
+
+### O que o sistema sabia antes, e por que um cadastro simples teria errado em silêncio
+
+O link curto da Shopee sai pela Open API com o AppID do dono, e paga o
+dono. O `an_redir` e a Amazon liam o ID do ambiente, que é um só. O
+Mercado Livre sai logado na Central do dono. Cadastrar o grupo do
+Breno sem mudar nada teria posto toda venda dele na conta do dono, sem
+erro nenhum.
+
+### A decisão
+
+- A conta mora no **parceiro** (`parceiro_afiliado`, uma linha por
+  loja), e o canal aponta para o parceiro (`canal.parceiro_id`, que já
+  existia e nunca era gravado).
+- Quem decide de quem é o link é `lib/conta-do-canal.ts`. Canal sem
+  parceiro, ou parceiro sem conta nenhuma: o dono, idêntico a antes.
+  Parceiro com conta: só nas lojas dele, e **nunca pelo link curto da
+  Open API**, que é do dono. Loja sem conta dele: a oferta não entra no
+  grupo dele. **Nunca cai para o ID do dono.**
+- Shopee e Amazon aceitam só o ID. O Mercado Livre precisa da sessão
+  logada da Central do parceiro e fica de fora até ele mandar.
+
+**Conferido em 26/09**, e não por documentação: o `an_redir` com
+`affiliate_id=18373711182` redirecionou para o produto com
+`utm_source=an_18373711182` e o subid em `utm_content`.
+
+### O que veio junto
+
+- Tela **Parceiros**, com o passo a passo, o ID da Shopee e a tag da
+  Amazon. O formulário do canal ganhou "De quem é o grupo", a etiqueta
+  do ML e a **lista dos grupos em que o chip está**, lida ao vivo da
+  Evolution: antes o JID era copiado à mão do painel da VPS.
+- Atributo `ANIMAL` (`cao`, `gato`, `outro`), calculado do título na
+  hora do roteamento (`lib/animal-do-pet.ts`). O grupo do Breno quer
+  cachorro e gato, sem cavalo, pássaro ou aquário, e a Shopee não manda
+  espécie. Título sem bicho passa, pela regra da migration 36.
+
+### O que isto NÃO é
+
+É um pedaço da Fase 3 (canal com parceiro) adiantado a pedido do dono.
+Login do parceiro, painel dele, split e repasse continuam fora: sem
+repasse, o split do canal fica zero, porque a comissão já cai na conta
+dele.
+
+**Mudaria se:** a Shopee passar a exigir o link curto para atribuir, ou
+o parceiro mandar a sessão da Central do ML. No segundo caso,
+`credencial_rotativa` ganha `parceiro_id` e `donoDoLink` libera o ML.

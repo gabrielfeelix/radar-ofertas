@@ -2,6 +2,7 @@ import "server-only";
 
 import { montaLinkDeAfiliado, type LinkDeAfiliado } from "@/lib/afiliado";
 import { buscaCanal, canais, type Canal } from "@/lib/distribuicao";
+import { donoDoLink, type ContasDoParceiro } from "@/lib/conta-do-canal";
 import type { DadosDaMensagem } from "@/lib/mensagem";
 import { supabaseServidor } from "@/lib/supabase/servidor";
 
@@ -229,9 +230,19 @@ function linkAPublicar(
   linha: LinhaDePublicacao,
   urlDoAnuncio: string,
   marketplaceSlug: string,
+  contas: ContasDoParceiro,
 ): LinkDeAfiliado {
   if (linha.link_afiliado) {
     return { url: linha.link_afiliado, rastreado: true };
+  }
+
+  // O grupo do parceiro nunca sai com o ID do dono (D-074).
+  const dono = donoDoLink(contas, marketplaceSlug);
+  if (dono.de === "ninguem") {
+    return { url: urlDoAnuncio, rastreado: false, motivo: dono.motivo };
+  }
+  if (dono.de === "parceiro") {
+    return montaLinkDeAfiliado(urlDoAnuncio, linha.subid, marketplaceSlug, dono.afiliadoId);
   }
 
   // Marketplace sem gerador ainda cai no caminho antigo, e lá o próprio
@@ -322,7 +333,12 @@ export async function publicacoesDaFila(): Promise<Publicacao[]> {
       precoNaFilaCentavos: linha.preco_na_fila_centavos,
       precoAgoraCentavos: precoAgora.get(oferta.anuncio_id) ?? oferta.preco_atual_centavos,
       subid: linha.subid,
-      link: linkAPublicar(linha, anuncio?.url_original ?? "", anuncio?.marketplace?.slug ?? ""),
+      link: linkAPublicar(
+        linha,
+        anuncio?.url_original ?? "",
+        anuncio?.marketplace?.slug ?? "",
+        canal.contas,
+      ),
       imagemUrl: fotoAindaValida(
         anuncio?.imagem_url,
         anuncio?.imagem_obtida_em,

@@ -55,6 +55,22 @@ export async function salvaCanal(
   // Qual bot publica aqui. Vazio é permitido: canal sem bot fica
   // parado, e o publicador diz isso no log da rodada.
   const botId = String(form.get("bot_id") ?? "").trim();
+  // De quem é o canal (D-074). Vazio é o dono, e é o caso de todos os
+  // canais que já existiam.
+  const parceiroId = String(form.get("parceiro_id") ?? "").trim();
+  // A etiqueta do ML. O publicador exige uma em todo canal, mesmo nos
+  // que só publicam Shopee; canal novo sem etiqueta ganha uma tirada
+  // do nome, para ninguém precisar saber o que ela é.
+  const etiquetaBruta = String(form.get("etiqueta") ?? "").trim();
+  const etiqueta =
+    etiquetaBruta ||
+    (id === ""
+      ? nome
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[^a-z0-9]/g, "")
+          .slice(0, 30)
+      : "");
 
   if (nome.length < 2) {
     return { ok: false, campo: "nome", mensagem: "Dê um nome ao canal." };
@@ -128,13 +144,13 @@ export async function salvaCanal(
     telegramChatId,
     whatsappGrupoId,
     botId,
+    parceiroId,
+    etiqueta,
     nichos,
     tetoDiario,
     audiencia: Number.isFinite(audiencia) ? Math.max(0, audiencia) : 0,
-    // Parceiro e operador saem do formulário como texto livre, e o
-    // banco os quer como referência a `parceiro` e `usuario`. Enquanto
-    // não existe cadastro de parceiro, o canal nasce sem vínculo e a
-    // tela mostra "você" — que é a verdade hoje.
+    // O operador continua sem vínculo: só o parceiro virou referência
+    // (D-074), porque é ele que decide de quem é a comissão.
     splitAudienciaPct,
     splitOperacaoPct,
     horarios: horariosBrutos,

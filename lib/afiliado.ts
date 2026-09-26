@@ -153,12 +153,17 @@ export function montaLinkDeAfiliado(
   urlDoAnuncio: string,
   subid: string,
   marketplaceSlug: string,
+  /**
+   * O ID do PARCEIRO, quando o canal é dele (D-074). Ausente, vale o do
+   * dono, do ambiente — que é o caso de todos os canais do dono.
+   */
+  afiliadoDoParceiro?: string,
 ): LinkDeAfiliado {
   if (!urlDoAnuncio) {
     return { url: "", rastreado: false, motivo: "o anúncio não tem URL" };
   }
 
-  const ferramenta = FERRAMENTA[marketplaceSlug];
+  const ferramenta = afiliadoDoParceiro || FERRAMENTA[marketplaceSlug];
   if (!ferramenta) {
     return {
       url: urlDoAnuncio,

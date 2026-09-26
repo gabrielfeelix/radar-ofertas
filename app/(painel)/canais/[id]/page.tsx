@@ -5,6 +5,8 @@ import { Botao } from "@/app/componentes/Botao";
 import { Pagina } from "@/app/componentes/CabecalhoDaPagina";
 import { FormularioCanal } from "@/app/componentes/FormularioCanal";
 import { botsParaEscolha } from "@/lib/bots";
+import { gruposDosChips } from "@/lib/grupos-do-whatsapp";
+import { parceirosParaEscolha } from "@/lib/parceiros";
 import { buscaCanal, nichosDisponiveis, parteDoDono, vagasDoCanal } from "@/lib/distribuicao";
 import { publicacoesDoCanal } from "@/lib/publicacoes";
 
@@ -26,10 +28,12 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
 
   if (!canal) notFound();
 
-  const [nichos, contagem, bots] = await Promise.all([
+  const [nichos, contagem, bots, parceiros, grupos] = await Promise.all([
     nichosDisponiveis(),
     publicacoesDoCanal(canal.id),
     botsParaEscolha(),
+    parceirosParaEscolha(),
+    gruposDosChips(),
   ]);
   const esperando = contagem.pendentes;
   const enviadas = contagem.enviadasHoje;
@@ -104,7 +108,7 @@ export default async function Canal({ params }: { params: Promise<{ id: string }
           Split, operador e teto são combinados com gente. Mudar aqui não reescreve o que já foi
           publicado.
         </p>
-        <FormularioCanal canal={canal} nichos={nichos} bots={bots} />
+        <FormularioCanal canal={canal} nichos={nichos} bots={bots} parceiros={parceiros} grupos={grupos} />
       </section>
 
       <section className="rounded-lg border border-borda bg-superficie-alt p-5">

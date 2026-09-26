@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabaseServidor } from "@/lib/supabase/servidor";
 import { leHorarios } from "@/lib/horarios";
+import { contasDasLinhas, type ContasDoParceiro } from "@/lib/conta-do-canal";
 
 /**
  * Os canais de distribuição, lidos do banco.
@@ -69,6 +70,15 @@ export type Canal = {
    * nem o teto dele nem a data de início do aquecimento.
    */
   botId: string | null;
+  /** Nulo nos canais do dono. Preenchido, o canal é de um parceiro (D-074). */
+  parceiroId: string | null;
+  /**
+   * A conta de afiliado do parceiro, por loja. Vazia: o link sai com o
+   * ID do dono. Quem decide é `donoDoLink`, nunca um `if` solto.
+   */
+  contas: ContasDoParceiro;
+  /** A etiqueta do Mercado Livre (D-045). Obrigatória para o publicador. */
+  etiqueta: string | null;
   ativo: boolean;
   ultimaPublicacaoEm: string | null;
 };
@@ -106,7 +116,12 @@ type LinhaDeCanal = {
   whatsapp_grupo_id: string | null;
   bot_id: string | null;
   ultima_publicacao_em: string | null;
-  parceiro: { nome: string } | null;
+  parceiro_id: string | null;
+  etiqueta_afiliado: string | null;
+  parceiro: {
+    nome: string;
+    parceiro_afiliado: { afiliado_id: string; marketplace: { slug: string } | null }[] | null;
+  } | null;
   canal_nicho: { nicho: { slug: string } | null }[] | null;
   canal_atributo: { atributo: string; valores: string[]; modo: string }[] | null;
 };
@@ -115,7 +130,8 @@ const SELECAO = `
   id, nome, plataforma, posts_por_dia_max, membros_estimados,
   split_audiencia_pct, split_operacao_pct, horarios_permitidos,
   ativo, telegram_chat_id, whatsapp_grupo_id, bot_id, ultima_publicacao_em,
-  parceiro:parceiro_id ( nome ),
+  parceiro_id, etiqueta_afiliado,
+  parceiro:parceiro_id ( nome, parceiro_afiliado ( afiliado_id, marketplace:marketplace_id ( slug ) ) ),
   canal_nicho ( nicho:nicho_id ( slug ) ),
   canal_atributo ( atributo, valores, modo )
 `;
@@ -147,6 +163,9 @@ function montaCanal(linha: LinhaDeCanal, publicadasHoje: number): Canal {
     telegramChatId: linha.telegram_chat_id,
     whatsappGrupoId: linha.whatsapp_grupo_id,
     botId: linha.bot_id,
+    parceiroId: linha.parceiro_id,
+    contas: contasDasLinhas(linha.parceiro?.parceiro_afiliado),
+    etiqueta: linha.etiqueta_afiliado,
     ativo: linha.ativo,
     ultimaPublicacaoEm: linha.ultima_publicacao_em,
   };
@@ -214,6 +233,14 @@ export type DadosDoCanal = {
    */
   whatsappGrupoId?: string | null;
   botId?: string | null;
+  /** Vazio: canal do dono. */
+  parceiroId?: string | null;
+  /**
+   * A etiqueta do ML. Vazia NÃO apaga a que já existe: os canais antigos
+   * têm etiqueta gravada por SQL, e salvar o formulário não pode
+   * emudecê-los.
+   */
+  etiqueta?: string | null;
   nichos: string[];
   tetoDiario: number;
   audiencia: number;
@@ -242,6 +269,8 @@ export async function criaCanal(dados: DadosDoCanal): Promise<string | null> {
       telegram_chat_id: dados.telegramChatId || null,
       whatsapp_grupo_id: dados.whatsappGrupoId || null,
       bot_id: dados.botId || null,
+      parceiro_id: dados.parceiroId || null,
+      etiqueta_afiliado: dados.etiqueta?.trim() || null,
       posts_por_dia_max: dados.tetoDiario,
       membros_estimados: dados.audiencia,
       split_audiencia_pct: dados.splitAudienciaPct,
@@ -268,6 +297,8 @@ export async function atualizaCanal(id: string, dados: DadosDoCanal): Promise<vo
       telegram_chat_id: dados.telegramChatId || null,
       whatsapp_grupo_id: dados.whatsappGrupoId || null,
       bot_id: dados.botId || null,
+      parceiro_id: dados.parceiroId || null,
+      ...(dados.etiqueta?.trim() ? { etiqueta_afiliado: dados.etiqueta.trim() } : {}),
       posts_por_dia_max: dados.tetoDiario,
       membros_estimados: dados.audiencia,
       split_audiencia_pct: dados.splitAudienciaPct,

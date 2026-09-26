@@ -65,6 +65,8 @@ import { eixoDeVariedade } from "../lib/familia-de-beleza.ts";
 import { pesoDaMarca } from "../lib/marca-de-perfume.ts";
 import { pesoDaMarcaDeBeleza, marcaDeBeleza } from "../lib/marca-de-beleza.ts";
 import { canalAceitaAtributos } from "../lib/canal-aceita.ts";
+import { donoDoLink, contasDasLinhas } from "../lib/conta-do-canal.ts";
+import { animalDoPet } from "../lib/animal-do-pet.ts";
 import { tipoForaDaBeleza } from "../lib/eletronico-em-beleza.ts";
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.URL;
@@ -546,12 +548,26 @@ async function melhorPrateleira(db, oferta) {
     );
   }
 
-  const { data: canais } = await db
+  const { data: canais, error: erroCanais } = await db
     .from("canal")
     .select(
-      "id, operacao_id, nome, plataforma, telegram_chat_id, whatsapp_grupo_id, bot_id, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id )",
+      "id, operacao_id, nome, plataforma, telegram_chat_id, whatsapp_grupo_id, bot_id, membros_estimados, posts_por_dia_max, ultima_publicacao_em, etiqueta_afiliado, horarios_permitidos, canal_nicho ( nicho_id ), canal_atributo ( atributo, valores, modo, exige_atributo, nicho_id ), parceiro:parceiro_id ( nome, parceiro_afiliado ( afiliado_id, marketplace:marketplace_id ( slug ) ) )",
     )
     .eq("ativo", true);
+
+  /*
+    A CONTA DE AFILIADO DO PARCEIRO (D-074), resolvida uma vez por canal.
+
+    Vazia para todos os canais do dono, e aí `donoDoLink` devolve
+    `dono` e nada abaixo muda. Se a consulta falhar, o publicador para
+    em vez de seguir: sem saber de quem é o canal, qualquer link pode ir
+    para a conta errada.
+  */
+  if (!canais) {
+    // `throw`, e não `process.exit`: a trava é solta no `finally`.
+    throw new Error(`não consegui ler os canais (nem as contas dos parceiros): ${erroCanais?.message}`);
+  }
+  for (const c of canais) c.contas = contasDasLinhas(c.parceiro?.parceiro_afiliado);
 
   /*
     O TETO DIÁRIO DO CANAL, que existia no papel e não no código.
@@ -839,16 +855,27 @@ async function melhorPrateleira(db, oferta) {
       Somadas num motivo só, a primeira ficaria invisível dentro da
       segunda.
     */
-    const elegiveis = doNicho.filter((c) =>
-      canalAceitaAtributos(
-        (c.canal_atributo ?? []).map((f) => ({
-          ...f,
-          exigeAtributo: f.exige_atributo,
-          nichoId: f.nicho_id,
-        })),
-        anuncio.produto?.atributos,
-        nichoId,
-      ),
+    // `ANIMAL` não vem da loja: sai do título, na hora (D-074). Só o
+    // grupo de pet do parceiro filtra por ele hoje.
+    const atributosDoProduto = {
+      ...(anuncio.produto?.atributos ?? {}),
+      ANIMAL: animalDoPet(anuncio.produto?.titulo_canonico),
+    };
+    const elegiveis = doNicho.filter(
+      (c) =>
+        canalAceitaAtributos(
+          (c.canal_atributo ?? []).map((f) => ({
+            ...f,
+            exigeAtributo: f.exige_atributo,
+            nichoId: f.nicho_id,
+          })),
+          atributosDoProduto,
+          nichoId,
+        ) &&
+        // Grupo de parceiro só recebe o que dá para linkar com a conta
+        // DELE. A prateleira ainda pode trocar de loja depois; quem
+        // cobra de novo é o `enviaComAnuncio`.
+        donoDoLink(c.contas, anuncio.marketplace?.slug ?? "").de !== "ninguem",
     );
 
     if (elegiveis.length === 0) {
@@ -1275,6 +1302,25 @@ async function melhorPrateleira(db, oferta) {
       const loja = aPublicar.marketplace?.slug;
 
       /*
+        DE QUEM É A COMISSÃO (D-074). Para os canais do dono, `dono`, e o
+        resto desta função segue igual. No grupo do parceiro, a loja
+        precisa ter conta DELE; sem ela a publicação morre aqui, só neste
+        canal — nunca sai com o ID do dono.
+      */
+      const dono = donoDoLink(canal.contas, loja ?? "");
+      if (dono.de === "ninguem") {
+        console.log(`  ✗ ${canal.nome}: ${dono.motivo}, não publica aqui`);
+        semLinkPorMotivo.sem_conta_do_parceiro = (semLinkPorMotivo.sem_conta_do_parceiro ?? 0) + 1;
+        await db
+          .from("publicacao")
+          .update({ estado: "cancelada", cancelada_em: new Date().toISOString() })
+          .eq("id", pub.id)
+          .eq("estado", "pendente");
+        return false;
+      }
+      const afiliadoDoParceiro = dono.de === "parceiro" ? dono.afiliadoId : undefined;
+
+      /*
         A SHOPEE PASSA PELA OPEN API, E CAI PARA O `an_redir` SE ELA FALHAR.
 
         O `an_redir` (D-057) carrega a URL do produto codificada dentro
@@ -1289,7 +1335,9 @@ async function melhorPrateleira(db, oferta) {
         canal mudo por causa disso seria trocar um problema de estética
         por um de receita — o `an_redir` é feio e paga comissão igual.
       */
-      if (loja === "shopee" && credShopee.appId && credShopee.appSecret) {
+      // O link curto é do AppID do DONO: no grupo do parceiro ele pagaria
+      // o dono. Lá sai sempre o `an_redir` com o ID do parceiro.
+      if (loja === "shopee" && !afiliadoDoParceiro && credShopee.appId && credShopee.appSecret) {
         const viaApi = await geraLinkCurtoDaShopee(aPublicar.url_original, pub.subid, credShopee);
         if (viaApi.curto) {
           curto = viaApi.curto;
@@ -1306,7 +1354,7 @@ async function melhorPrateleira(db, oferta) {
           morria por falta de uma sessão que ele nem usa.
         */
       } else if (loja === "amazon" || loja === "shopee") {
-        const link = montaLinkDeAfiliado(aPublicar.url_original, pub.subid, loja);
+        const link = montaLinkDeAfiliado(aPublicar.url_original, pub.subid, loja, afiliadoDoParceiro);
         if (!link.rastreado) {
           console.log(`  ✗ ${canal.nome}: ${link.motivo}`);
           semLink++;
