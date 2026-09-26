@@ -2240,7 +2240,22 @@ async function melhorPrateleira(db, oferta) {
 
       const veredito = doCanal.pode ? doChip : doCanal;
       const faltamMs = veredito.pode ? 0 : (veredito.faltamMinutos ?? 1) * 60_000;
-      if (!melhor || faltamMs < melhor.faltamMs) melhor = { canal, faltamMs };
+      /*
+        EMPATE VAI PARA QUEM ESTÁ HÁ MAIS TEMPO CALADO (26/09).
+
+        Com `<` puro, o empate ficava com o primeiro canal da lista. Dois
+        grupos no mesmo chip empatam SEMPRE, porque é o chip que segura
+        os dois: o Radar Delas, com fila sem fim, ganhava toda volta e o
+        Vellupet, no mesmo número, não publicou nada na primeira hora.
+      */
+      const calado = (c) => (c.ultima_publicacao_em ? new Date(c.ultima_publicacao_em).getTime() : 0);
+      if (
+        !melhor ||
+        faltamMs < melhor.faltamMs ||
+        (faltamMs === melhor.faltamMs && calado(canal) < calado(melhor.canal))
+      ) {
+        melhor = { canal, faltamMs };
+      }
     }
 
     if (!melhor) break;
