@@ -73,6 +73,8 @@ const casos = [
   ["Shampoo Para Cães, Gatos e Coelhos", "cao"],
   ["Ração Úmida Sachê Whiskas", null],
   ["Tubarão de pelúcia", null],
+  ["Orelha Suína Desidratada Petisco Natural", null],
+  ["Petisco Bovino Palito 500g", null],
 ];
 for (const [titulo, esperado] of casos) {
   confere(`${titulo} → ${esperado}`, animalDoPet(titulo) === esperado);

@@ -37,8 +37,10 @@ const OUTRO = [
   " peixe", " aquario", " betta", " aquatico",
   " hamster", " roedor", " coelho", " porquinho da india", " chinchila", " furao",
   " tartaruga", " jabuti", " reptil", " cobra ", " iguana",
-  " galinha", " frango vivo", " bovino", " suino", " ovino", " gado ",
+  " galinha", " frango vivo", " gado ",
 ];
+// Fora da lista de propósito: "suíno", "bovino", "frango". São SABOR e
+// ingrediente de petisco de cachorro ("Orelha Suína Desidratada").
 
 export function animalDoPet(titulo: string | null | undefined): AnimalDoPet {
   if (!titulo) return null;
