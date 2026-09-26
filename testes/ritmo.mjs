@@ -99,24 +99,24 @@ confere(
 /*
   O RITMO DO WHATSAPP.
 
-  A regra do dono não tem folga nas pontas: *"aleatório entre 4 à 10 min
+  A regra do dono (o piso desceu de 4 para 2 em 26/09): *"aleatório entre 4 à 10 min
   cada promo, NAO PODEMOS SER MENOS OU MAIS QUE ISSO"*. Errar aqui não
   levanta erro — o número só cai algumas semanas depois, e aí não dá
   para saber se foi o ritmo ou outra coisa. Por isso o teste varre a
   janela inteira em vez de conferir um caso.
 */
-console.log("\no ritmo do whatsapp, de 4 a 10\n");
+console.log("\no ritmo do whatsapp, de 2 a 10 (piso de 2 desde 26/09)\n");
 
 const sorteados = new Set();
 let foraDaJanela = null;
 for (let i = 0; i < 5_000; i++) {
   const m = intervaloDoWhatsAppEmMinutos(`canal-${i}|${i * 97}`);
   sorteados.add(m);
-  if (m < 4 || m > 10) foraDaJanela = m;
+  if (m < 2 || m > 10) foraDaJanela = m;
 }
 
 confere("nunca sai da janela em 5.000 sorteios", foraDaJanela === null);
-confere("e usa os sete valores, de 4 a 10", sorteados.size === 7);
+confere("e usa os nove valores, de 2 a 10", sorteados.size === 9);
 
 /*
   A ESTABILIDADE, que é o que faz a regra valer de verdade.
@@ -188,19 +188,19 @@ const agoraChip = new Date("2026-08-01T14:00:00Z");
 const atras = (min) => new Date(agoraChip.getTime() - min * 60_000);
 
 confere("chip que nunca falou pode falar", podeChipFalarAgora(agoraChip, null, "bot-1").pode);
-confere("chip que falou há 2 min espera", !podeChipFalarAgora(agoraChip, atras(2), "bot-1").pode);
+confere("chip que falou há 1 min espera", !podeChipFalarAgora(agoraChip, atras(1), "bot-1").pode);
 confere("chip que falou há 11 min pode", podeChipFalarAgora(agoraChip, atras(11), "bot-1").pode);
 
-// A janela do chip é a mesma do canal: nunca abaixo de 4, nunca acima
+// A janela do chip é a mesma do canal: nunca abaixo de 2, nunca acima
 // de 10. Varre a janela inteira em vez de conferir um caso.
 let chipLiberouCedo = false;
 let chipSegurouDemais = false;
 for (let i = 0; i < 500; i++) {
   const bot = `bot-${i}`;
-  if (podeChipFalarAgora(agoraChip, atras(3), bot).pode) chipLiberouCedo = true;
+  if (podeChipFalarAgora(agoraChip, atras(1), bot).pode) chipLiberouCedo = true;
   if (!podeChipFalarAgora(agoraChip, atras(11), bot).pode) chipSegurouDemais = true;
 }
-confere("com 3 min desde o último envio, nenhum chip libera", !chipLiberouCedo);
+confere("com 1 min desde o último envio, nenhum chip libera", !chipLiberouCedo);
 confere("com 11 min desde o último envio, todo chip libera", !chipSegurouDemais);
 
 /*
@@ -287,11 +287,11 @@ confere(
 );
 confere(
   "sem taxa, a faixa é a de sempre",
-  faixaDoWhatsApp().min === 4 && faixaDoWhatsApp().max === 10,
+  faixaDoWhatsApp().min === 2 && faixaDoWhatsApp().max === 10,
 );
 confere(
-  "o piso de 4 minutos nunca cai, nem numa taxa absurda",
-  faixaDoWhatsApp(60).min >= 4,
+  "o piso de 2 minutos nunca cai, nem numa taxa absurda",
+  faixaDoWhatsApp(60).min >= 2,
 );
 
 /*

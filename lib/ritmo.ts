@@ -159,11 +159,16 @@ export function intervaloEmMinutos(
  * e cadência curta demais é o padrão de disparo em massa que derruba
  * conta. As duas pontas custam o chip, então as duas são duras.
  *
+ * **O piso caiu para 2 em 26/09, a pedido do dono** (*"ao inves de 4
+ * min, aumenta pra 2, o chip n vai ser banido"*), com o risco dito a
+ * ele: quanto mais curto, mais perto do padrão de disparo em massa. O
+ * teto de 10 não mudou.
+ *
  * O que continua valendo por cima: o teto diário do canal, o
  * `whatsapp_envios_dia_max` por chip, e o `horarios_permitidos` — é ele,
  * e não o intervalo, que impede o grupo de tocar às 3 da manhã.
  */
-export const WHATSAPP_INTERVALO_MIN = 4;
+export const WHATSAPP_INTERVALO_MIN = 2;
 export const WHATSAPP_INTERVALO_MAX = 10;
 
 /**
@@ -222,7 +227,7 @@ function sorteioEstavel(semente: string): number {
 }
 
 /**
- * O intervalo do WhatsApp: um inteiro de 4 a 10, inclusive nas pontas.
+ * O intervalo do WhatsApp: um inteiro de 2 a 10, inclusive nas pontas.
  *
  * A semente é `canalId|instanteDoUltimoPost`, montada por quem chama.
  */
@@ -259,8 +264,8 @@ export function intervaloDoWhatsAppEmMinutos(semente: string, porHora?: number):
  * QUE SER IMPREVISIVEL"*. Uma faixa larga o bastante para o intervalo
  * nunca se repetir é o que separa isto de um cron.
  *
- * O piso de 4 minutos continua de pé em qualquer taxa: abaixo disso é
- * padrão de disparo em massa, e essa ponta nunca foi negociada.
+ * O piso (`WHATSAPP_INTERVALO_MIN`, 2 minutos desde 26/09) continua de
+ * pé em qualquer taxa.
  */
 export function faixaDoWhatsApp(porHora?: number): { min: number; max: number } {
   if (!porHora || porHora <= 0) {
