@@ -1,0 +1,35 @@
+name: Teste do monitor de celular
+
+# Manda uma mensagem de exemplo aos destinos do monitor de celular do
+# dono (Telegram e WhatsApp) e sai. Existe porque a apikey da Evolution
+# só vive nos secrets e na VPS: da máquina não dá para testar o envio.
+#
+# Não consulta loja nenhuma, então não renova o token do Mercado Livre e
+# não precisa do grupo de concorrência da coleta.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  teste:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Instala o cliente do Supabase
+        run: npm install --no-save @supabase/supabase-js
+
+      - name: Manda a mensagem de teste
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          MONITOR_CELULAR_CHAT_ID: ${{ secrets.MONITOR_CELULAR_CHAT_ID }}
+          WHATSAPP_API_URL: ${{ secrets.WHATSAPP_API_URL }}
+          WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
+          MONITOR_CELULAR_WHATSAPP: ${{ secrets.MONITOR_CELULAR_WHATSAPP }}
+        run: node scripts/monitora-celulares.mjs --envia-teste

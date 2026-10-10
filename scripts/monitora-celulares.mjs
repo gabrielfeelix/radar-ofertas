@@ -34,6 +34,14 @@
  *   node --env-file=.env --env-file=.env.producao scripts/monitora-celulares.mjs --teste
  *
  * `--teste` imprime o que mandaria e não manda nem grava nada.
+ * `--envia-teste` manda uma mensagem de exemplo aos destinos e sai, sem
+ * consultar loja nenhuma. É o que o `monitor-celular-teste.yml` roda.
+ *
+ * DESTINOS: o privado do Telegram (`MONITOR_CELULAR_CHAT_ID`) e o
+ * WhatsApp do dono (`MONITOR_CELULAR_WHATSAPP`, número com DDI), cada um
+ * ligado quando a variável existe. O WhatsApp sai pelo chip do bot, e o
+ * dono pediu isso sabendo: são poucas mensagens por dia, para um número
+ * que conversa com o chip, o que não tem cara de disparo em massa.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -142,15 +150,26 @@ const TEMPO_LIMITE_MS = 20_000;
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const ENVIA_TESTE = process.argv.includes("--envia-teste");
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const chatId = process.env.MONITOR_CELULAR_CHAT_ID;
+const whatsappDono = (process.env.MONITOR_CELULAR_WHATSAPP ?? "").replace(/\D/g, "");
+const whatsappBase = (process.env.WHATSAPP_API_URL ?? "").replace(/\/+$/, "");
+const whatsappChave = process.env.WHATSAPP_API_KEY;
+const whatsappInstancia = process.env.MONITOR_CELULAR_INSTANCIA ?? "radar01";
+
+const temTelegram = Boolean(botToken && chatId);
+const temWhatsApp = Boolean(whatsappDono && whatsappBase && whatsappChave);
 
 if (!url || !chave) {
   console.error("Falta NEXT_PUBLIC_SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY.");
   process.exit(1);
 }
-if (!TESTE && (!botToken || !chatId)) {
-  console.error("Falta TELEGRAM_BOT_TOKEN ou MONITOR_CELULAR_CHAT_ID.");
+if (!TESTE && !temTelegram && !temWhatsApp) {
+  console.error(
+    "Nenhum destino: falta MONITOR_CELULAR_CHAT_ID (com TELEGRAM_BOT_TOKEN) " +
+      "ou MONITOR_CELULAR_WHATSAPP (com WHATSAPP_API_URL e WHATSAPP_API_KEY).",
+  );
   process.exit(1);
 }
 
@@ -372,7 +391,7 @@ function mensagem(modelo, achado) {
   ].join("\n");
 }
 
-async function avisa(texto) {
+async function avisaNoTelegram(texto) {
   const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -383,7 +402,64 @@ async function avisa(texto) {
   if (!d.ok) throw new Error(`Telegram recusou: ${d.description}`);
 }
 
+async function evolution(caminho, corpo) {
+  const r = await fetch(`${whatsappBase}/${caminho}/${encodeURIComponent(whatsappInstancia)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: whatsappChave },
+    body: JSON.stringify(corpo),
+    signal: AbortSignal.timeout(30_000),
+  });
+  const d = await r.json().catch(() => null);
+  if (!r.ok) throw new Error(`Evolution recusou (${r.status}): ${JSON.stringify(d?.response?.message ?? d)}`);
+  return d;
+}
+
+let jidDoDono = null;
+
+/**
+ * O endereço do dono no WhatsApp, perguntado ao próprio WhatsApp.
+ *
+ * Celular brasileiro tem o nono dígito, e conta antiga às vezes está
+ * registrada sem ele. Mandar para a forma errada não dá erro: a mensagem
+ * some. Por isso o número é conferido nas duas formas antes.
+ */
+async function enderecoDoDono() {
+  if (jidDoDono) return jidDoDono;
+  const semNono = whatsappDono.replace(/^(55\d{2})9(\d{8})$/, "$1$2");
+  const formas = [...new Set([whatsappDono, semNono])];
+  const d = await evolution("chat/whatsappNumbers", { numbers: formas });
+  const achado = (Array.isArray(d) ? d : []).find((n) => n.exists);
+  if (!achado) throw new Error(`o número ${whatsappDono} não está no WhatsApp`);
+  jidDoDono = achado.jid;
+  return jidDoDono;
+}
+
+async function avisaNoWhatsApp(texto) {
+  await evolution("message/sendText", { number: await enderecoDoDono(), text: texto, linkPreview: true });
+}
+
+/** Manda a todos os destinos ligados. Um falhar não cala o outro. */
+async function avisa(texto) {
+  const falhas = [];
+  if (temTelegram) await avisaNoTelegram(texto).catch((e) => falhas.push(e.message));
+  if (temWhatsApp) await avisaNoWhatsApp(texto).catch((e) => falhas.push(e.message));
+  if (falhas.length) throw new Error(falhas.join(" | "));
+}
+
 async function main() {
+  if (ENVIA_TESTE) {
+    const destinos = [temTelegram && "Telegram", temWhatsApp && "WhatsApp"].filter(Boolean);
+    await avisa(
+      [
+        "📱 Teste do monitor de celular do Radar",
+        "Se chegou, está funcionando. A partir de agora, quando um celular da sua lista",
+        "ficar abaixo do teto, o aviso chega aqui.",
+      ].join("\n"),
+    );
+    console.log(`teste enviado: ${destinos.join(" e ")}`);
+    return;
+  }
+
   const { data: mkt } = await db
     .from("marketplace")
     .select("id, operacao_id")

@@ -261,6 +261,9 @@ jobs:
           SHOPEE_APP_SECRET: ${{ secrets.SHOPEE_APP_SECRET }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           MONITOR_CELULAR_CHAT_ID: ${{ secrets.MONITOR_CELULAR_CHAT_ID }}
+          WHATSAPP_API_URL: ${{ secrets.WHATSAPP_API_URL }}
+          WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
+          MONITOR_CELULAR_WHATSAPP: ${{ secrets.MONITOR_CELULAR_WHATSAPP }}
         run: |
           set -o pipefail
           node scripts/monitora-celulares.mjs | tee -a "$GITHUB_STEP_SUMMARY"
