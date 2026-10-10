@@ -70,8 +70,10 @@ import { readFileSync, writeFileSync } from "node:fs";
  * devolveu o produto de 256GB que estava R$ 700 mais barato que tudo o
  * que ela trouxe. A semente garante que ele é sempre relido.
  *
- * Poco F9, Xiaomi 18 Pro e iPhone 18 ainda não tinham preço limpo no ML
- * em 10/10. Ficam na lista para avisar quando aparecerem baratos.
+ * Poco F9 e Xiaomi 18 Pro ainda não tinham preço limpo no ML em 10/10.
+ * Ficam na lista para avisar quando aparecerem baratos.
+ *
+ * iPhone 18 saiu da lista a pedido do dono, em 10/10.
  *
  * A SHOPEE TRAZ IMPORTADOR. iPhone 17 Pro Max a R$ 6.943 é real, mas
  * com frete de R$ 400 a R$ 600 fora de SP, e Xiaomi/Poco quase só
@@ -163,23 +165,6 @@ const MODELOS = [
     exclui: null,
     teto: 8799,
   },
-  {
-    // Sem desconto real até 10/10: o à vista da Apple é R$ 10.799. O
-    // teto fica abaixo dele para pegar o primeiro desconto de verdade.
-    nome: "iPhone 18 Pro",
-    termos: ["iphone 18 pro 256gb"],
-    inclui: /iphone 18 pro\b/i,
-    exclui: /pro max/i,
-    teto: 10499,
-  },
-  {
-    // À vista da Apple: R$ 11.699.
-    nome: "iPhone 18 Pro Max",
-    termos: ["iphone 18 pro max 256gb"],
-    inclui: /iphone 18 pro max/i,
-    exclui: null,
-    teto: 11399,
-  },
 
   // ── Xiaomi e Poco ──
   {
@@ -258,6 +243,15 @@ const MODELOS = [
 /** Título com isto não é o celular, é acessório ou aparelho usado. */
 const NAO_E_CELULAR =
   /capa|capinha|pel[ií]cula|case|cabo|carregador|caneta|s ?pen|l[aá]pis|fone|suporte|lente|tela lcd|frontal|bateria|carca|vidro|adesivo|usado|seminovo|vitrine|recondicionado|r[eé]plica|pe[cç]a/i;
+
+/**
+ * Nada acima disto avisa, qualquer que seja o teto do modelo.
+ *
+ * Pedido do dono em 10/10: *"não quero nada que seja acima de 6 mil
+ * reais"*. Os tetos de iPhone 17 Pro e Pro Max, que a pesquisa pôs em
+ * R$ 7.999 e R$ 8.799, ficam valendo R$ 6.000 na prática.
+ */
+const PRECO_MAXIMO_CENTAVOS = 600_000;
 
 /**
  * Abaixo desta fração do teto, o preço é golpe ou erro, não promoção.
@@ -602,7 +596,7 @@ function mensagem(modelo, achado) {
   const de = achado.deCentavos && achado.deCentavos > achado.centavos ? ` (de ${reais(achado.deCentavos)})` : "";
   return [
     `📱 ${modelo.nome} por ${reais(achado.centavos)}${de}`,
-    `Teto: ${reais(modelo.teto * 100)}. Loja: ${achado.loja}`,
+    `Teto: ${reais(Math.min(modelo.teto * 100, PRECO_MAXIMO_CENTAVOS))}. Loja: ${achado.loja}`,
     achado.titulo,
     "Preço de anúncio, sem cupom nem Pix. No carrinho pode sair menor.",
     achado.link,
@@ -740,7 +734,7 @@ async function main() {
     const achado = candidatos.sort((a, b) => a.centavos - b.centavos)[0];
     const chaveEstado = chaveDoModelo(modelo);
     const ultimo = avisado[chaveEstado] ?? 0;
-    const tetoCentavos = modelo.teto * 100;
+    const tetoCentavos = Math.min(modelo.teto * 100, PRECO_MAXIMO_CENTAVOS);
 
     if (!achado) {
       console.log(`${modelo.nome}: nada à venda`);
