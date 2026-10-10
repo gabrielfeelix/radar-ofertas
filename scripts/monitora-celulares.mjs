@@ -453,6 +453,7 @@ async function maisBaratoNoMl(modelo) {
           centavos,
           deCentavos: i.original_price ? Math.round(i.original_price * 100) : null,
           link: `https://www.mercadolivre.com.br/p/${p.id}`,
+          produtoId: p.id,
           vendedorId: i.seller_id,
           oficial: Boolean(i.official_store_id),
         });
@@ -464,11 +465,28 @@ async function maisBaratoNoMl(modelo) {
   candidatos.sort((a, b) => a.centavos - b.centavos);
   let consultas = 0;
   for (const c of candidatos) {
-    if (c.oficial) return c;
+    if (c.oficial) return comFoto(c);
     if (consultas++ >= MAX_VENDEDORES_CONSULTADOS) break;
-    if (await vendedorConfiavel(c.vendedorId)) return c;
+    if (await vendedorConfiavel(c.vendedorId)) return comFoto(c);
   }
   return null;
+}
+
+/**
+ * A foto do produto de catálogo, buscada só para o vencedor.
+ *
+ * O dono pediu em 10/10: aviso de promoção tem que ter a imagem do
+ * celular. É só o LINK da foto, que vai direto para o Telegram e a
+ * Evolution baixarem; nada é guardado.
+ */
+async function comFoto(candidato) {
+  try {
+    const p = await ml(`products/${candidato.produtoId}`);
+    const foto = p?.pictures?.[0]?.url ?? null;
+    return { ...candidato, imagem: foto ? foto.replace(/^http:/, "https:") : null };
+  } catch {
+    return { ...candidato, imagem: null };
+  }
 }
 
 const confiancaDoVendedor = new Map();
@@ -537,7 +555,7 @@ async function maisBaratoNaShopee(modelo) {
     try {
       const d = await shopee(
         `{productOfferV2(keyword:${JSON.stringify(termo)}, sortType:1, page:1, limit:50)` +
-          `{nodes{itemId shopId productName price priceMin ratingStar shopName}}}`,
+          `{nodes{itemId shopId productName price priceMin ratingStar shopName imageUrl}}}`,
       );
       nos = d.productOfferV2?.nodes ?? [];
     } catch (e) {
@@ -557,6 +575,7 @@ async function maisBaratoNaShopee(modelo) {
           centavos,
           deCentavos: null,
           link: `https://shopee.com.br/product/${n.shopId}/${n.itemId}`,
+          imagem: n.imageUrl ?? null,
         };
       }
     }
@@ -590,14 +609,27 @@ function mensagem(modelo, achado) {
   ].join("\n");
 }
 
-async function avisaNoTelegram(texto) {
-  const r = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text: texto, disable_web_page_preview: false }),
-    signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
-  });
+/**
+ * Com foto quando existe. Foto que a loja se recusa a servir cai para
+ * texto, igual no publicador: o aviso vale mais que a imagem.
+ */
+async function avisaNoTelegram(texto, imagem) {
+  const comFotoAnexada = Boolean(imagem);
+  const r = await fetch(
+    `https://api.telegram.org/bot${botToken}/${comFotoAnexada ? "sendPhoto" : "sendMessage"}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(
+        comFotoAnexada
+          ? { chat_id: chatId, photo: imagem, caption: texto }
+          : { chat_id: chatId, text: texto, disable_web_page_preview: false },
+      ),
+      signal: AbortSignal.timeout(TEMPO_LIMITE_MS),
+    },
+  );
   const d = await r.json();
+  if (!d.ok && comFotoAnexada) return avisaNoTelegram(texto, null);
   if (!d.ok) throw new Error(`Telegram recusou: ${d.description}`);
 }
 
@@ -633,8 +665,17 @@ async function enderecoDoDono() {
   return jidDoDono;
 }
 
-async function avisaNoWhatsApp(texto) {
-  await evolution("message/sendText", { number: await enderecoDoDono(), text: texto, linkPreview: true });
+async function avisaNoWhatsApp(texto, imagem) {
+  const numero = await enderecoDoDono();
+  if (imagem) {
+    try {
+      await evolution("message/sendMedia", { number: numero, mediatype: "image", media: imagem, caption: texto });
+      return;
+    } catch (e) {
+      console.log(`  foto recusada no WhatsApp, vai texto: ${e.message}`);
+    }
+  }
+  await evolution("message/sendText", { number: numero, text: texto, linkPreview: true });
 }
 
 /**
@@ -645,7 +686,7 @@ async function avisaNoWhatsApp(texto) {
  * derrubasse o aviso inteiro, o estado não seria gravado e o Telegram
  * receberia a mesma mensagem de hora em hora até o chip voltar.
  */
-async function avisa(texto) {
+async function avisa(texto, imagem = null) {
   const falhas = [];
   let entregues = 0;
   for (const [ligado, envia] of [
@@ -654,7 +695,7 @@ async function avisa(texto) {
   ]) {
     if (!ligado) continue;
     try {
-      await envia(texto);
+      await envia(texto, imagem);
       entregues++;
     } catch (e) {
       falhas.push(e.message);
@@ -716,7 +757,7 @@ async function main() {
       if (TESTE) {
         console.log(`\n--- mandaria ---\n${texto}\n`);
       } else {
-        await avisa(texto);
+        await avisa(texto, achado.imagem);
         console.log("  avisado");
       }
       novoEstado = achado.centavos;
