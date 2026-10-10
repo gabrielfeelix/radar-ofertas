@@ -601,12 +601,31 @@ async function avisaNoWhatsApp(texto) {
   await evolution("message/sendText", { number: await enderecoDoDono(), text: texto, linkPreview: true });
 }
 
-/** Manda a todos os destinos ligados. Um falhar não cala o outro. */
+/**
+ * Manda a todos os destinos ligados. Um falhar não cala o outro.
+ *
+ * Só falha se NENHUM entregou. Com um entregue, o aviso conta como dado:
+ * em 10/10 o chip estava desconectado, e se a falha do WhatsApp
+ * derrubasse o aviso inteiro, o estado não seria gravado e o Telegram
+ * receberia a mesma mensagem de hora em hora até o chip voltar.
+ */
 async function avisa(texto) {
   const falhas = [];
-  if (temTelegram) await avisaNoTelegram(texto).catch((e) => falhas.push(e.message));
-  if (temWhatsApp) await avisaNoWhatsApp(texto).catch((e) => falhas.push(e.message));
-  if (falhas.length) throw new Error(falhas.join(" | "));
+  let entregues = 0;
+  for (const [ligado, envia] of [
+    [temTelegram, avisaNoTelegram],
+    [temWhatsApp, avisaNoWhatsApp],
+  ]) {
+    if (!ligado) continue;
+    try {
+      await envia(texto);
+      entregues++;
+    } catch (e) {
+      falhas.push(e.message);
+    }
+  }
+  if (falhas.length) console.log(`  ⚠️  ${falhas.join(" | ")}`);
+  if (entregues === 0) throw new Error("nenhum destino recebeu o aviso");
 }
 
 async function main() {
