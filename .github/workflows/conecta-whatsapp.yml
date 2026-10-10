@@ -1,0 +1,31 @@
+name: Conecta o WhatsApp
+
+# Pede à Evolution o código de pareamento do chip e manda ao dono no
+# privado do Telegram. Rodar quando o chip cair ("Connection Closed").
+# Detalhe em `scripts/conecta-whatsapp.mjs`.
+#
+# O código NUNCA vai para o log: o repositório é público.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  conecta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Pede o código e manda no Telegram
+        env:
+          WHATSAPP_API_URL: ${{ secrets.WHATSAPP_API_URL }}
+          WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
+          # O chip do radar01, cadastrado na tabela `bot`.
+          WHATSAPP_NUMERO_DO_CHIP: "5544991370285"
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          MONITOR_CELULAR_CHAT_ID: ${{ secrets.MONITOR_CELULAR_CHAT_ID }}
+        run: node scripts/conecta-whatsapp.mjs
