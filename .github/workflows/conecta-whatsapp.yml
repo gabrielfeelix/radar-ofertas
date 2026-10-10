@@ -8,6 +8,13 @@ name: Conecta o WhatsApp
 
 on:
   workflow_dispatch:
+    inputs:
+      numero:
+        description: "Número do chip com DDI, como a conta está registrada"
+        # SEM o nono dígito: em 10/10 o código pedido com o 9
+        # (5544991370285) foi recusado como incorreto no aparelho. Fora de
+        # SP/RJ, conta antiga de WhatsApp costuma estar registrada sem ele.
+        default: "554491370285"
 
 jobs:
   conecta:
@@ -25,7 +32,7 @@ jobs:
           WHATSAPP_API_URL: ${{ secrets.WHATSAPP_API_URL }}
           WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
           # O chip do radar01, cadastrado na tabela `bot`.
-          WHATSAPP_NUMERO_DO_CHIP: "5544991370285"
+          WHATSAPP_NUMERO_DO_CHIP: ${{ inputs.numero }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           MONITOR_CELULAR_CHAT_ID: ${{ secrets.MONITOR_CELULAR_CHAT_ID }}
         run: node scripts/conecta-whatsapp.mjs
