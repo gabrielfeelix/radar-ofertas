@@ -51,44 +51,64 @@ import { readFileSync, writeFileSync } from "node:fs";
 /**
  * A lista que o dono pediu, com o teto de cada um em reais.
  *
+ * DE ONDE SAEM OS TETOS: pesquisa de 10/10 no Pelando, Oficina da Net,
+ * Tecnoblog e MacMagazine, de meados de agosto até o dia, mais o preço
+ * da API do ML no mesmo dia. O teto é um preço AGRESSIVO QUE JÁ
+ * ACONTECEU, sem condição estranha: plano de operadora, "leve 2" e o
+ * bug de Pix em dobro da Amazon no S25 Ultra (R$ 3.543, 09/10) não
+ * contam. Ao lado de cada um, o preço "bom" que se repete.
+ *
+ * O teto vale para a versão mais barata que casar, de qualquer
+ * armazenamento.
+ *
  * `inclui` e `exclui` existem porque a busca por "galaxy s25" devolve
  * FE, Edge, Ultra, capa e caneta.
  *
  * `sementes` são produtos de catálogo do ML conferidos à mão em 10/10.
  * A busca do ML não é estável: no teste, "galaxy s25 ultra 256gb" não
  * devolveu o produto de 256GB que estava R$ 700 mais barato que tudo o
- * que ela trouxe. A semente garante que ele é sempre relido. O teto vale para a versão mais barata
- * que casar, de qualquer armazenamento.
+ * que ela trouxe. A semente garante que ele é sempre relido.
  *
- * Poco F9 e Xiaomi 17T Pro ainda não existiam no catálogo do ML em
- * 10/10. Ficam na lista para avisar quando aparecerem.
+ * Poco F9, Xiaomi 18 Pro e iPhone 18 ainda não tinham preço limpo no ML
+ * em 10/10. Ficam na lista para avisar quando aparecerem baratos.
+ *
+ * A SHOPEE TRAZ IMPORTADOR. iPhone 17 Pro Max a R$ 6.943 é real, mas
+ * com frete de R$ 400 a R$ 600 fora de SP, e Xiaomi/Poco quase só
+ * existe por importador, com garantia do vendedor. O aviso diz a loja, e
+ * quem decide é o dono.
  */
 const MODELOS = [
+  // ── Samsung ──
   {
+    // Bom: R$ 3.450 a 3.580. Já foi a R$ 3.329 (ML, 14/09, cupom + Pix).
     nome: "Galaxy S25",
     termos: ["samsung galaxy s25 256gb", "samsung galaxy s25 512gb"],
     sementes: ["MLB45513356", "MLB45502223", "MLB45502235", "MLB45520367"],
     inclui: /galaxy s25\b/i,
     exclui: /s25\s*(\+|plus|ultra|fe|edge)/i,
-    teto: 3200,
+    teto: 3400,
   },
   {
+    // Bom: R$ 3.780 a 3.990. Já foi a R$ 3.527 (Vivo, 14/09) e R$ 3.680
+    // com 512GB e fone (Shopee, 22/09).
     nome: "Galaxy S25+",
     termos: ["samsung galaxy s25+ 256gb", "samsung galaxy s25 plus 512gb"],
     sementes: ["MLB45513966", "MLB45513357", "MLB45524546", "MLB60857188"],
     inclui: /s25\s*(\+|plus)/i,
     exclui: null,
-    teto: 3500,
+    teto: 3700,
   },
   {
+    // Bom: R$ 4.650 a 4.950. Já foi a R$ 3.989 (Vivo outlet, 12/09).
     nome: "Galaxy S25 Ultra",
     termos: ["samsung galaxy s25 ultra 256gb", "samsung galaxy s25 ultra 512gb"],
     sementes: ["MLB45517552", "MLB45524778", "MLB45514086", "MLB45502333", "MLB46541360", "MLB45515203", "MLB66698021"],
     inclui: /s25 ultra/i,
     exclui: null,
-    teto: 3900,
+    teto: 4000,
   },
   {
+    // Fora da pesquisa de 10/10. ML no dia: R$ 4.553.
     nome: "Galaxy S26",
     termos: ["samsung galaxy s26 256gb", "samsung galaxy s26 512gb"],
     sementes: ["MLB65560109", "MLB66001283", "MLB65560107", "MLB65560103"],
@@ -96,36 +116,139 @@ const MODELOS = [
     exclui: /s26\s*(\+|plus|ultra|fe|edge)/i,
     teto: 4000,
   },
+
+  // ── iPhone ──
   {
+    // "17e" não casa: não há fronteira de palavra entre o 7 e o e.
+    // Bom: R$ 5.000 a 5.200. Passou abaixo de R$ 5.000 várias vezes.
     nome: "iPhone 17",
     termos: ["iphone 17 256gb", "iphone 17 512gb"],
-    // "17e" não casa: não há fronteira de palavra entre o 7 e o e.
     sementes: ["MLB55308917", "MLB55308843", "MLB55308852", "MLB55309009", "MLB55308835"],
     inclui: /iphone 17\b/i,
     exclui: /iphone 17\s*(pro|air|plus)/i,
-    teto: 4500,
+    teto: 4999,
   },
   {
+    // Bom: R$ 3.950 a 4.050.
+    nome: "iPhone 17e",
+    termos: ["iphone 17e 256gb"],
+    inclui: /iphone 17e\b/i,
+    exclui: null,
+    teto: 3949,
+  },
+  {
+    // Bom desde setembro: uns R$ 5.800. Foi a R$ 5.759 (ML oficial, 10/09).
+    nome: "iPhone Air",
+    termos: ["iphone air 256gb"],
+    inclui: /iphone (17 )?air\b/i,
+    exclui: null,
+    teto: 5799,
+  },
+  {
+    // Bom: R$ 8.000 a 8.300. Foi a R$ 7.798 (Amazon, 05/08).
+    nome: "iPhone 17 Pro",
+    termos: ["iphone 17 pro 256gb"],
+    sementes: ["MLB55308774", "MLB55308767", "MLB55308781"],
+    inclui: /iphone 17 pro\b/i,
+    exclui: /pro max/i,
+    teto: 7999,
+  },
+  {
+    // Bom em loja oficial: R$ 8.800 a 9.000.
+    nome: "iPhone 17 Pro Max",
+    termos: ["iphone 17 pro max 256gb"],
+    sementes: ["MLB55308620", "MLB55308605", "MLB55308632"],
+    inclui: /iphone 17 pro max/i,
+    exclui: null,
+    teto: 8799,
+  },
+  {
+    // Sem desconto real até 10/10: o à vista da Apple é R$ 10.799. O
+    // teto fica abaixo dele para pegar o primeiro desconto de verdade.
+    nome: "iPhone 18 Pro",
+    termos: ["iphone 18 pro 256gb"],
+    inclui: /iphone 18 pro\b/i,
+    exclui: /pro max/i,
+    teto: 10499,
+  },
+  {
+    // À vista da Apple: R$ 11.699.
+    nome: "iPhone 18 Pro Max",
+    termos: ["iphone 18 pro max 256gb"],
+    inclui: /iphone 18 pro max/i,
+    exclui: null,
+    teto: 11399,
+  },
+
+  // ── Xiaomi e Poco ──
+  {
+    // Bom: R$ 2.900 a 3.100 (256GB). Já foi a R$ 2.720 em julho.
+    nome: "Poco X8 Pro Max",
+    termos: ["poco x8 pro max 256gb", "poco x8 pro max 512gb"],
+    inclui: /poco x8 pro max/i,
+    exclui: null,
+    teto: 2750,
+  },
+  {
+    // Bom: R$ 3.200 a 3.500. Importador na Shopee a R$ 2.878 (05/10).
+    nome: "Poco F8 Pro",
+    termos: ["poco f8 pro 256gb", "poco f8 pro 512gb"],
+    sementes: ["MLB67289426", "MLB80120678", "MLB67289427"],
+    inclui: /poco f8 pro/i,
+    exclui: null,
+    teto: 2900,
+  },
+  {
+    // Bom: R$ 4.200 a 4.500. Foi a R$ 3.989 (Shopee, 08/08).
+    nome: "Poco F8 Ultra",
+    termos: ["poco f8 ultra"],
+    inclui: /poco f8 ultra/i,
+    exclui: null,
+    teto: 4000,
+  },
+  {
+    // A linha mais nova (01/09). Só importador, uns R$ 4.780. Menor
+    // registrado: R$ 4.461.
+    nome: "Poco F9 Pro",
+    termos: ["poco f9 pro"],
+    inclui: /poco f9 pro/i,
+    exclui: null,
+    teto: 4470,
+  },
+  {
+    // Só importador, uns R$ 5.400 a 5.500, sem promoção registrada.
+    nome: "Poco F9 Ultra",
+    termos: ["poco f9 ultra"],
+    inclui: /poco f9 ultra/i,
+    exclui: null,
+    teto: 5200,
+  },
+  {
+    // Importador: bom de R$ 3.500 a 3.900. Foi a R$ 3.403 (Shopee, 06/10).
+    // O oficial no Brasil custa R$ 8.699 e não entra nessa conta.
+    nome: "Xiaomi 17T",
+    termos: ["xiaomi 17t 512gb"],
+    inclui: /xiaomi 17t\b/i,
+    exclui: /17t pro/i,
+    teto: 3400,
+  },
+  {
+    // Só importador, R$ 4.990 a 5.150, sem promoção registrada.
     nome: "Xiaomi 17T Pro",
     termos: ["xiaomi 17t pro"],
     inclui: /xiaomi 17t pro/i,
     exclui: null,
-    teto: 3900,
+    teto: 4790,
   },
   {
-    nome: "Poco F9 Pro / Ultra",
-    termos: ["poco f9 pro", "poco f9 ultra"],
-    inclui: /poco f9 (pro|ultra)/i,
+    // Anunciado na China em 23/09, global esperado para novembro. Sem
+    // preço em real ainda: o teto é chute de partida, revisar quando
+    // houver dado.
+    nome: "Xiaomi 18 Pro / Pro Max",
+    termos: ["xiaomi 18 pro"],
+    inclui: /xiaomi 18 pro/i,
     exclui: null,
-    teto: 3900,
-  },
-  {
-    nome: "Poco F8 Pro / Ultra",
-    termos: ["poco f8 pro", "poco f8 ultra"],
-    sementes: ["MLB67289426", "MLB80120678", "MLB67289427"],
-    inclui: /poco f8 (pro|ultra)/i,
-    exclui: null,
-    teto: 3200,
+    teto: 6000,
   },
 ];
 
@@ -141,6 +264,9 @@ const NAO_E_CELULAR =
  * vendedores. Avisar isso seria mandar o dono para um golpe.
  */
 const PISO_DO_TETO = 0.5;
+
+/** Teto de consultas de vendedor por modelo, para a rodada caber na hora. */
+const MAX_VENDEDORES_CONSULTADOS = 20;
 
 /** Quanto o preço precisa cair abaixo do último aviso para avisar de novo. */
 const QUEDA_MINIMA_CENTAVOS = 2000;
@@ -243,7 +369,7 @@ async function ml(caminho) {
 
 /** O item novo mais barato do modelo no ML, entre todos os vendedores. */
 async function maisBaratoNoMl(modelo) {
-  let melhor = null;
+  const candidatos = [];
   const vistos = new Set();
 
   const produtosDasSementes = [];
@@ -285,19 +411,56 @@ async function maisBaratoNoMl(modelo) {
         if (i.condition !== "new" || !(i.price > 0)) continue;
         const centavos = Math.round(i.price * 100);
         if (centavos < modelo.teto * 100 * PISO_DO_TETO) continue;
-        if (!melhor || centavos < melhor.centavos) {
-          melhor = {
-            loja: "Mercado Livre",
-            titulo: p.name,
-            centavos,
-            deCentavos: i.original_price ? Math.round(i.original_price * 100) : null,
-            link: `https://www.mercadolivre.com.br/p/${p.id}`,
-          };
-        }
+        candidatos.push({
+          loja: "Mercado Livre",
+          titulo: p.name,
+          centavos,
+          deCentavos: i.original_price ? Math.round(i.original_price * 100) : null,
+          link: `https://www.mercadolivre.com.br/p/${p.id}`,
+          vendedorId: i.seller_id,
+          oficial: Boolean(i.official_store_id),
+        });
       }
     }
   }
-  return melhor;
+
+  // Do mais barato para cima, o primeiro vendedor confiável ganha.
+  candidatos.sort((a, b) => a.centavos - b.centavos);
+  let consultas = 0;
+  for (const c of candidatos) {
+    if (c.oficial) return c;
+    if (consultas++ >= MAX_VENDEDORES_CONSULTADOS) break;
+    if (await vendedorConfiavel(c.vendedorId)) return c;
+  }
+  return null;
+}
+
+const confiancaDoVendedor = new Map();
+
+/**
+ * Vendedor terceiro só conta com reputação verde.
+ *
+ * POR QUE: no teste de 10/10, o mais barato de iPhone 18 Pro Max no ML
+ * era R$ 8.500 contra R$ 11.699 da Apple, de vendedor terceiro. O
+ * Pelando já tinha registrado o padrão em 10/09 com o iPhone 17 Pro Max
+ * a R$ 6.750 da "MEGA FONTE": pedidos cancelados e vendedor bloqueado.
+ * Os níveis são os mesmos de `reputacaoDoVendedor`, no coletor.
+ *
+ * Só o nível, e não o número de vendas: em 10/10 o `users/{id}` devolvia
+ * `seller_reputation.transactions` sem o `completed`, para todo vendedor.
+ */
+async function vendedorConfiavel(vendedorId) {
+  if (confiancaDoVendedor.has(vendedorId)) return confiancaDoVendedor.get(vendedorId);
+  let confiavel = false;
+  try {
+    const u = await ml(`users/${vendedorId}`);
+    const r = u?.seller_reputation;
+    confiavel = ["5_green", "4_light_green"].includes(r?.level_id);
+  } catch {
+    /* sem como conferir, não confia */
+  }
+  confiancaDoVendedor.set(vendedorId, confiavel);
+  return confiavel;
 }
 
 // ── Shopee ────────────────────────────────────────────────────────────
