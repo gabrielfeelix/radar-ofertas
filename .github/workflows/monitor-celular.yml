@@ -1,0 +1,56 @@
+name: Monitor de celular
+
+# Avisa o dono no Telegram (e no WhatsApp, quando o chip está no ar)
+# quando um celular da lista dele fica abaixo do teto. Não é produto.
+# Detalhe e tetos em `scripts/monitora-celulares.mjs`.
+#
+# QUEM DISPARA É O `pg_cron`, de 15 em 15 minutos (migration
+# 20261010150000), igual ao `publica.yml`. Ele começou como passo da
+# coleta horária, e no primeiro dia a coleta rodou às 06h26 e depois não
+# rodou mais: o agendador do GitHub entrega uma execução em cada oito
+# pedidas. Um Xiaomi 17T Pro a R$ 4.412 passou sem aviso.
+#
+# O `schedule` abaixo fica só de reserva, para o caso de o gatilho do
+# banco parar.
+
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+# Uma rodada por vez: duas juntas mandariam o mesmo aviso duas vezes,
+# porque as duas leriam o estado antes de a outra gravar.
+concurrency:
+  group: monitor-celular
+  cancel-in-progress: false
+
+jobs:
+  monitora:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Instala o cliente do Supabase
+        run: npm install --no-save @supabase/supabase-js
+
+      - name: Confere os preços e avisa
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          ML_CLIENT_ID: ${{ secrets.ML_CLIENT_ID }}
+          ML_CLIENT_SECRET: ${{ secrets.ML_CLIENT_SECRET }}
+          SHOPEE_APP_ID: ${{ secrets.SHOPEE_APP_ID }}
+          SHOPEE_APP_SECRET: ${{ secrets.SHOPEE_APP_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          MONITOR_CELULAR_CHAT_ID: ${{ secrets.MONITOR_CELULAR_CHAT_ID }}
+          WHATSAPP_API_URL: ${{ secrets.WHATSAPP_API_URL }}
+          WHATSAPP_API_KEY: ${{ secrets.WHATSAPP_API_KEY }}
+          MONITOR_CELULAR_WHATSAPP: ${{ secrets.MONITOR_CELULAR_WHATSAPP }}
+        run: |
+          set -o pipefail
+          node scripts/monitora-celulares.mjs | tee -a "$GITHUB_STEP_SUMMARY"

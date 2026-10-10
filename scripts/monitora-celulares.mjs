@@ -10,7 +10,8 @@
  * Link de afiliado fica de fora de propósito: comprar pelo próprio link
  * é autocompra, e os programas tratam isso como fraude de comissão.
  *
- * O QUE ELE FAZ, de hora em hora, no fim da coleta horária:
+ * O QUE ELE FAZ, de 15 em 15 minutos (`monitor-celular.yml`, disparado
+ * pelo `pg_cron`):
  *
  *   1. Para cada modelo da lista, acha o menor preço de item NOVO no
  *      Mercado Livre (API de catálogo, a mesma rota do coletor) e na
@@ -233,12 +234,14 @@ const MODELOS = [
     teto: 3400,
   },
   {
-    // Só importador, R$ 4.990 a 5.150, sem promoção registrada.
+    // Só importador, R$ 4.990 a 5.150 na pesquisa. O dono achou a
+    // R$ 4.412 na Shopee em 10/10, e é o celular que ele quer: o teto
+    // fica logo acima disso, para cada queda nova chegar.
     nome: "Xiaomi 17T Pro",
     termos: ["xiaomi 17t pro"],
     inclui: /xiaomi 17t pro/i,
     exclui: null,
-    teto: 4790,
+    teto: 4500,
   },
   {
     // Anunciado na China em 23/09, global esperado para novembro. Sem
@@ -306,14 +309,34 @@ const db = createClient(url, chave, { auth: { persistSession: false } });
 const API_ML = "https://api.mercadolibre.com";
 let acessoMl = "";
 
+/** Onde o monitor guarda o token de acesso do ML, em `credencial_rotativa`. */
+const CHAVE_DO_ACESSO = "monitor_celular_acesso";
+
 /**
- * Renova o token e grava o novo, igual ao coletor.
+ * Entra no ML, renovando o token só quando o guardado está vencendo.
  *
- * Roda DEPOIS do coletor, no mesmo job e no mesmo grupo de concorrência
- * do workflow: o ML invalida o refresh token velho a cada renovação, e
- * duas renovações ao mesmo tempo derrubariam uma das duas.
+ * O ML INVALIDA O REFRESH TOKEN VELHO A CADA RENOVAÇÃO, e o coletor
+ * renova o mesmo. Duas renovações ao mesmo tempo derrubam uma das duas.
+ * Este monitor roda de 15 em 15 minutos, então renovar a cada rodada
+ * seria 96 chances por dia de pisar no coletor.
+ *
+ * O token de ACESSO vale 6 horas e não invalida nada ao ser usado. O
+ * monitor guarda o dele com o vencimento e reaproveita: renova uma vez a
+ * cada ~6 horas, e o choque com o coletor fica improvável.
  */
-async function entraNoMl(marketplaceId) {
+async function entraNoMl(marketplaceId, operacaoId) {
+  const { data: guardado } = await db
+    .from("credencial_rotativa")
+    .select("valor")
+    .eq("marketplace_id", marketplaceId)
+    .eq("chave", CHAVE_DO_ACESSO)
+    .maybeSingle();
+  const [venceEm, token] = String(guardado?.valor ?? "").split("|");
+  if (token && Number(venceEm) > Date.now() + 10 * 60_000) {
+    acessoMl = token;
+    return;
+  }
+
   const { data: credencial } = await db
     .from("credencial_rotativa")
     .select("valor")
@@ -335,6 +358,19 @@ async function entraNoMl(marketplaceId) {
   const d = await r.json();
   if (!d.access_token) throw new Error(`não renovei o token do ML: ${JSON.stringify(d)}`);
   acessoMl = d.access_token;
+
+  const venceNovo = Date.now() + Number(d.expires_in ?? 21_600) * 1000;
+  const { error: erroDoAcesso } = await db.from("credencial_rotativa").upsert(
+    {
+      operacao_id: operacaoId,
+      marketplace_id: marketplaceId,
+      chave: CHAVE_DO_ACESSO,
+      valor: `${venceNovo}|${d.access_token}`,
+      atualizado_em: new Date().toISOString(),
+    },
+    { onConflict: "marketplace_id,chave" },
+  );
+  if (erroDoAcesso) console.log(`⚠️  Não guardei o token de acesso: ${erroDoAcesso.message}`);
 
   if (d.refresh_token && d.refresh_token !== credencial?.valor) {
     const { error } = await db
@@ -649,7 +685,7 @@ async function main() {
     .single();
   if (!mkt) throw new Error("não achei o marketplace mercado_livre");
 
-  await entraNoMl(mkt.id);
+  await entraNoMl(mkt.id, mkt.operacao_id);
 
   const { data: estado } = await db
     .from("parametro")
