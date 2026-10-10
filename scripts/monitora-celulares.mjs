@@ -24,9 +24,22 @@
  * do teto avisa outra vez. Sem isso, um S25+ parado em R$ 3.450 mandaria
  * 24 mensagens por dia iguais.
  *
- * O PREÇO É O DE ANÚNCIO, sem cupom nem desconto de Pix. Medido em
- * 10/10 no carrinho: o S25+ de R$ 3.977 na API fechou em R$ 3.777 com
- * cupom. Por isso o teto conta com o cupom ainda por vir.
+ * O TETO É COMPARADO COM O MELHOR PREÇO ESTIMADO, e não com o de
+ * anúncio, porque é assim que os tetos foram pesquisados: preço final de
+ * promoção, com cupom e Pix. A primeira versão comparava o de anúncio e
+ * calou o Xiaomi 17T Pro em 10/10: a API da Shopee dizia R$ 4.799 (preço
+ * de cartão) e o comparador do dono mostrava R$ 4.412 (Pix).
+ *
+ *   Shopee         preço da API menos ~8% de Pix. Medido no carrinho em
+ *                  10/10: R$ 383,92 de desconto Pix sobre R$ 4.799.
+ *   Mercado Livre  preço da API menos o melhor cupom vivo em `cupom`,
+ *                  colhido dos canais públicos de 15 em 15 minutos, no
+ *                  passo anterior do workflow. Cupom do ML muitas vezes só
+ *                  vale em "selecionados", então é estimativa: o aviso diz
+ *                  o código, e o carrinho confirma.
+ *
+ * Os dois são ESTIMATIVA, e o aviso mostra os dois preços, o de anúncio
+ * e o estimado.
  *
  * A Amazon fica de fora porque o projeto não tem API de preço dela.
  *
@@ -219,14 +232,15 @@ const MODELOS = [
     teto: 3400,
   },
   {
-    // Só importador, R$ 4.990 a 5.150 na pesquisa. O dono achou a
-    // R$ 4.412 na Shopee em 10/10, e é o celular que ele quer: o teto
-    // fica logo acima disso, para cada queda nova chegar.
+    // Só importador. Pesquisa de 10/10: promoção entre R$ 4.400 e 4.800
+    // no Pix, média R$ 4.530, recorde R$ 4.208 (Shopee, 04/09). É o
+    // celular que o dono quer, e ele decidiu esperar: R$ 4.300 no Pix é o
+    // preço "excepcional" combinado.
     nome: "Xiaomi 17T Pro",
     termos: ["xiaomi 17t pro"],
     inclui: /xiaomi 17t pro/i,
     exclui: null,
-    teto: 4500,
+    teto: 4300,
   },
   {
     // Anunciado na China em 23/09, global esperado para novembro. Sem
@@ -264,6 +278,9 @@ const PISO_DO_TETO = 0.5;
 
 /** Teto de consultas de vendedor por modelo, para a rodada caber na hora. */
 const MAX_VENDEDORES_CONSULTADOS = 20;
+
+/** Desconto de Pix na Shopee, medido no carrinho em 10/10 (R$ 383,92 sobre R$ 4.799). */
+const PIX_NA_SHOPEE = 0.08;
 
 /** Quanto o preço precisa cair abaixo do último aviso para avisar de novo. */
 const QUEDA_MINIMA_CENTAVOS = 2000;
@@ -565,6 +582,8 @@ async function maisBaratoNaShopee(modelo) {
       if (!melhor || centavos < melhor.centavos) {
         melhor = {
           loja: `Shopee (${n.shopName})`,
+          estimadoCentavos: Math.round(centavos * (1 - PIX_NA_SHOPEE)),
+          comoChegar: "no Pix (estimado, ~8% a menos)",
           titulo: n.productName,
           centavos,
           deCentavos: null,
@@ -592,15 +611,52 @@ const reais = (centavos) =>
 const chaveDoModelo = (modelo) =>
   `monitor_celular:${modelo.nome.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
 
+/**
+ * O melhor cupom vivo do ML para um preço, ou nada.
+ *
+ * Vem da tabela `cupom`, a mesma que o produto usa, colhida dos canais
+ * públicos. Percentual respeita o teto de desconto; valor fixo, a compra
+ * mínima.
+ */
+function melhorCupom(cupons, centavos) {
+  let melhor = null;
+  for (const c of cupons) {
+    if (centavos < (c.valor_minimo_centavos ?? 0)) continue;
+    const desconto =
+      c.tipo === "percentual"
+        ? Math.min(Math.round((centavos * c.valor) / 100), c.teto_desconto_centavos ?? Infinity)
+        : c.valor;
+    if (!melhor || desconto > melhor.desconto) melhor = { codigo: c.codigo, desconto };
+  }
+  return melhor;
+}
+
+function comCupom(achado, cupons) {
+  if (!achado || achado.estimadoCentavos) return achado;
+  const cupom = melhorCupom(cupons, achado.centavos);
+  if (!cupom) return { ...achado, estimadoCentavos: achado.centavos, comoChegar: null };
+  return {
+    ...achado,
+    estimadoCentavos: achado.centavos - cupom.desconto,
+    comoChegar: `com o cupom ${cupom.codigo}, se valer para o produto`,
+  };
+}
+
 function mensagem(modelo, achado) {
   const de = achado.deCentavos && achado.deCentavos > achado.centavos ? ` (de ${reais(achado.deCentavos)})` : "";
+  const estimado =
+    achado.comoChegar && achado.estimadoCentavos < achado.centavos
+      ? `💸 ${reais(achado.estimadoCentavos)} ${achado.comoChegar}`
+      : null;
   return [
     `📱 ${modelo.nome} por ${reais(achado.centavos)}${de}`,
+    estimado,
     `Teto: ${reais(Math.min(modelo.teto * 100, PRECO_MAXIMO_CENTAVOS))}. Loja: ${achado.loja}`,
     achado.titulo,
-    "Preço de anúncio, sem cupom nem Pix. No carrinho pode sair menor.",
     achado.link,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /**
@@ -729,9 +785,26 @@ async function main() {
     .is("nicho_id", null);
   const avisado = Object.fromEntries((estado ?? []).map((p) => [p.chave, Number(p.valor)]));
 
+  const agora = new Date().toISOString();
+  const { data: cuponsDoMl } = await db
+    .from("cupom")
+    .select("codigo, tipo, valor, valor_minimo_centavos, teto_desconto_centavos, vigente_ate")
+    .eq("marketplace_id", mkt.id)
+    .eq("ativo", true)
+    // Só cupom que vale em qualquer categoria. No primeiro teste, sem
+    // isto, o STANLEY (25% sem teto, de garrafa térmica) virou desconto de
+    // R$ 1.300 num S25 Ultra.
+    .eq("geral", true)
+    .is("esgotado_em", null)
+    .lte("vigente_de", agora);
+  const cupons = (cuponsDoMl ?? []).filter((c) => !c.vigente_ate || c.vigente_ate > agora);
+  console.log(`cupons vivos do ML: ${cupons.map((c) => c.codigo).join(", ") || "nenhum"}`);
+
   for (const modelo of MODELOS) {
-    const candidatos = [await maisBaratoNoMl(modelo), await maisBaratoNaShopee(modelo)].filter(Boolean);
-    const achado = candidatos.sort((a, b) => a.centavos - b.centavos)[0];
+    const candidatos = [comCupom(await maisBaratoNoMl(modelo), cupons), await maisBaratoNaShopee(modelo)].filter(
+      Boolean,
+    );
+    const achado = candidatos.sort((a, b) => a.estimadoCentavos - b.estimadoCentavos)[0];
     const chaveEstado = chaveDoModelo(modelo);
     const ultimo = avisado[chaveEstado] ?? 0;
     const tetoCentavos = Math.min(modelo.teto * 100, PRECO_MAXIMO_CENTAVOS);
@@ -740,13 +813,16 @@ async function main() {
       console.log(`${modelo.nome}: nada à venda`);
       continue;
     }
-    console.log(`${modelo.nome}: ${reais(achado.centavos)} em ${achado.loja} (teto ${reais(tetoCentavos)})`);
+    console.log(
+      `${modelo.nome}: ${reais(achado.centavos)} em ${achado.loja}, estimado ${reais(achado.estimadoCentavos)} ` +
+        `(teto ${reais(tetoCentavos)})`,
+    );
 
     let novoEstado = ultimo;
-    if (achado.centavos > tetoCentavos) {
+    if (achado.estimadoCentavos > tetoCentavos) {
       // Voltou acima do teto: solta a trava para a próxima queda avisar.
       novoEstado = 0;
-    } else if (ultimo === 0 || achado.centavos <= ultimo - QUEDA_MINIMA_CENTAVOS) {
+    } else if (ultimo === 0 || achado.estimadoCentavos <= ultimo - QUEDA_MINIMA_CENTAVOS) {
       const texto = mensagem(modelo, achado);
       if (TESTE) {
         console.log(`\n--- mandaria ---\n${texto}\n`);
@@ -754,7 +830,7 @@ async function main() {
         await avisa(texto, achado.imagem);
         console.log("  avisado");
       }
-      novoEstado = achado.centavos;
+      novoEstado = achado.estimadoCentavos;
     }
 
     if (!TESTE && novoEstado !== ultimo) {

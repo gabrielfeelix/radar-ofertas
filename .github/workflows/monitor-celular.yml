@@ -38,6 +38,22 @@ jobs:
       - name: Instala o cliente do Supabase
         run: npm install --no-save @supabase/supabase-js
 
+      - name: Colhe cupons do Mercado Livre
+        # O mesmo script da coleta horária, aqui de 15 em 15 minutos: o
+        # monitor desconta o melhor cupom vivo do preço do ML, e cupom do
+        # ML vale um dia e esgota em horas. Ele grava na tabela `cupom`,
+        # que o produto também usa, então rodar mais vezes só a deixa
+        # mais fresca.
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node --experimental-strip-types \
+               --disable-warning=ExperimentalWarning \
+               --disable-warning=MODULE_TYPELESS_PACKAGE_JSON \
+               scripts/colhe-cupons.mjs
+
       - name: Confere os preços e avisa
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
