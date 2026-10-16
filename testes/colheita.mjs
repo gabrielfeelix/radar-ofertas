@@ -419,6 +419,40 @@ confere(
 Cupom: LOJASOFICIAIS0408`).length === 1,
 );
 
+// -------------------------------------------------------------
+// 16/10: o PEGANDO, post real do @pechinchou
+// -------------------------------------------------------------
+
+const pechinchou = `CORREEEEEEEEEE!! 50% OFF, CUPOM PEGANDO EM QUASE TODO SITE! 🏃‍♂️😨😍
+
+•⁠ Cupom de 50%OFF limitado a R$100 de desconto
+
+🔥 50% Off
+Achado Dafiti 👇🏻
+🛒 https://pechin.co/155072
+➡ Cupom: LIQUIDA50`;
+
+confere("post de outra loja nao rende cupom do ML", extraiCupons(pechinchou).length === 0);
+{
+  // O mesmo texto falando do ML, para isolar as outras regras.
+  const noMl = pechinchou.replace("Achado Dafiti", "Achado Mercado Livre");
+  confere("  gerundio colado no rotulo nao e codigo", !extraiCupons(noMl).some((c) => c.codigo === "PEGANDO"));
+}
+confere(
+  "rotulo sem dois-pontos e prosa quando o post tem rotulo com",
+  extraiCupons(`20% OFF no Mercado Livre, CUPOM BOMBA hoje\nCupom: PIPOCA`).every((c) => c.codigo !== "BOMBA"),
+);
+{
+  const [c] = extraiCupons(`50% OFF no Mercado Livre, use o cupom: METADE
+
+Desconto limitado a R$ 100`);
+  confere("teto no bloco de baixo e lido", c?.tetoCentavos === 10000);
+}
+confere(
+  "cupom comum do ML continua passando",
+  extraiCupons(`20% OFF acima de R$ 99\nCupom: PIPOCA`)[0]?.codigo === "PIPOCA",
+);
+
 console.log(`\n${passou} passaram, ${falhou} falharam`);
 if (falhou > 0) process.exit(1);
 console.log("todos os casos passaram");

@@ -219,7 +219,17 @@ async function main() {
       nossa, conferida uma vez e reaproveitada; o texto é leitura de
       frase de terceiro. Onde os dois falam, vale o nosso.
     */
-    const porTexto = porPrefixo ? null : escopoPeloTexto(c.contexto);
+    /*
+      PERCENTUAL ALTO SEM TETO NÃO VIRA GERAL PELO TEXTO.
+
+      Cupom do ML vive entre 5% e 30%, e o que passa disso vem com
+      limite em reais. Sem o limite, o número lido costuma ser a
+      manchete do post ou o desconto do produto, não a regra do cupom.
+      Em 16/10 o PEGANDO entrou assim (50%, sem teto, geral) e saiu em
+      dez canais. O prefixo é curadoria nossa e continua valendo.
+    */
+    const manchete = c.percentual > 30 && c.tetoCentavos == null;
+    const porTexto = porPrefixo || manchete ? null : escopoPeloTexto(c.contexto);
     const escopo = porPrefixo ?? (porTexto
       ? { geral: porTexto.geral, nicho_id: porTexto.nichoSlug ? (nichoPorSlug.get(porTexto.nichoSlug) ?? null) : null }
       : null);

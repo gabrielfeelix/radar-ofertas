@@ -622,6 +622,10 @@ function melhorCupom(cupons, centavos) {
   let melhor = null;
   for (const c of cupons) {
     if (centavos < (c.valor_minimo_centavos ?? 0)) continue;
+    // Percentual sem teto num celular é desconto de mil reais que o
+    // carrinho nunca dá. Em 16/10 o PEGANDO (50%, sem teto, lido errado
+    // de um post da Dafiti) avisou celulares pela metade do preço.
+    if (c.tipo === "percentual" && c.teto_desconto_centavos == null) continue;
     const desconto =
       c.tipo === "percentual"
         ? Math.min(Math.round((centavos * c.valor) / 100), c.teto_desconto_centavos ?? Infinity)

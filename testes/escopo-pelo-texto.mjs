@@ -23,6 +23,7 @@ confere(
   escopoPeloTexto("10% OFF no site em compras a partir de R$149, limitado a R$200.")?.geral === true,
 );
 confere("site todo", escopoPeloTexto("20% OFF no site todo")?.geral === true);
+confere("quase todo site nao e geral", escopoPeloTexto("50% OFF, CUPOM PEGANDO EM QUASE TODO SITE!") === null);
 confere("todo o site", escopoPeloTexto("15% em todo o site, mínimo R$ 50")?.geral === true);
 confere("qualquer produto", escopoPeloTexto("10% OFF em qualquer produto")?.geral === true);
 confere("geral não carrega nicho", escopoPeloTexto("10% OFF no site")?.nichoSlug === null);

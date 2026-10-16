@@ -330,6 +330,16 @@ export type CupomLido = {
  * precisa saber que a exclusão é deliberada.
  */
 export function extraiCupons(texto: string): CupomLido[] {
+  /*
+    POST DE OUTRA LOJA NÃO TEM CUPOM DO MERCADO LIVRE.
+
+    Quem chama grava tudo o que sai daqui como cupom do ML, e os canais
+    que lemos postam de todas as lojas. Em 16/10 um achado da Dafiti no
+    `@pechinchou` virou cupom do ML de 50% e saiu em dez canais. Post
+    que nomeia outra loja e não fala do ML fica de fora inteiro.
+  */
+  if (dePostDeOutraLoja(texto)) return [];
+
   // Primeiro só as posições. O percentual e os valores precisam saber
   // onde o cupom VIZINHO começa, senão uma mensagem com três cupons
   // seguidos lê o desconto de um e atribui ao outro — que é pior que
@@ -403,7 +413,32 @@ export function extraiCupons(texto: string): CupomLido[] {
     // (de "MERCADO LIVRE") entraram como cupom na primeira rodada.
     "MERCADO", "LIVRE", "DAFITI", "NETSHOES", "CENTAURO", "AMERICANAS",
     "SUBMARINO", "CASASBAHIA", "PONTOFRIO", "ALIEXPRESS", "PRIME",
+    // Gíria de canal para "o cupom funciona", colhida em 16/10:
+    // *"CUPOM PEGANDO EM QUASE TODO SITE"*. Os gerúndios saem pela
+    // regra de baixo; aqui ficam os que não terminam em -NDO.
+    "PEGOU", "PEGA", "VALE", "VALIDO", "VÁLIDO", "ATIVO", "VOLTOU",
+    "LIBERADO", "LIBERADA", "NOVA", "INSANO", "BUGADO", "BUG",
   ]);
+
+  /*
+    GERÚNDIO É FRASE, NÃO CÓDIGO.
+
+    "CUPOM PEGANDO", "CUPOM VALENDO", "CUPOM BOMBANDO": o canal grita em
+    caixa alta e o verbo cola no rótulo. Código de cupom é nome
+    (`PIPOCA`, `DESCONTAO`, `FASHIONML`), e nenhum dos colhidos até hoje
+    termina em -ANDO, -ENDO ou -INDO.
+  */
+  const GERUNDIO = /(?:ANDO|ENDO|INDO)$/;
+
+  /*
+    RÓTULO COM DOIS-PONTOS GANHA DO RÓTULO SEM.
+
+    "Cupom: LIQUIDA50" é o canal apontando o código; "CUPOM PEGANDO EM
+    QUASE TODO SITE" é o canal falando do cupom. Quando o post tem o
+    primeiro, o segundo é prosa, mesmo que a palavra passe pelas listas.
+  */
+  const temRotuloComDoisPontos = /(?:cupom|c[óo]digo|c[óo]d\.?|voucher)\s*:\s*\S/i.test(texto);
+  const ROTULO_COM_DOIS_PONTOS = /(?:cupom|cupons|c[óo]digo|c[óo]d\.?|voucher)\s*:\s*$/i;
 
   /*
     SÓ LETRAS NESTE CAMINHO, E É A EXCLUSÃO DA SHOPEE QUE MANDA.
@@ -428,12 +463,15 @@ export function extraiCupons(texto: string): CupomLido[] {
     const de = m.index ?? 0;
 
     if (NAO_E_CUPOM.has(codigo)) continue;
+    if (GERUNDIO.test(codigo)) continue;
     // Já achado pelo caminho da data, que é melhor: ele traz o prazo.
     if (candidatos.some((c) => c.de === de || c.codigo === codigo)) continue;
 
     // O rótulo tem que estar imediatamente antes, na mesma linha.
     const inicioDaLinha = texto.lastIndexOf("\n", de - 1) + 1;
-    if (!ROTULO.test(texto.slice(inicioDaLinha, de))) continue;
+    const antesNaLinha = texto.slice(inicioDaLinha, de);
+    if (!ROTULO.test(antesNaLinha)) continue;
+    if (temRotuloComDoisPontos && !ROTULO_COM_DOIS_PONTOS.test(antesNaLinha)) continue;
 
     candidatos.push({ codigo, dia: null, mes: null, origem: "rotulo", de, ate: de + codigo.length });
   }
@@ -540,11 +578,25 @@ export function extraiCupons(texto: string): CupomLido[] {
     const percentual = Number(pct[1]);
     if (percentual < 1 || percentual > 50) continue;
 
+    /*
+      O TETO PODE ESTAR NO BLOCO DE BAIXO, separado por linha em branco.
+      Colhido em 16/10, do `@pechinchou`:
+
+        CORREEEE!! 50% OFF, CUPOM ...
+        (linha em branco)
+        • Cupom de 50%OFF limitado a R$100 de desconto
+
+      Só o bloco dava teto nulo, e 50% sem teto num celular de R$ 4.000
+      é R$ 2.000 de desconto prometido. A janela inteira ainda para nos
+      códigos vizinhos, então não atravessa para o teto de outro cupom.
+    */
+    const teto = valorApos(bloco, TETO) ?? valorApos(janelaToda, TETO);
+
     achados.set(c.codigo, {
       codigo: c.codigo,
       percentual,
       minimoCentavos: valorApos(bloco, MINIMO) ?? 0,
-      tetoCentavos: valorApos(bloco, TETO),
+      tetoCentavos: teto,
       contexto: bloco,
       dia: c.dia,
       mes: c.mes,
@@ -553,6 +605,21 @@ export function extraiCupons(texto: string): CupomLido[] {
   }
 
   return [...achados.values()];
+}
+
+/**
+ * Se o post é de outra loja: nomeia uma e não fala do Mercado Livre.
+ *
+ * Post misto ("no ML e na Amazon") fica, porque o cupom pode ser do
+ * ML; o bloco de cada código ainda decide o percentual dele.
+ */
+export function dePostDeOutraLoja(texto: string): boolean {
+  const t = texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const falaDoMl = /mercado\s*livre|mercadolivre|meli\.la|\bml\b/.test(t);
+  if (falaDoMl) return false;
+  return /\b(?:dafiti|netshoes|centauro|amazon|amzn\.to|shopee|magalu|magazine\s*luiza|kabum|americanas|submarino|casas\s*bahia|ponto\s*frio|aliexpress|shein|temu|carrefour|zattini|renner|riachuelo|c&a|nike|adidas|boticario|natura|sephora|beleza\s*na\s*web|epoca\s*cosmeticos|drogasil|drogaria\s*sao\s*paulo|leroy\s*merlin|madeiramadeira)\b/.test(
+    t,
+  );
 }
 
 /**

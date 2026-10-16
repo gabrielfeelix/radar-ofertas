@@ -81,6 +81,13 @@ const SELECAO = [
   /lista indicada/,
   /itens da lista/,
   /produtos? participantes?/,
+  /*
+    "Quase" é o contrário de "todo". Colhido ao vivo em 16/10, do
+    `@pechinchou`: *"CUPOM PEGANDO EM QUASE TODO SITE"* casava com
+    `todo site` e o cupom virou geral. Quase todo é parte, e parte que
+    não sabemos qual é a lista que não temos.
+  */
+  /\bquase tod[oa]s?\b/,
 ];
 
 /*
